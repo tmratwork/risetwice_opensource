@@ -4,12 +4,12 @@
 // Based on real production WebRTC apps to solve render storm issues
 
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
-import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
-import { ConnectionManager } from '@/hooksV15/webrtc/connection-manager';
-import { ComprehensiveMessageHandler, type MessageHandlerCallbacks } from '@/hooksV15/webrtc/comprehensive-message-handler';
-import { useBookFunctionsV15 } from '@/hooksV15/functions/use-book-functions-v15';
-import { useMentalHealthFunctionsV15 } from '@/hooksV15/functions/use-mental-health-functions-v15';
-import type { ConnectionConfig } from '@/hooksV15/types';
+import { optimizedAudioLogger } from '@/hooksV16/audio/optimized-audio-logger';
+import { ConnectionManager } from '@/hooksV16/webrtc/connection-manager';
+import { ComprehensiveMessageHandler, type MessageHandlerCallbacks } from '@/hooksV16/webrtc/comprehensive-message-handler';
+import { useBookFunctionsV16 } from '@/hooksV16/use-book-functions-v16';
+import { useMentalHealthFunctionsV16 } from '@/hooksV16/use-mental-health-functions-v16';
+import type { ConnectionConfig } from '@/hooksV16/types';
 
 // Conversation message type
 interface ConversationMessage {
@@ -93,8 +93,8 @@ export function WebRTCProvider({
   const ephemeralUserMessageIdRef = useRef<string | null>(null);
 
   // Function hooks (only used in callbacks, not as dependencies)
-  const bookFunctions = useBookFunctionsV15();
-  const mentalHealthFunctions = useMentalHealthFunctionsV15();
+  const bookFunctions = useBookFunctionsV16();
+  const mentalHealthFunctions = useMentalHealthFunctionsV16();
 
   // Stable refs object - doesn't change between renders
   const refs = useRef({

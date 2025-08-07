@@ -1,4 +1,4 @@
-# LivingBooks Development Guidelines
+# RiseTwice Development Guidelines
 
 ## Core Principles
 

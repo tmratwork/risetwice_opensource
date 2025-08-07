@@ -1,6 +1,6 @@
 # Mental Health Resource Search Feature
 
-This module provides a way for the LivingBooks V11 mental health AI companion to search for and retrieve mental health resources for users. The feature enables the AI to respond to user requests for information about available resources, support services, and mental health organizations.
+This module provides a way for the RiseTwice V11 mental health AI companion to search for and retrieve mental health resources for users. The feature enables the AI to respond to user requests for information about available resources, support services, and mental health organizations.
 
 ## Overview
 

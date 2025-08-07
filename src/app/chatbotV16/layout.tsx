@@ -7,8 +7,7 @@ import { ThemeProvider } from '@/contexts/theme-context';
 import { ClientHeader } from '@/components/client-header';
 import { MobileFooterNavV15 } from './components/MobileFooterNavV15';
 import SearchProgressToast from './components/SearchProgressToast';
-// Import V15 audio logger
-import { audioLogger } from '@/hooksV15';
+// V16 uses simple console logging instead of V15 audioLogger
 // Import V16 CSS styles
 import './chatbotV15.css';
 
@@ -46,27 +45,25 @@ function AudioMonitoringInit() {
   useEffect(() => {
     // Only run on client-side
     if (typeof window !== 'undefined') {
-      // Log V15 initialization
-      audioLogger.info('system', 'v15_page_loaded', {
+      // Log V16 initialization
+      console.log('[V16-SYSTEM] page_loaded', {
         userAgent: navigator.userAgent,
         timestamp: Date.now(),
         url: window.location.href,
-        version: 'v15'
+        version: 'v16'
       });
 
       // Set up global unhandled error monitoring
       window.addEventListener('error', (event) => {
-        audioLogger.error('system', 'unhandled_error', event.error || new Error(event.message), {
+        console.error('[V16-SYSTEM] unhandled_error', event.error || new Error(event.message), {
           filename: event.filename,
           lineno: event.lineno,
           colno: event.colno
         });
       });
 
-      // Log successful V15 initialization
-      if (process.env.ENABLE_AUDIO_LOGGER_LOGS === 'true') {
-        console.log('[AudioLogger] [SYSTEM] V15 chat interface initialized');
-      }
+      // Log successful V16 initialization
+      console.log('[V16-SYSTEM] chat interface initialized');
     }
   }, []);
 
@@ -82,7 +79,7 @@ function MobileFooterNavWithDebug() {
     setShowDebugPanel(newState);
     
     // Log debug panel toggle
-    audioLogger.userAction('debug_panel_toggled', { showDebugPanel: newState });
+    console.log('[V16-USER] debug_panel_toggled', { showDebugPanel: newState });
     
     // Dispatch event for page component
     window.dispatchEvent(new CustomEvent('toggleDebugPanel', {

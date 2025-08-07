@@ -1,4 +1,4 @@
-# WebRTC Audio Enhancement for LivingBooks
+# WebRTC Audio Enhancement for RiseTwice
 
 This enhancement improves audio playback reliability in WebRTC connections by implementing direct audio stream monitoring and intelligent completion detection to prevent premature audio cutoffs.
 

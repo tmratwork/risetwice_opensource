@@ -2,7 +2,7 @@ file: docs/TAILWIND_V4_MIGRATION.md
 
 # Tailwind v4 Migration Guide
 
-This document provides guidance on migrating the LivingBooks application to Tailwind CSS v4 when ready.
+This document provides guidance on migrating the RiseTwice application to Tailwind CSS v4 when ready.
 
 ## Current Implementation
 

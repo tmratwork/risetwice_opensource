@@ -4,7 +4,7 @@ import { ReactNode } from 'react';
 import Link from 'next/link';
 
 export default function ProfilePromptsLayout({ children }: { children: ReactNode }) {
-  
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <nav className="bg-white dark:bg-gray-800 shadow-sm">
@@ -13,7 +13,7 @@ export default function ProfilePromptsLayout({ children }: { children: ReactNode
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <span className="text-xl font-bold text-gray-900 dark:text-white">
-                  LivingBooks Profile Management
+                  RiseTwice Profile Management
                 </span>
               </div>
               <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
@@ -34,7 +34,7 @@ export default function ProfilePromptsLayout({ children }: { children: ReactNode
           </div>
         </div>
       </nav>
-      
+
       <main className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {children}

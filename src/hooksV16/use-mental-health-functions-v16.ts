@@ -4,7 +4,7 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
-import audioLogger from '../hooksV15/audio/audio-logger';
+// Remove V15 dependency - V16 should be independent
 
 /**
  * V16 Mental Health Functions Hook - Based on V15 Implementation
@@ -1215,7 +1215,7 @@ export function useMentalHealthFunctionsV16() {
     const requestId = Date.now().toString().slice(-6);
 
     // console.log(`[V16] grounding_function called with requestId: ${requestId}`);
-    audioLogger.info('function', 'grounding_function_called', {
+    console.log('[V16-FUNCTION] grounding_function_called', {
       requestId,
       distress_level: params.distress_level,
       technique_type: params.technique_type
@@ -1260,7 +1260,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] grounding_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'grounding_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'grounding_function_success', { requestId });
       
       return {
         success: true,
@@ -1274,7 +1274,7 @@ export function useMentalHealthFunctionsV16() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
     // console.log(`[V16] grounding_function error for requestId: ${requestId}: ${errorMessage}`);
-      audioLogger.error('function', 'grounding_function_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'grounding_function_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       return {
@@ -1292,7 +1292,7 @@ export function useMentalHealthFunctionsV16() {
     const requestId = Date.now().toString().slice(-6);
 
     // console.log(`[V16] thought_exploration_function called with requestId: ${requestId}`);
-    audioLogger.info('function', 'thought_exploration_function_called', {
+    console.log('[V16-FUNCTION]', 'thought_exploration_function_called', {
       requestId,
       thought_type: params.thought_type,
       related_emotion: params.related_emotion
@@ -1316,7 +1316,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] thought_exploration_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'thought_exploration_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'thought_exploration_function_success', { requestId });
       
       return {
         success: true,
@@ -1330,7 +1330,7 @@ export function useMentalHealthFunctionsV16() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
     // console.log(`[V16] thought_exploration_function error for requestId: ${requestId}: ${errorMessage}`);
-      audioLogger.error('function', 'thought_exploration_function_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'thought_exploration_function_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       return {
@@ -1349,7 +1349,7 @@ export function useMentalHealthFunctionsV16() {
 
     // console.log(`[V16] crisis_response_function called with requestId: ${requestId}`);
     // console.error(`[V16] ⚠️ CRITICAL: Crisis response activated for ${params.crisis_type} at ${params.urgency_level} urgency level`);
-    audioLogger.info('function', 'crisis_response_function_called', {
+    console.log('[V16-FUNCTION]', 'crisis_response_function_called', {
       requestId,
       crisis_type: params.crisis_type,
       urgency_level: params.urgency_level
@@ -1377,7 +1377,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] crisis_response_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'crisis_response_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'crisis_response_function_success', { requestId });
       
       return {
         success: true,
@@ -1392,7 +1392,7 @@ export function useMentalHealthFunctionsV16() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
     // console.log(`[V16] crisis_response_function error for requestId: ${requestId}: ${errorMessage}`);
-      audioLogger.error('function', 'crisis_response_function_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'crisis_response_function_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       // Critical: Even if there's an error, provide a fallback crisis message
@@ -1415,7 +1415,7 @@ export function useMentalHealthFunctionsV16() {
     const requestId = Date.now().toString().slice(-6);
 
     // console.log(`[V16] psychoeducation_function called with requestId: ${requestId}`);
-    audioLogger.info('function', 'psychoeducation_function_called', {
+    console.log('[V16-FUNCTION]', 'psychoeducation_function_called', {
       requestId,
       topic: params.topic,
       information_type: params.information_type
@@ -1438,7 +1438,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] psychoeducation_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'psychoeducation_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'psychoeducation_function_success', { requestId });
       
       return {
         success: true,
@@ -1452,7 +1452,7 @@ export function useMentalHealthFunctionsV16() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
     // console.log(`[V16] psychoeducation_function error for requestId: ${requestId}: ${errorMessage}`);
-      audioLogger.error('function', 'psychoeducation_function_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'psychoeducation_function_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       return {
@@ -1470,7 +1470,7 @@ export function useMentalHealthFunctionsV16() {
     const requestId = Date.now().toString().slice(-6);
 
     // console.log(`[V16] validation_function called with requestId: ${requestId}`);
-    audioLogger.info('function', 'validation_function_called', {
+    console.log('[V16-FUNCTION]', 'validation_function_called', {
       requestId,
       emotion: params.emotion,
       validation_type: params.validation_type
@@ -1494,7 +1494,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] validation_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'validation_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'validation_function_success', { requestId });
       
       return {
         success: true,
@@ -1508,7 +1508,7 @@ export function useMentalHealthFunctionsV16() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
     // console.log(`[V16] validation_function error for requestId: ${requestId}: ${errorMessage}`);
-      audioLogger.error('function', 'validation_function_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'validation_function_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       return {
@@ -1528,7 +1528,7 @@ export function useMentalHealthFunctionsV16() {
     const requestId = Date.now().toString().slice(-6);
 
     // console.log(`[V16] resource_feedback_function called with requestId: ${requestId}`);
-    audioLogger.info('function', 'resource_feedback_function_called', {
+    console.log('[V16-FUNCTION]', 'resource_feedback_function_called', {
       requestId,
       searchId: params.searchId,
       helpful: params.helpful
@@ -1573,7 +1573,7 @@ export function useMentalHealthFunctionsV16() {
       }
 
     // console.log(`[V16] resource_feedback_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'resource_feedback_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'resource_feedback_function_success', { requestId });
 
       return {
         success: true,
@@ -1587,7 +1587,7 @@ export function useMentalHealthFunctionsV16() {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
     // console.log(`[V16] resource_feedback_function error for requestId: ${requestId}: ${errorMessage}`);
-      audioLogger.error('function', 'resource_feedback_function_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'resource_feedback_function_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       return {
@@ -1616,7 +1616,7 @@ export function useMentalHealthFunctionsV16() {
       timestamp: new Date().toISOString()
     });
 
-    audioLogger.info('function', 'display_map_function_called', {
+    console.log('[V16-FUNCTION]', 'display_map_function_called', {
       requestId,
       searchId: params.searchId
     });
@@ -1675,7 +1675,7 @@ export function useMentalHealthFunctionsV16() {
           windowKeys: Object.keys(window).filter(key => key.includes('event') || key.includes('listener'))
         });
 
-        audioLogger.info('function', 'display_map_function_success', { requestId });
+        console.log('[V16-FUNCTION]', 'display_map_function_success', { requestId });
         
         const successResponse = {
           success: true,
@@ -1706,7 +1706,7 @@ export function useMentalHealthFunctionsV16() {
         stack: error instanceof Error ? error.stack : undefined
       });
       
-      audioLogger.error('function', 'display_map_function_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'display_map_function_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       return {
@@ -1726,7 +1726,7 @@ export function useMentalHealthFunctionsV16() {
     try {
       const requestId = Date.now().toString().slice(-6);
     // console.log(`[V16] pathway_exploration_function called with requestId: ${requestId}`);
-      audioLogger.info('function', 'pathway_exploration_function_called', { requestId, interests: params.interests, education_level: params.education_level });
+      console.log('[V16-FUNCTION]', 'pathway_exploration_function_called', { requestId, interests: params.interests, education_level: params.education_level });
 
       setFunctionError(null);
 
@@ -1752,7 +1752,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] pathway_exploration_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'pathway_exploration_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'pathway_exploration_function_success', { requestId });
 
       // Enhance the response with personalized pathway suggestions
       const enhancedMessage = (result.data?.[0] || '') +
@@ -1791,7 +1791,7 @@ export function useMentalHealthFunctionsV16() {
     try {
       const requestId = Date.now().toString().slice(-6);
     // console.log(`[V16] educational_guidance_function called with requestId: ${requestId}`);
-      audioLogger.info('function', 'educational_guidance_function_called', { requestId, pathway_type: params.pathway_type });
+      console.log('[V16-FUNCTION]', 'educational_guidance_function_called', { requestId, pathway_type: params.pathway_type });
 
       setFunctionError(null);
 
@@ -1815,7 +1815,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] educational_guidance_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'educational_guidance_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'educational_guidance_function_success', { requestId });
 
       // Add specific educational resources and next steps
       const enhancedMessage = (result.data?.[0] || '') +
@@ -1858,7 +1858,7 @@ export function useMentalHealthFunctionsV16() {
     try {
       const requestId = Date.now().toString().slice(-6);
     // console.log(`[V16] skill_building_function called with requestId: ${requestId}`);
-      audioLogger.info('function', 'skill_building_function_called', { requestId, skill_area: params.skill_area });
+      console.log('[V16-FUNCTION]', 'skill_building_function_called', { requestId, skill_area: params.skill_area });
 
       setFunctionError(null);
 
@@ -1882,7 +1882,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] skill_building_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'skill_building_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'skill_building_function_success', { requestId });
 
       // Add practical skill-building steps
       const skillSpecificSteps = {
@@ -1960,7 +1960,7 @@ export function useMentalHealthFunctionsV16() {
     try {
       const requestId = Date.now().toString().slice(-6);
     // console.log(`[V16] goal_planning_function called with requestId: ${requestId}`);
-      audioLogger.info('function', 'goal_planning_function_called', { requestId, goal_type: params.goal_type });
+      console.log('[V16-FUNCTION]', 'goal_planning_function_called', { requestId, goal_type: params.goal_type });
 
       setFunctionError(null);
 
@@ -1984,7 +1984,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] goal_planning_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'goal_planning_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'goal_planning_function_success', { requestId });
 
       // Create a structured action plan
       const enhancedMessage = (result.data?.[0] || '') +
@@ -2034,7 +2034,7 @@ export function useMentalHealthFunctionsV16() {
     try {
       const requestId = Date.now().toString().slice(-6);
     // console.log(`[V16] futures_assessment_function called with requestId: ${requestId}`);
-      audioLogger.info('function', 'futures_assessment_function_called', { requestId, assessment_area: params.assessment_area });
+      console.log('[V16-FUNCTION]', 'futures_assessment_function_called', { requestId, assessment_area: params.assessment_area });
 
       setFunctionError(null);
 
@@ -2054,7 +2054,7 @@ export function useMentalHealthFunctionsV16() {
       });
 
     // console.log(`[V16] futures_assessment_function success for requestId: ${requestId}`);
-      audioLogger.info('function', 'futures_assessment_function_success', { requestId });
+      console.log('[V16-FUNCTION]', 'futures_assessment_function_success', { requestId });
 
       // Create assessment questions based on the area
       const assessmentQuestions = {
@@ -2148,7 +2148,7 @@ export function useMentalHealthFunctionsV16() {
     logResourceLocator(`Location specific: ${params.location_specific ? 'yes' : 'no'}`);
     logResourceLocator(`Map view: ${params.mapView ? 'yes' : 'no'}`);
 
-    audioLogger.info('function', 'resource_search_called', {
+    console.log('[V16-FUNCTION]', 'resource_search_called', {
       requestId,
       searchId,
       query: params.query,
@@ -2295,7 +2295,7 @@ export function useMentalHealthFunctionsV16() {
         timestamp: new Date().toISOString()
       });
       
-      audioLogger.info('function', 'resource_search_success', {
+      console.log('[V16-FUNCTION]', 'resource_search_success', {
         requestId,
         resultCount: data.results?.resources?.length || 0
       });
@@ -2330,7 +2330,7 @@ export function useMentalHealthFunctionsV16() {
         location_specific: params.location_specific
       });
       
-      audioLogger.error('function', 'resource_search_failed', error as Error, { requestId });
+      console.error('[V16-FUNCTION]', 'resource_search_failed', error as Error, { requestId });
       setFunctionError(errorMessage);
 
       return {
@@ -2455,7 +2455,7 @@ export function useMentalHealthFunctionsV16() {
         try {
           const requestId = Date.now().toString().slice(-6);
     // console.log(`[V16] resource_connection_function called with requestId: ${requestId}`);
-          audioLogger.info('function', 'resource_connection_function_called', { requestId, connection_type: params.connection_type, field_of_interest: params.field_of_interest });
+          console.log('[V16-FUNCTION]', 'resource_connection_function_called', { requestId, connection_type: params.connection_type, field_of_interest: params.field_of_interest });
 
           setFunctionError(null);
 
@@ -2475,7 +2475,7 @@ export function useMentalHealthFunctionsV16() {
           });
 
     // console.log(`[V16] resource_connection_function success for requestId: ${requestId}`);
-          audioLogger.info('function', 'resource_connection_function_success', { requestId });
+          console.log('[V16-FUNCTION]', 'resource_connection_function_success', { requestId });
 
           // Provide specific connection strategies based on comfort level
           const connectionStrategies = {

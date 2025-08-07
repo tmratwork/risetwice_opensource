@@ -10,10 +10,10 @@ export default function ShareLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  
+
   // Check if this is a warm-handoff page (warmhandoff-v15-* pattern)
   const isWarmHandoffPage = pathname.includes('/summary/warmhandoff-v15-');
-  
+
   // For warm-handoff pages, don't show the "Shared Insights" header
   // since the page itself will handle the V16 header
   if (isWarmHandoffPage) {
@@ -23,7 +23,7 @@ export default function ShareLayout({
       </Providers>
     );
   }
-  
+
   // For other share pages, show the original "Shared Insights" header
   return (
     <Providers>
@@ -31,7 +31,7 @@ export default function ShareLayout({
         <header className="bg-white dark:bg-gray-800 py-4 px-6 shadow-md mb-6">
           <div className="container mx-auto flex justify-between items-center">
             <div className="flex items-center">
-              <img src="/livingBooks.svg" alt="Living Books" className="h-10 w-auto" />
+              <img src="/RiseTwice.svg" alt="Living Books" className="h-10 w-auto" />
               <h1 className="ml-2 text-lg font-medium text-gray-900 dark:text-gray-100">Shared Insights</h1>
             </div>
           </div>

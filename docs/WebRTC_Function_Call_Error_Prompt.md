@@ -111,4 +111,4 @@ This implementation has successfully resolved the "Tool call ID not found in con
 - 8-second timeouts for orphaned function calls
 - Version tracking for implementation identification
 
-This solution has been tested and verified to work reliably in the LivingBooks application.
+This solution has been tested and verified to work reliably in the RiseTwice application.

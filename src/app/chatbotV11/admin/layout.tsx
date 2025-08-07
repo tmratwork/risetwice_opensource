@@ -20,7 +20,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <div className="flex">
               <div className="flex-shrink-0 flex items-center">
                 <span className="text-xl font-bold text-gray-900 dark:text-white">
-                  LivingBooks Admin
+                  RiseTwice Admin
                 </span>
               </div>
             </div>
@@ -55,33 +55,30 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
                     <div className="py-1">
                       <Link
                         href="/chatbotV11/admin"
-                        className={`${
-                          isActive('/chatbotV11/admin')
+                        className={`${isActive('/chatbotV11/admin')
                             ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                             : 'text-gray-700 dark:text-gray-200'
-                        } block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700`}
+                          } block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700`}
                         onClick={() => setMenuOpen(false)}
                       >
                         Prompts
                       </Link>
                       <Link
                         href="/chatbotV11/admin/share-prompts"
-                        className={`${
-                          isActive('/chatbotV11/admin/share-prompts')
+                        className={`${isActive('/chatbotV11/admin/share-prompts')
                             ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                             : 'text-gray-700 dark:text-gray-200'
-                        } block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700`}
+                          } block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700`}
                         onClick={() => setMenuOpen(false)}
                       >
                         Share Prompts
                       </Link>
                       <Link
                         href="/chatbotV11/admin/mh-functions"
-                        className={`${
-                          isActive('/chatbotV11/admin/mh-functions')
+                        className={`${isActive('/chatbotV11/admin/mh-functions')
                             ? 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                             : 'text-gray-700 dark:text-gray-200'
-                        } block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700`}
+                          } block px-4 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700`}
                         onClick={() => setMenuOpen(false)}
                       >
                         Function Descriptions for MH
@@ -94,7 +91,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           </div>
         </div>
       </nav>
-      
+
       <main className="py-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {children}

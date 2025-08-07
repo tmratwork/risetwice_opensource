@@ -1,10 +1,10 @@
 file: docs/logging_method.md
 
-# Logging Standards for LivingBooks
+# Logging Standards for RiseTwice
 
 ## Overview
 
-LivingBooks uses conditional logging controlled by environment variables to help debug specific features without cluttering logs with unnecessary output.
+RiseTwice uses conditional logging controlled by environment variables to help debug specific features without cluttering logs with unnecessary output.
 
 ## ⚠️ CRITICAL: Environment Variable Consistency
 

@@ -4,7 +4,7 @@ file: docs/smart_send_debugging.md
 
 ## Overview
 
-Comprehensive logging has been added to debug why Smart Send messages are not reaching the AI. The logging follows the established LivingBooks logging standards.
+Comprehensive logging has been added to debug why Smart Send messages are not reaching the AI. The logging follows the established RiseTwice logging standards.
 
 ## Environment Variable Setup
 
