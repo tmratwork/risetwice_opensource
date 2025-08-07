@@ -49,7 +49,9 @@ next-env.d.ts
 **/.claude/settings.local.json
 
 #functions
-functions
+/functions
+# This only ignores the root-level functions directory (Firebase)
+# But allows src/hooksV15/functions/ to be committed
 
 #scripts
 scripts
