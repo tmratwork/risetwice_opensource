@@ -24,7 +24,8 @@ async function fetchResourceGreeting(userId?: string): Promise<string> {
   };
 
   try {
-    const languagePreference = getStoredLanguagePreference();
+    const isAuthenticated = !!(userId && userId !== 'anonymous');
+    const languagePreference = getStoredLanguagePreference(isAuthenticated);
     const params = new URLSearchParams({
       type: 'resources',
       language: languagePreference
@@ -126,7 +127,7 @@ async function fetchResourceGreeting(userId?: string): Promise<string> {
     
     logMultilingualSupport('❌ CRITICAL ERROR: Resource greeting fetch completely failed', {
       error: (error as Error).message,
-      languagePreference: getStoredLanguagePreference(),
+      languagePreference: getStoredLanguagePreference(!!(userId && userId !== 'anonymous')),
       userId: userId || 'anonymous',
       source: 'greeting-fetch-critical-error',
       impact: 'Complete multilingual support failure - showing breaking error'
@@ -145,7 +146,7 @@ To fix this issue:
 2. Create a greeting for type 'resources' in the user's selected language
 3. Ensure the greeting is marked as active
 
-Language selected: ${getStoredLanguagePreference()}
+Language selected: ${getStoredLanguagePreference(!!(userId && userId !== 'anonymous'))}
 User ID: ${userId || 'anonymous'}
 Timestamp: ${new Date().toISOString()}`);
   }

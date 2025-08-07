@@ -88,8 +88,17 @@ export function getLanguageNativeName(code: string): string {
 }
 
 // Language preference management
-export function getStoredLanguagePreference(): string {
+export function getStoredLanguagePreference(isAuthenticated?: boolean): string {
   if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
+  
+  // Force anonymous users to always use English, ignore localStorage completely
+  // TODO: Future enhancement - implement smarter anonymous language detection
+  // (browser language, geolocation, session storage, AI detection)
+  // See docs/multilingual_language_management.md "Future Enhancements" section
+  if (isAuthenticated === false) {
+    return DEFAULT_LANGUAGE;
+  }
+  
   return localStorage.getItem('languagePreference') || DEFAULT_LANGUAGE;
 }
 

@@ -2507,7 +2507,7 @@ This is a breaking error in the V16 system. The application cannot proceed witho
 Please contact an administrator to resolve this issue.
 
 Resource: ${resourceLocatorContext.selectedResource.title}
-Language: ${getStoredLanguagePreference()}
+Language: ${getStoredLanguagePreference(!!user)}
 User: ${user?.uid || 'anonymous'}
 Time: ${new Date().toLocaleString()}`);
           
@@ -2944,7 +2944,7 @@ Time: ${new Date().toLocaleString()}`);
 
       try {
         // Get user's language preference for the API call
-        const languagePreference = getStoredLanguagePreference();
+        const languagePreference = getStoredLanguagePreference(!!user);
         const promptApiUrl = `/api/v16/load-prompt?type=triage&userId=${user?.uid || 'anonymous'}&language=${languagePreference}`;
         const greetingApiUrl = `/api/v16/greeting-prompt?type=triage&language=${languagePreference}${user?.uid ? `&userId=${user.uid}` : ''}`;
         

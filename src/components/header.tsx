@@ -126,9 +126,9 @@ function AuthButtons() {
 
     // Initialize language preference on mount
     useEffect(() => {
-        const savedLanguage = getStoredLanguagePreference();
+        const savedLanguage = getStoredLanguagePreference(!!user);
         setSelectedLanguage(savedLanguage);
-    }, []);
+    }, [user]);
 
 
     // Toggle theme function - use theme context
