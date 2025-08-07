@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400">
+  <!-- Rounded rectangle background -->
+  <rect x="50" y="50" width="300" height="300" rx="40" ry="40" fill="none" stroke="currentColor" stroke-width="15"/>
+  
+  <!-- Book - upward curved shape -->
+  <path d="M90 270 
+           C140 290, 260 290, 310 270
+           C260 300, 140 300, 90 270" 
+        fill="none" 
+        stroke="currentColor" 
+        stroke-width="15"
+        stroke-linejoin="round"/>
+  
+  <!-- Face profile -->
+  <path d="M180 190 
+           C190 190, 200 180, 200 160 
+           C200 140, 190 120, 200 100 
+           C210 80, 220 70, 240 70
+           C260 70, 270 80, 280 100" 
+        fill="none" 
+        stroke="currentColor" 
+        stroke-width="15"
+        stroke-linecap="round"/>
+  
+  <!-- Flowing hair -->
+  <path d="M240 70 
+           C270 60, 290 80, 280 100 
+           C270 120, 260 110, 270 130 
+           C280 150, 290 140, 280 160" 
+        fill="none" 
+        stroke="currentColor" 
+        stroke-width="15"
+        stroke-linecap="round"/>
+</svg>

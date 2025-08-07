@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/v16/scheduled-memory-processing",
+      "schedule": "0 2 * * *"
+    }
+  ]
+}

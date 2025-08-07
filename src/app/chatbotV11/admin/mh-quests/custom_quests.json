@@ -1,0 +1,189 @@
+[
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Grounding Techniques",
+        "quest_title": "5-4-3-2-1 Grounding Exercise",
+        "introduction": "This practice helps you manage anxiety through sensory awareness.",
+        "challenge": "Ground yourself with the 5-4-3-2-1 senses exercise whenever you feel overwhelmed.",
+        "reward": "Increased self-awareness and emotional-regulation skills.",
+        "starting_question": "When anxiety hits, what are five things you can see right now?",
+        "ai_prompt": "Guide the user calmly through the 5-4-3-2-1 grounding exercise, pausing after each sense and checking in on their feelings at the end."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "DBT STOP Skill",
+        "quest_title": "Use the S-T-O-P Skill",
+        "introduction": "Pausing buys a moment to choose a safer response when anger rises.",
+        "challenge": "Use the S-T-O-P skill to pause before acting when anger or impulse spikes.",
+        "reward": "Improved impulse-control and safer behavior.",
+        "starting_question": "What usually happens right before you act on anger?",
+        "ai_prompt": "Coach the user through each letter of the S-T-O-P skill, offer concrete examples, and give space for their reflections."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "DBT TIPP Skills",
+        "quest_title": "Quick Calm with TIPP",
+        "introduction": "Rapid body-based techniques to lower extreme emotional arousal.",
+        "challenge": "Cool down fast with one TIPP technique (cold water, quick exercise, paced breathing, or muscle-tensing).",
+        "reward": "Ability to self-soothe quickly during crises.",
+        "starting_question": "How does your body feel when emotions are out of control?",
+        "ai_prompt": "Present the four TIPP options, help the user pick one feasible right now, then guide them through it safely and check the results."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "DBT TIPP Skills",
+        "quest_title": "Progressive Muscle Relaxation",
+        "introduction": "Release tension by tensing and relaxing muscle groups in sequence.",
+        "challenge": "Practice a quick paired-muscle relaxation session to reduce physical tension and stress.",
+        "reward": "Looser muscles and a calmer mind.",
+        "starting_question": "Which part of your body feels the tightest right now?",
+        "ai_prompt": "Guide the user to briefly tense and then relax each major muscle group, remind them to breathe, and check in on how their body feels afterward."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Grounding Techniques",
+        "quest_title": "Body-Scan Relaxation",
+        "introduction": "Noticing sensations from head to toe anchors you in the present moment.",
+        "challenge": "Do a two-minute body scan, slowly placing attention on each body part without judgment.",
+        "reward": "Greater mindfulness and connection with your body.",
+        "starting_question": "Can you notice how your toes feel right now without moving them?",
+        "ai_prompt": "Lead the user through a slow attention sweep from feet to head, prompting gentle observation at each region and pausing to breathe."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Anger/Stress Management Techniques",
+        "quest_title": "Physical Shake-Out Release",
+        "introduction": "Shaking out muscles helps discharge built-up stress energy quickly.",
+        "challenge": "Try a one-minute full-body shake or stretch to lower stress and loosen tension.",
+        "reward": "Fast stress relief and refreshed energy.",
+        "starting_question": "Where in your body do you feel pent-up energy right now?",
+        "ai_prompt": "Instruct the user (if safe) to stand, shake arms, shoulders, and legs for about 60 seconds while breathing steadily; afterwards guide them to notice any changes."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 1,
+        "chapter_title": "TIC Principle: Safety",
+        "quest_title": "Personal Safety Coping Plan",
+        "introduction": "Being prepared helps you feel safer when strong distress hits.",
+        "challenge": "Create a brief safety coping plan listing warning signs, three coping skills, and trusted contacts you can reach out to.",
+        "reward": "Feeling prepared and supported during future crises.",
+        "starting_question": "What are the first signs that tell you you're heading into a crisis?",
+        "ai_prompt": "Guide the user to identify their warning signs, pick three coping skills they trust, list people or services they can reach, and summarize the plan for easy reference."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Simple CBT Thought Record",
+        "quest_title": "CBT Thought Record",
+        "introduction": "Spot the link between thoughts, feelings, and actions.",
+        "challenge": "Complete a simple CBT thought record about a recent upsetting event and write one kinder alternative thought.",
+        "reward": "Greater insight and kinder self-talk.",
+        "starting_question": "Which upsetting event from today keeps replaying in your mind?",
+        "ai_prompt": "Walk the user through situation, thought, feeling (with intensity), behavior, and co-create one balanced alternative thought."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Problem-Solving Steps",
+        "quest_title": "Six-Step Problem-Solving",
+        "introduction": "Break down big challenges into doable actions.",
+        "challenge": "Work through the six-step problem-solving process on a real-life challenge.",
+        "reward": "Practical steps toward goals and reduced overwhelm.",
+        "starting_question": "What problem is stressing you out most this week?",
+        "ai_prompt": "Lead the user through all six problem-solving steps, ensure open brainstorming, and help them choose a small first actionable step."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "MI Decisional Balance",
+        "quest_title": "Decisional Balance",
+        "introduction": "Explore mixed feelings about change without pressure.",
+        "challenge": "Fill out a decisional-balance grid to explore the pros and cons of a change you’re unsure about.",
+        "reward": "Clarity about motivations and barriers.",
+        "starting_question": "What change are you currently on the fence about?",
+        "ai_prompt": "Create a four-quadrant decisional balance, explore each side with the user, summarize, and ask what stands out to them."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 1,
+        "chapter_title": "MI Techniques – Affirmations & Strength-Spotting",
+        "quest_title": "Spot Your Strengths",
+        "introduction": "Notice resilience you already show.",
+        "challenge": "Identify and name one personal strength or coping strategy you’ve used recently.",
+        "reward": "Boosted confidence and self-esteem.",
+        "starting_question": "Think of a tough moment you got through—how did you manage it?",
+        "ai_prompt": "Help the user spot and name a specific strength or coping strategy and provide a genuine affirmation."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Basic Psychoeducation Delivery",
+        "quest_title": "Understand Fight-or-Flight",
+        "introduction": "Learn why your body reacts under stress.",
+        "challenge": "Learn the science behind the fight-or-flight response through a brief psycho-education chat.",
+        "reward": "Normalizes symptoms and increases self-compassion.",
+        "starting_question": "Have you noticed physical changes when you feel stressed?",
+        "ai_prompt": "Explain the fight-or-flight response in clear, youth-friendly language, use relatable examples, and verify understanding."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Grounding Techniques – Reinforcement",
+        "quest_title": "Build Coping Toolbox",
+        "introduction": "Save helpful techniques for quick use.",
+        "challenge": "Add one coping skill you like to your personal “My Coping Skills” list inside the chatbot.",
+        "reward": "Personalized toolkit for future stress.",
+        "starting_question": "Which coping skill has helped you feel calmer before?",
+        "ai_prompt": "Add the chosen coping skill to the user’s personal list, confirm it’s saved, and show how to access it later."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Grounding Techniques – Check-in",
+        "quest_title": "Reflect After Grounding",
+        "introduction": "Track how skills shift your state.",
+        "challenge": "After any grounding or relaxation exercise, message the AI describing how your body and mood changed.",
+        "reward": "Better awareness of what works for you.",
+        "starting_question": "After practicing, what changes do you notice in your body or mood?",
+        "ai_prompt": "Invite a post-exercise reflection, mirror the user’s observations, and encourage continued practice."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 2,
+        "chapter_title": "Goals/Aspirations Scenario",
+        "quest_title": "Tiny First Step",
+        "introduction": "Transform a big dream into an actionable start.",
+        "challenge": "Break a big goal (like finishing school) into the very first tiny step you’ll try this week.",
+        "reward": "Momentum and reduced overwhelm.",
+        "starting_question": "What big life goal keeps popping into your head?",
+        "ai_prompt": "Help the user break the big goal into the smallest next step, set a realistic timeframe, and plan a follow-up."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Grounding Techniques",
+        "quest_title": "Daily Paced Breathing",
+        "introduction": "Build a daily calmness routine.",
+        "challenge": "Practice the paced-breathing animation for one minute every day to build a calmness habit.",
+        "reward": "Lower baseline stress levels.",
+        "starting_question": "Can you set aside one minute right now to practice calm breathing?",
+        "ai_prompt": "Run a 60-second paced-breathing animation, encourage daily repetition, and track streaks if the user agrees."
+    },
+    {
+        "book_id": "f95206aa-165e-4c49-b43a-69d91bef8ed4",
+        "chapter_number": 3,
+        "chapter_title": "Simple CBT Thought Record",
+        "quest_title": "Reframe Harsh Self-Talk",
+        "introduction": "Turn self-criticism into supportive language.",
+        "challenge": "Whenever you catch harsh self-talk, work with the AI to rephrase it in a kinder, strength-based way.",
+        "reward": "Kinder inner voice and improved mood.",
+        "starting_question": "What harsh thought about yourself did you notice most recently?",
+        "ai_prompt": "Ask the user to share the harsh thought, model reframing into a kinder statement, and check how the new wording feels."
+    }
+]

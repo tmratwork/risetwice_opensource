@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Clean white background with rounded corners -->
+  <rect width="512" height="512" rx="120" fill="white" />
+  
+  <!-- Single continuous brush stroke forming both book and speech bubble -->
+  <path d="M170 300
+           C140 260, 150 200, 190 170
+           C230 140, 280 130, 320 160
+           C360 190, 380 230, 360 280
+           C340 330, 300 350, 250 330
+           C200 310, 180 270, 170 300
+           C160 330, 120 340, 150 370
+           C180 400, 230 410, 280 380
+           C330 350, 380 300, 340 240
+           C300 180, 230 150, 170 180
+           C110 210, 90 270, 130 310
+           C170 350, 220 360, 270 340
+           C320 320, 350 270, 330 220
+           C310 170, 260 140, 210 160
+           C160 180, 140 220, 170 300Z"
+        fill="none" 
+        stroke="black" 
+        stroke-width="12" 
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+  
+  <!-- Small dot element suggesting dialogue/interaction -->
+  <circle cx="290" cy="250" r="20" fill="black" />
+  
+</svg>

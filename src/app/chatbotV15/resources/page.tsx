@@ -1,0 +1,434 @@
+"use client";
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Home,
+  Utensils,
+  Heart,
+  Stethoscope,
+  Briefcase,
+  Rainbow,
+  Scale,
+  GraduationCap,
+  Car,
+  Shield,
+  Users,
+  Baby,
+  ShoppingBag,
+  CheckCircle,
+  Phone
+} from 'lucide-react';
+
+interface ResourceFunction {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  textColor: string;
+  functionName: string;
+  benefits: string[];
+  category: string;
+}
+
+export default function ResourcesV15Page() {
+  const router = useRouter();
+  const [selectedCard, setSelectedCard] = useState<ResourceFunction | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+
+  const resourceFunctions: ResourceFunction[] = [
+    // Emergency & Crisis
+    {
+      id: 'emergency_shelter',
+      title: 'Emergency Shelter',
+      subtitle: 'Safe Places to Stay Tonight',
+      description: 'Find emergency shelters and overnight accommodations specifically for youth experiencing homelessness.',
+      icon: Home,
+      color: 'from-red-500 to-pink-500',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
+      textColor: 'text-red-700',
+      functionName: 'emergency_shelter_function',
+      benefits: ['24/7 safe shelter', 'Youth-specific options', 'Immediate availability check'],
+      category: 'emergency'
+    },
+    {
+      id: 'crisis_mental_health',
+      title: 'Crisis Support',
+      subtitle: '24/7 Mental Health Help',
+      description: 'Access immediate mental health crisis resources including hotlines and emergency counseling services.',
+      icon: Phone,
+      color: 'from-purple-500 to-indigo-500',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
+      textColor: 'text-purple-700',
+      functionName: 'crisis_mental_health_function',
+      benefits: ['24/7 crisis hotlines', 'Text and chat options', 'Immediate support'],
+      category: 'emergency'
+    },
+    {
+      id: 'domestic_violence',
+      title: 'Safety Resources',
+      subtitle: 'Domestic Violence Support',
+      description: 'Get help if you\'re experiencing domestic violence, dating violence, or unsafe home situations.',
+      icon: Shield,
+      color: 'from-orange-500 to-red-500',
+      bgColor: 'bg-orange-50',
+      borderColor: 'border-orange-200',
+      textColor: 'text-orange-700',
+      functionName: 'domestic_violence_support_function',
+      benefits: ['Safety planning', 'Emergency shelter', 'Legal advocacy'],
+      category: 'emergency'
+    },
+
+    // Basic Needs
+    {
+      id: 'food_assistance',
+      title: 'Food Resources',
+      subtitle: 'Food Banks & Meal Programs',
+      description: 'Find food banks, pantries, meal programs, and free food resources when you\'re hungry.',
+      icon: Utensils,
+      color: 'from-green-500 to-emerald-500',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      textColor: 'text-green-700',
+      functionName: 'food_assistance_function',
+      benefits: ['Free meals and groceries', 'No eligibility requirements', 'Multiple locations'],
+      category: 'basic_needs'
+    },
+    {
+      id: 'healthcare_access',
+      title: 'Healthcare',
+      subtitle: 'Free & Low-Cost Medical Care',
+      description: 'Locate free and low-cost healthcare services, clinics, and medical resources for uninsured youth.',
+      icon: Stethoscope,
+      color: 'from-blue-500 to-cyan-500',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      textColor: 'text-blue-700',
+      functionName: 'healthcare_access_function',
+      benefits: ['Free clinics', 'Sliding scale fees', 'Mental health services'],
+      category: 'basic_needs'
+    },
+    {
+      id: 'basic_needs',
+      title: 'Essential Items',
+      subtitle: 'Hygiene & Clothing Resources',
+      description: 'Find resources for basic needs like hygiene products, clothing, and essential daily living items.',
+      icon: ShoppingBag,
+      color: 'from-teal-500 to-green-500',
+      bgColor: 'bg-teal-50',
+      borderColor: 'border-teal-200',
+      textColor: 'text-teal-700',
+      functionName: 'basic_needs_assistance_function',
+      benefits: ['Free clothing', 'Hygiene supplies', 'Personal care items'],
+      category: 'basic_needs'
+    },
+
+    // Support Services
+    {
+      id: 'lgbtq_support',
+      title: 'LGBTQ+ Support',
+      subtitle: 'Safe Spaces & Community',
+      description: 'Connect with LGBTQ+ affirming resources, support groups, and community services.',
+      icon: Rainbow,
+      color: 'from-pink-500 to-purple-500',
+      bgColor: 'bg-pink-50',
+      borderColor: 'border-pink-200',
+      textColor: 'text-pink-700',
+      functionName: 'lgbtq_support_function',
+      benefits: ['LGBTQ+ affirming services', 'Peer support groups', 'Safe spaces'],
+      category: 'support'
+    },
+    {
+      id: 'substance_abuse',
+      title: 'Addiction Support',
+      subtitle: 'Treatment & Recovery Resources',
+      description: 'Find substance abuse treatment, counseling, and recovery support services.',
+      icon: Heart,
+      color: 'from-indigo-500 to-purple-500',
+      bgColor: 'bg-indigo-50',
+      borderColor: 'border-indigo-200',
+      textColor: 'text-indigo-700',
+      functionName: 'substance_abuse_support_function',
+      benefits: ['Treatment programs', 'Support groups', 'Recovery coaching'],
+      category: 'support'
+    },
+    {
+      id: 'young_parent',
+      title: 'Young Parent Support',
+      subtitle: 'Resources for Teen Parents',
+      description: 'Access resources and support services specifically for teen parents and young families.',
+      icon: Baby,
+      color: 'from-yellow-500 to-orange-500',
+      bgColor: 'bg-yellow-50',
+      borderColor: 'border-yellow-200',
+      textColor: 'text-yellow-700',
+      functionName: 'young_parent_support_function',
+      benefits: ['Parenting classes', 'Childcare assistance', 'Family support'],
+      category: 'support'
+    },
+
+    // Development
+    {
+      id: 'job_search',
+      title: 'Job Search Help',
+      subtitle: 'Employment & Career Support',
+      description: 'Find job search resources, career counseling, and employment opportunities for youth.',
+      icon: Briefcase,
+      color: 'from-blue-600 to-indigo-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
+      textColor: 'text-blue-700',
+      functionName: 'job_search_assistance_function',
+      benefits: ['Resume help', 'Interview prep', 'Job placement'],
+      category: 'development'
+    },
+    {
+      id: 'educational_support',
+      title: 'Education Resources',
+      subtitle: 'GED, Tutoring & School Support',
+      description: 'Access educational resources including GED programs, tutoring, and academic support.',
+      icon: GraduationCap,
+      color: 'from-green-600 to-teal-600',
+      bgColor: 'bg-green-50',
+      borderColor: 'border-green-200',
+      textColor: 'text-green-700',
+      functionName: 'educational_support_function',
+      benefits: ['GED preparation', 'Tutoring', 'School enrollment help'],
+      category: 'development'
+    },
+    {
+      id: 'legal_aid',
+      title: 'Legal Help',
+      subtitle: 'Free Legal Assistance',
+      description: 'Find free legal assistance and advocacy services for youth dealing with legal issues.',
+      icon: Scale,
+      color: 'from-purple-600 to-indigo-600',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
+      textColor: 'text-purple-700',
+      functionName: 'legal_aid_function',
+      benefits: ['Free legal advice', 'Court advocacy', 'Document help'],
+      category: 'development'
+    },
+
+    // Community
+    {
+      id: 'transportation',
+      title: 'Transportation',
+      subtitle: 'Bus Passes & Ride Programs',
+      description: 'Find transportation resources including bus passes and ride programs for essential needs.',
+      icon: Car,
+      color: 'from-gray-600 to-blue-600',
+      bgColor: 'bg-gray-50',
+      borderColor: 'border-gray-200',
+      textColor: 'text-gray-700',
+      functionName: 'transportation_assistance_function',
+      benefits: ['Free bus passes', 'Emergency transportation', 'Gas vouchers'],
+      category: 'community'
+    },
+    {
+      id: 'community_programs',
+      title: 'Community Programs',
+      subtitle: 'Activities & Social Support',
+      description: 'Discover recreational activities, community programs, and positive youth development opportunities.',
+      icon: Users,
+      color: 'from-teal-600 to-green-600',
+      bgColor: 'bg-teal-50',
+      borderColor: 'border-teal-200',
+      textColor: 'text-teal-700',
+      functionName: 'community_programs_function',
+      benefits: ['Social activities', 'Skill building', 'Community connections'],
+      category: 'community'
+    }
+  ];
+
+  const categories = [
+    { id: 'all', label: 'All Resources' },
+    { id: 'emergency', label: 'Emergency' },
+    { id: 'basic_needs', label: 'Basic Needs' },
+    { id: 'support', label: 'Support' },
+    { id: 'development', label: 'Development' },
+    { id: 'community', label: 'Community' }
+  ];
+
+  const filteredResources = selectedCategory === 'all'
+    ? resourceFunctions
+    : resourceFunctions.filter(resource => resource.category === selectedCategory);
+
+  const handleResourceSelection = (functionName: string, parameters: Record<string, unknown>) => {
+    console.log('[ResourcesV15] handleResourceSelection called with:', { functionName, parameters });
+
+    // Find the selected resource card
+    const selectedCard = resourceFunctions.find(card => card.functionName === functionName);
+    console.log('[ResourcesV15] Found selected card:', selectedCard);
+
+    if (selectedCard) {
+      console.log('[ResourcesV15] Creating resource context for selected card');
+      // Store resource locator context in sessionStorage
+      const resourceContext = {
+        source: 'resource_locator',
+        timestamp: Date.now(),
+        mode: 'resource_locator',
+        selectedResource: {
+          id: selectedCard.id,
+          title: selectedCard.title,
+          subtitle: selectedCard.subtitle,
+          description: selectedCard.description,
+          functionName: selectedCard.functionName,
+          category: selectedCard.category,
+          parameters: parameters
+        }
+      };
+
+      sessionStorage.setItem('resourceLocatorContext', JSON.stringify(resourceContext));
+      console.log('[ResourcesV15] Stored resource context in sessionStorage:', resourceContext);
+
+      // Navigate to V15 chat page
+      console.log('[ResourcesV15] Navigating to V15 chat page');
+      router.push('/chatbotV15');
+    } else {
+      console.error('[ResourcesV15] No matching card found for functionName:', functionName);
+    }
+  };
+
+  const handleCardClick = (card: ResourceFunction) => {
+    setSelectedCard(card);
+  };
+
+  const handleStart = (functionName: string) => {
+    // Get default parameters for the function
+    const defaultParameters: Record<string, Record<string, unknown>> = {
+      emergency_shelter_function: { location: "user_location", urgency: "immediate" },
+      crisis_mental_health_function: { crisis_type: "general", urgency: "immediate" },
+      domestic_violence_support_function: { safety_level: "immediate", location: "user_location" },
+      food_assistance_function: { assistance_type: "immediate", family_size: 1 },
+      healthcare_access_function: { service_type: "general", insurance_status: "uninsured" },
+      basic_needs_assistance_function: { need_type: "hygiene_clothing", urgency: "immediate" },
+      lgbtq_support_function: { support_type: "general", age_group: "youth" },
+      substance_abuse_support_function: { treatment_type: "general", stage: "seeking_help" },
+      young_parent_support_function: { parent_age: "teen", child_age: "infant" },
+      job_search_assistance_function: { experience_level: "entry", job_type: "any" },
+      educational_support_function: { education_level: "ged", support_type: "general" },
+      legal_aid_function: { legal_issue: "general", urgency: "non_emergency" },
+      transportation_assistance_function: { transport_need: "general", urgency: "immediate" },
+      community_programs_function: { program_type: "general", age_group: "youth" }
+    };
+
+    const parameters = defaultParameters[functionName] || {};
+    handleResourceSelection(functionName, parameters);
+    setSelectedCard(null);
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-8 pt-20 bg-gray-900 min-h-screen">
+      <div className="pb-24">
+        {/* Header */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-white mb-2">Find Support Resources</h1>
+          <p className="text-gray-400">Connect with local resources and support services for youth</p>
+        </div>
+
+        {/* Category Filter */}
+        <div className="flex flex-wrap justify-center gap-2 mb-8">
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              onClick={() => setSelectedCategory(category.id)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategory === category.id
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                }`}
+            >
+              {category.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Resource Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredResources.map((resource) => {
+            const IconComponent = resource.icon;
+            return (
+              <div
+                key={resource.id}
+                onClick={() => handleCardClick(resource)}
+                className="bg-gray-800 border border-gray-700 rounded-xl p-6 hover:bg-gray-750 transition-all duration-200 cursor-pointer transform hover:scale-105 hover:shadow-lg"
+              >
+                <div className="flex items-start space-x-4">
+                  <div className={`p-3 rounded-lg bg-gradient-to-r ${resource.color}`}>
+                    <IconComponent className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-white mb-1">{resource.title}</h3>
+                    <p className="text-sm text-gray-400 mb-2">{resource.subtitle}</p>
+                    <p className="text-sm text-gray-300 leading-relaxed">{resource.description}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Modal */}
+        {selectedCard && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+            <div className="bg-gray-800 rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className={`p-6 bg-gradient-to-r ${selectedCard.color} rounded-t-xl`}>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center">
+                    <selectedCard.icon className="w-8 h-8 mr-3 text-white" />
+                    <div>
+                      <h2 className="text-xl font-bold text-white">{selectedCard.title}</h2>
+                      <p className="text-white opacity-90">{selectedCard.subtitle}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setSelectedCard(null)}
+                    className="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition-colors"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                <p className="text-gray-300 leading-relaxed">
+                  {selectedCard.description}
+                </p>
+
+                {/* Benefits */}
+                <div>
+                  <h4 className="font-semibold text-white mb-3">What you&apos;ll get:</h4>
+                  <div className="space-y-2">
+                    {selectedCard.benefits.map((benefit, index) => (
+                      <div key={index} className="flex items-center text-sm text-gray-300">
+                        <CheckCircle className="w-4 h-4 text-green-500 mr-2 flex-shrink-0" />
+                        {benefit}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action button */}
+                <button
+                  onClick={() => handleStart(selectedCard.functionName)}
+                  className={`w-full bg-gradient-to-r ${selectedCard.color} text-white font-semibold py-3 px-6 rounded-xl hover:shadow-lg transition-all duration-200 transform hover:scale-105`}
+                >
+                  Find {selectedCard.title}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

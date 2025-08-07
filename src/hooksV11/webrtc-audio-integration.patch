@@ -1,0 +1,187 @@
+# file: src/hooksV11/webrtc-audio-integration.patch
+# Patch file for use-webrtc.ts to integrate with audio-service
+
+## 1. Add imports for audio service
+```typescript
+// Add these imports at the top of the file
+import audioService from './audio-service';
+import { useAudioService } from './use-audio-service';
+```
+
+## 2. Add audio service hook to the main useWebRTC hook
+```typescript
+export default function useWebRTC({ userId, bookId }: UseWebRTCProps): WebRTCState {
+  // ...existing refs and state...
+  
+  // Add this to get access to the audio service
+  const { 
+    queueAudioData, 
+    handleStopSignal, 
+    clearAudioQueue, 
+    startNewMessage 
+  } = useAudioService();
+  
+  // ...rest of the hook...
+}
+```
+
+## 3. Modify the output_audio_buffer.push handler
+```typescript
+case "output_audio_buffer.push": {
+  if (msg.buffer) {
+    try {
+      // Store the timestamp when this buffer was received
+      const bufferReceivedTime = Date.now();
+      
+      // Get buffer size for diagnostics
+      const binaryString = atob(msg.buffer);
+      const bufferSize = binaryString.length;
+      
+      // Create a unique ID for this audio chunk for complete lifecycle tracking
+      const chunkId = `chunk-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+      
+      // Log for debugging
+      if (window.__audioBufferCount % 3 === 0 || bufferSize > 10000) {
+        console.log(`[WEBRTC-${msgId}] Received audio buffer #${window.__audioBufferCount || 0}, size: ${bufferSize} bytes`);
+      }
+      
+      // Convert base64 to ArrayBuffer - reuse the binary string from earlier
+      const bytes = new Uint8Array(bufferSize);
+      for (let i = 0; i < bufferSize; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      
+      // CHANGED: Use audio service instead of internal queue
+      queueAudioData(bytes.buffer, chunkId, msgId);
+      
+    } catch (error) {
+      console.error(`[WEBRTC-ERROR-${msgId}] Error processing audio buffer:`, error);
+    }
+  } else {
+    console.warn(`[WEBRTC-WARNING-${msgId}] Received output_audio_buffer.push without buffer data`);
+  }
+  break;
+}
+```
+
+## 4. Modify the output_audio_buffer.stopped handler
+```typescript
+case "output_audio_buffer.stopped": {
+  // Add diagnostics to see if audio completed before all audio data was received
+  console.log(`[WEBRTC-${msgId}] Audio output stopped signal received`);
+  
+  // CHANGED: Use audio service to handle stop signal
+  handleStopSignal(msgId);
+  
+  break;
+}
+```
+
+## 5. Modify the session initialization to set up a new message
+```typescript
+// In the function that handles session initialization or message start
+// (could be in handleUserMessageSent or similar function)
+
+// Add this line to start a new message session when sending user message
+startNewMessage(msgId);
+```
+
+## 6. Replace calls to the internal clearAudioQueue function
+```typescript
+// Replace any code like this:
+clearAudioQueue();
+
+// With this:
+clearAudioQueue(false); // false means don't force clear if playing important content
+
+// Or for forced clearing:
+clearAudioQueue(true); // true means force clear regardless of state
+```
+
+## 7. Modify the response.cancel handler (if present)
+```typescript
+case "response.cancel": {
+  console.log(`[WEBRTC-${msgId}] Response cancelled by user or system`);
+  
+  // CHANGED: Use audio service's force clear
+  clearAudioQueue(true); // Force clear because it's a user-initiated cancellation
+  
+  break;
+}
+```
+
+## 8. Cleanup on component unmount
+```typescript
+// In the component's cleanup useEffect
+useEffect(() => {
+  // ... existing cleanup code...
+  
+  return () => {
+    // ... existing cleanup code...
+    
+    // DO NOT clear audio here - the audio service will continue playback
+    // This is the key change that prevents audio cutoff during component remounts
+  };
+}, []);
+```
+
+## 9. For any manual cleanup (like farewell messages)
+```typescript
+// Instead of directly clearing the audio queue
+const finalizeConnection = useCallback(() => {
+  // ... existing cleanup code...
+  
+  // CHANGED: Don't clear audio queue here, just let it finish naturally
+  // The audio service will handle proper playback completion
+  
+  // ... rest of cleanup code...
+}, []);
+```
+
+## 10. Any references to audioQueueRef, isPlayingRef, and pendingChunksRef
+```typescript
+// Replace references like this:
+if (audioQueueRef.current.length > 0 || isPlayingRef.current || pendingChunksRef.current.size > 0) {
+  // ...
+}
+
+// With references to audio service state:
+const { audioState } = useAudioService();
+// ...
+if (audioState.queueLength > 0 || audioState.isPlaying || audioState.pendingChunksCount > 0) {
+  // ...
+}
+```
+
+## 11. For debugging UI and logging
+```typescript
+// If you have UI elements showing audio state, use the audioState from useAudioService:
+const { audioState } = useAudioService();
+
+return (
+  <div>
+    {/* ... */}
+    <div>Audio queue: {audioState.queueLength}</div>
+    <div>Playing: {audioState.isPlaying ? 'Yes' : 'No'}</div>
+    <div>Pending chunks: {audioState.pendingChunksCount}</div>
+    {/* ... */}
+  </div>
+);
+```
+
+## 12. For function call handlers that might clear audio
+```typescript
+// When handling function calls that might interrupt audio:
+const handleFunctionCall = useCallback((functionName, args) => {
+  // ... function call handling code ...
+  
+  // If need to clear audio for some function calls
+  if (functionName === 'some_function_that_resets_audio') {
+    // CHANGED: Use audio service with protection:
+    // Only clear if not in the middle of important playback
+    clearAudioQueue(false);
+  }
+  
+  // ... rest of function call code ...
+}, [clearAudioQueue]);
+```

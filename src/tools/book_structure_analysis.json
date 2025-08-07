@@ -1,0 +1,784 @@
+{
+  "bookPath": "/Users/tmr/github/living_books/src/tools/complete_book.txt",
+  "totalLines": 42315,
+  "totalCharacters": 3711023,
+  "totalSizeKB": "3624.0 KB",
+  "averageSectionSizeKB": "604.0",
+  "averageChapterSizeKB": "125.0",
+  "sections": [
+    {
+      "lineNumber": 1,
+      "sectionNumber": "1",
+      "title": "Conceptual frameworks",
+      "line": "Section 1 Conceptual frameworks"
+    },
+    {
+      "lineNumber": 9959,
+      "sectionNumber": "2",
+      "title": "Mood disorders",
+      "line": "Section 2 Mood disorders"
+    },
+    {
+      "lineNumber": 15376,
+      "sectionNumber": "3",
+      "title": "Anxiety disorders",
+      "line": "Section 3 Anxiety disorders"
+    },
+    {
+      "lineNumber": 22823,
+      "sectionNumber": "4",
+      "title": "Physical health problems",
+      "line": "Section 4 Physical health problems"
+    },
+    {
+      "lineNumber": 28773,
+      "sectionNumber": "5",
+      "title": "Other Significant Psychological Problems",
+      "line": "Section 5 Other Significant Psychological Problems"
+    },
+    {
+      "lineNumber": 36999,
+      "sectionNumber": "6",
+      "title": "Approaches to psychological distress related to complex childhood trauma",
+      "line": "Section 6 Approaches to psychological distress related to complex childhood trauma"
+    }
+  ],
+  "sectionSizes": [
+    {
+      "section": "1",
+      "title": "Conceptual frameworks",
+      "lines": 9958,
+      "words": 127769,
+      "characters": 849980,
+      "sizeKB": "830.1 KB"
+    },
+    {
+      "section": "2",
+      "title": "Mood disorders",
+      "lines": 5417,
+      "words": 76537,
+      "characters": 506827,
+      "sizeKB": "494.9 KB"
+    },
+    {
+      "section": "3",
+      "title": "Anxiety disorders",
+      "lines": 7447,
+      "words": 109801,
+      "characters": 731379,
+      "sizeKB": "714.2 KB"
+    },
+    {
+      "section": "4",
+      "title": "Physical health problems",
+      "lines": 5950,
+      "words": 84433,
+      "characters": 557290,
+      "sizeKB": "544.2 KB"
+    },
+    {
+      "section": "5",
+      "title": "Other Significant Psychological Problems",
+      "lines": 8226,
+      "words": 100102,
+      "characters": 672773,
+      "sizeKB": "657.0 KB"
+    },
+    {
+      "section": "6",
+      "title": "Approaches to psychological distress related to complex childhood trauma",
+      "lines": 5317,
+      "words": 59377,
+      "characters": 392769,
+      "sizeKB": "383.6 KB"
+    }
+  ],
+  "chapters": [
+    {
+      "lineNumber": 3,
+      "chapterNumber": "1",
+      "title": "Normal psychological development in adulthood",
+      "line": "Chapter 1 Normal psychological development in adulthood"
+    },
+    {
+      "lineNumber": 1498,
+      "chapterNumber": "2",
+      "title": "Classification and epidemiology",
+      "line": "Chapter 2 Classification and epidemiology"
+    },
+    {
+      "lineNumber": 2544,
+      "chapterNumber": "3",
+      "title": "Cognitive behaviour therapy",
+      "line": "Chapter 3 Cognitive behaviour therapy"
+    },
+    {
+      "lineNumber": 3949,
+      "chapterNumber": "4",
+      "title": "Psychodynamic therapy",
+      "line": "Chapter 4 Psychodynamic therapy"
+    },
+    {
+      "lineNumber": 5419,
+      "chapterNumber": "5",
+      "title": "Emotion-focused therapy",
+      "line": "Chapter 5 Emotion-focused therapy"
+    },
+    {
+      "lineNumber": 6261,
+      "chapterNumber": "6",
+      "title": "Systemic couple therapy",
+      "line": "Chapter 6 Systemic couple therapy"
+    },
+    {
+      "lineNumber": 8056,
+      "chapterNumber": "7",
+      "title": "Biomedical approaches and use of drugs to treat adult mental health problems",
+      "line": "Chapter 7 Biomedical approaches and use of drugs to treat adult mental health problems"
+    },
+    {
+      "lineNumber": 9057,
+      "chapterNumber": "8",
+      "title": "Intake interviews, testing and report writing",
+      "line": "Chapter 8 Intake interviews, testing and report writing"
+    },
+    {
+      "lineNumber": 9961,
+      "chapterNumber": "9",
+      "title": "Depression",
+      "line": "Chapter 9 Depression"
+    },
+    {
+      "lineNumber": 11921,
+      "chapterNumber": "10",
+      "title": "Bipolar disorder",
+      "line": "Chapter 10 Bipolar disorder"
+    },
+    {
+      "lineNumber": 13357,
+      "chapterNumber": "11",
+      "title": "Suicide risk",
+      "line": "Chapter 11 Suicide risk"
+    },
+    {
+      "lineNumber": 14413,
+      "chapterNumber": "12",
+      "title": "Anger",
+      "line": "Chapter 12 Anger"
+    },
+    {
+      "lineNumber": 15378,
+      "chapterNumber": "13",
+      "title": "Social anxiety disorder",
+      "line": "Chapter 13 Social anxiety disorder"
+    },
+    {
+      "lineNumber": 16601,
+      "chapterNumber": "14",
+      "title": "Generalised anxiety disorder",
+      "line": "Chapter 14 Generalised anxiety disorder"
+    },
+    {
+      "lineNumber": 17693,
+      "chapterNumber": "15",
+      "title": "Panic disorder and agoraphobia",
+      "line": "Chapter 15 Panic disorder and agoraphobia"
+    },
+    {
+      "lineNumber": 18670,
+      "chapterNumber": "16",
+      "title": "Obsessive-compulsive disorder",
+      "line": "Chapter 16 Obsessive-compulsive disorder"
+    },
+    {
+      "lineNumber": 19541,
+      "chapterNumber": "17",
+      "title": "Post-traumatic stress disorder",
+      "line": "Chapter 17 Post-traumatic stress disorder"
+    },
+    {
+      "lineNumber": 20552,
+      "chapterNumber": "18",
+      "title": "Depersonalization disorder",
+      "line": "Chapter 18 Depersonalization disorder"
+    },
+    {
+      "lineNumber": 22825,
+      "chapterNumber": "19",
+      "title": "Health anxiety and somatization",
+      "line": "Chapter 19 Health anxiety and somatization"
+    },
+    {
+      "lineNumber": 23874,
+      "chapterNumber": "20",
+      "title": "Chronic Pain",
+      "line": "Chapter 20 Chronic Pain"
+    },
+    {
+      "lineNumber": 26091,
+      "chapterNumber": "21",
+      "title": "Psychological Assessment and Treatment in Cancer Care",
+      "line": "Chapter 21 Psychological Assessment and Treatment in Cancer Care"
+    },
+    {
+      "lineNumber": 27195,
+      "chapterNumber": "22",
+      "title": "Eating Disorders",
+      "line": "Chapter 22 Eating Disorders"
+    },
+    {
+      "lineNumber": 28775,
+      "chapterNumber": "23",
+      "title": "Attention Deficit Hyperactivity Disorder in Adults",
+      "line": "Chapter 23 Attention Deficit Hyperactivity Disorder in Adults"
+    },
+    {
+      "lineNumber": 29946,
+      "chapterNumber": "24",
+      "title": "Alcohol and Other Drug Problems",
+      "line": "Chapter 24 Alcohol and Other Drug Problems"
+    },
+    {
+      "lineNumber": 32528,
+      "chapterNumber": "25",
+      "title": "Psychosis",
+      "line": "Chapter 25 Psychosis"
+    },
+    {
+      "lineNumber": 35533,
+      "chapterNumber": "26",
+      "title": "Psychological problems of older people",
+      "line": "Chapter 26 Psychological problems of older people"
+    },
+    {
+      "lineNumber": 37002,
+      "chapterNumber": "27",
+      "title": "Dialectical behaviour therapy for borderline personality disorder",
+      "line": "Chapter 27 Dialectical behaviour therapy for borderline personality disorder"
+    },
+    {
+      "lineNumber": 38755,
+      "chapterNumber": "28",
+      "title": "Radically open-dialectical behaviour therapy for overcontrolled disorders",
+      "line": "Chapter 28 Radically open-dialectical behaviour therapy for overcontrolled disorders"
+    },
+    {
+      "lineNumber": 40567,
+      "chapterNumber": "29",
+      "title": "Schema therapy",
+      "line": "Chapter 29 Schema therapy"
+    }
+  ],
+  "chapterSizes": [
+    {
+      "chapter": "1",
+      "title": "Normal psychological development in adulthood",
+      "section": "1",
+      "lines": 1495,
+      "words": 17454,
+      "characters": 115770,
+      "sizeKB": "113.1 KB"
+    },
+    {
+      "chapter": "2",
+      "title": "Classification and epidemiology",
+      "section": "1",
+      "lines": 1046,
+      "words": 11701,
+      "characters": 85563,
+      "sizeKB": "83.6 KB"
+    },
+    {
+      "chapter": "3",
+      "title": "Cognitive behaviour therapy",
+      "section": "1",
+      "lines": 1405,
+      "words": 18262,
+      "characters": 115564,
+      "sizeKB": "112.9 KB"
+    },
+    {
+      "chapter": "4",
+      "title": "Psychodynamic therapy",
+      "section": "1",
+      "lines": 1470,
+      "words": 20217,
+      "characters": 129171,
+      "sizeKB": "126.1 KB"
+    },
+    {
+      "chapter": "5",
+      "title": "Emotion-focused therapy",
+      "section": "1",
+      "lines": 842,
+      "words": 12508,
+      "characters": 85796,
+      "sizeKB": "83.8 KB"
+    },
+    {
+      "chapter": "6",
+      "title": "Systemic couple therapy",
+      "section": "1",
+      "lines": 1795,
+      "words": 22825,
+      "characters": 147084,
+      "sizeKB": "143.6 KB"
+    },
+    {
+      "chapter": "7",
+      "title": "Biomedical approaches and use of drugs to treat adult mental health problems",
+      "section": "1",
+      "lines": 1001,
+      "words": 12517,
+      "characters": 87611,
+      "sizeKB": "85.6 KB"
+    },
+    {
+      "chapter": "8",
+      "title": "Intake interviews, testing and report writing",
+      "section": "1",
+      "lines": 904,
+      "words": 12292,
+      "characters": 83407,
+      "sizeKB": "81.5 KB"
+    },
+    {
+      "chapter": "9",
+      "title": "Depression",
+      "section": "2",
+      "lines": 1960,
+      "words": 27397,
+      "characters": 181637,
+      "sizeKB": "177.4 KB"
+    },
+    {
+      "chapter": "10",
+      "title": "Bipolar disorder",
+      "section": "2",
+      "lines": 1436,
+      "words": 21366,
+      "characters": 138600,
+      "sizeKB": "135.4 KB"
+    },
+    {
+      "chapter": "11",
+      "title": "Suicide risk",
+      "section": "2",
+      "lines": 1056,
+      "words": 14008,
+      "characters": 93902,
+      "sizeKB": "91.7 KB"
+    },
+    {
+      "chapter": "12",
+      "title": "Anger",
+      "section": "2",
+      "lines": 965,
+      "words": 13769,
+      "characters": 92688,
+      "sizeKB": "90.5 KB"
+    },
+    {
+      "chapter": "13",
+      "title": "Social anxiety disorder",
+      "section": "3",
+      "lines": 1223,
+      "words": 17771,
+      "characters": 117073,
+      "sizeKB": "114.3 KB"
+    },
+    {
+      "chapter": "14",
+      "title": "Generalised anxiety disorder",
+      "section": "3",
+      "lines": 1092,
+      "words": 15175,
+      "characters": 99476,
+      "sizeKB": "97.1 KB"
+    },
+    {
+      "chapter": "15",
+      "title": "Panic disorder and agoraphobia",
+      "section": "3",
+      "lines": 977,
+      "words": 13872,
+      "characters": 93358,
+      "sizeKB": "91.2 KB"
+    },
+    {
+      "chapter": "16",
+      "title": "Obsessive-compulsive disorder",
+      "section": "3",
+      "lines": 871,
+      "words": 13371,
+      "characters": 87202,
+      "sizeKB": "85.2 KB"
+    },
+    {
+      "chapter": "17",
+      "title": "Post-traumatic stress disorder",
+      "section": "3",
+      "lines": 1011,
+      "words": 15422,
+      "characters": 102674,
+      "sizeKB": "100.3 KB"
+    },
+    {
+      "chapter": "18",
+      "title": "Depersonalization disorder",
+      "section": "3",
+      "lines": 2273,
+      "words": 34196,
+      "characters": 231598,
+      "sizeKB": "226.2 KB"
+    },
+    {
+      "chapter": "19",
+      "title": "Health anxiety and somatization",
+      "section": "4",
+      "lines": 1049,
+      "words": 15621,
+      "characters": 101402,
+      "sizeKB": "99.0 KB"
+    },
+    {
+      "chapter": "20",
+      "title": "Chronic Pain",
+      "section": "4",
+      "lines": 2217,
+      "words": 27247,
+      "characters": 182993,
+      "sizeKB": "178.7 KB"
+    },
+    {
+      "chapter": "21",
+      "title": "Psychological Assessment and Treatment in Cancer Care",
+      "section": "4",
+      "lines": 1104,
+      "words": 17564,
+      "characters": 115153,
+      "sizeKB": "112.5 KB"
+    },
+    {
+      "chapter": "22",
+      "title": "Eating Disorders",
+      "section": "4",
+      "lines": 1580,
+      "words": 24005,
+      "characters": 157755,
+      "sizeKB": "154.1 KB"
+    },
+    {
+      "chapter": "23",
+      "title": "Attention Deficit Hyperactivity Disorder in Adults",
+      "section": "5",
+      "lines": 1171,
+      "words": 16200,
+      "characters": 108171,
+      "sizeKB": "105.6 KB"
+    },
+    {
+      "chapter": "24",
+      "title": "Alcohol and Other Drug Problems",
+      "section": "5",
+      "lines": 2582,
+      "words": 29014,
+      "characters": 191028,
+      "sizeKB": "186.6 KB"
+    },
+    {
+      "chapter": "25",
+      "title": "Psychosis",
+      "section": "5",
+      "lines": 3005,
+      "words": 36991,
+      "characters": 254432,
+      "sizeKB": "248.5 KB"
+    },
+    {
+      "chapter": "26",
+      "title": "Psychological problems of older people",
+      "section": "5",
+      "lines": 1469,
+      "words": 17905,
+      "characters": 119172,
+      "sizeKB": "116.4 KB"
+    },
+    {
+      "chapter": "27",
+      "title": "Dialectical behaviour therapy for borderline personality disorder",
+      "section": "6",
+      "lines": 1753,
+      "words": 20719,
+      "characters": 139803,
+      "sizeKB": "136.5 KB"
+    },
+    {
+      "chapter": "28",
+      "title": "Radically open-dialectical behaviour therapy for overcontrolled disorders",
+      "section": "6",
+      "lines": 1812,
+      "words": 20356,
+      "characters": 138359,
+      "sizeKB": "135.1 KB"
+    },
+    {
+      "chapter": "29",
+      "title": "Schema therapy",
+      "section": "6",
+      "lines": 1749,
+      "words": 18293,
+      "characters": 114520,
+      "sizeKB": "111.8 KB"
+    }
+  ],
+  "chaptersPerSection": [
+    {
+      "chapter": "1",
+      "title": "Normal psychological development in adulthood",
+      "section": "1"
+    },
+    {
+      "chapter": "2",
+      "title": "Classification and epidemiology",
+      "section": "1"
+    },
+    {
+      "chapter": "3",
+      "title": "Cognitive behaviour therapy",
+      "section": "1"
+    },
+    {
+      "chapter": "4",
+      "title": "Psychodynamic therapy",
+      "section": "1"
+    },
+    {
+      "chapter": "5",
+      "title": "Emotion-focused therapy",
+      "section": "1"
+    },
+    {
+      "chapter": "6",
+      "title": "Systemic couple therapy",
+      "section": "1"
+    },
+    {
+      "chapter": "7",
+      "title": "Biomedical approaches and use of drugs to treat adult mental health problems",
+      "section": "1"
+    },
+    {
+      "chapter": "8",
+      "title": "Intake interviews, testing and report writing",
+      "section": "1"
+    },
+    {
+      "chapter": "9",
+      "title": "Depression",
+      "section": "2"
+    },
+    {
+      "chapter": "10",
+      "title": "Bipolar disorder",
+      "section": "2"
+    },
+    {
+      "chapter": "11",
+      "title": "Suicide risk",
+      "section": "2"
+    },
+    {
+      "chapter": "12",
+      "title": "Anger",
+      "section": "2"
+    },
+    {
+      "chapter": "13",
+      "title": "Social anxiety disorder",
+      "section": "3"
+    },
+    {
+      "chapter": "14",
+      "title": "Generalised anxiety disorder",
+      "section": "3"
+    },
+    {
+      "chapter": "15",
+      "title": "Panic disorder and agoraphobia",
+      "section": "3"
+    },
+    {
+      "chapter": "16",
+      "title": "Obsessive-compulsive disorder",
+      "section": "3"
+    },
+    {
+      "chapter": "17",
+      "title": "Post-traumatic stress disorder",
+      "section": "3"
+    },
+    {
+      "chapter": "18",
+      "title": "Depersonalization disorder",
+      "section": "3"
+    },
+    {
+      "chapter": "19",
+      "title": "Health anxiety and somatization",
+      "section": "4"
+    },
+    {
+      "chapter": "20",
+      "title": "Chronic Pain",
+      "section": "4"
+    },
+    {
+      "chapter": "21",
+      "title": "Psychological Assessment and Treatment in Cancer Care",
+      "section": "4"
+    },
+    {
+      "chapter": "22",
+      "title": "Eating Disorders",
+      "section": "4"
+    },
+    {
+      "chapter": "23",
+      "title": "Attention Deficit Hyperactivity Disorder in Adults",
+      "section": "5"
+    },
+    {
+      "chapter": "24",
+      "title": "Alcohol and Other Drug Problems",
+      "section": "5"
+    },
+    {
+      "chapter": "25",
+      "title": "Psychosis",
+      "section": "5"
+    },
+    {
+      "chapter": "26",
+      "title": "Psychological problems of older people",
+      "section": "5"
+    },
+    {
+      "chapter": "27",
+      "title": "Dialectical behaviour therapy for borderline personality disorder",
+      "section": "6"
+    },
+    {
+      "chapter": "28",
+      "title": "Radically open-dialectical behaviour therapy for overcontrolled disorders",
+      "section": "6"
+    },
+    {
+      "chapter": "29",
+      "title": "Schema therapy",
+      "section": "6"
+    }
+  ],
+  "possibleSubsections": [
+    {
+      "lineNumber": 11,
+      "title": "Family lifecycle",
+      "context": "normal family lifecycle. | Family lifecycle | Most models of the family lifecycle are based upon the norm of the traditional nuclear family with other family forms being conceptualized"
+    },
+    {
+      "lineNumber": 18,
+      "title": "Leaving home",
+      "context": " | Leaving home | In the first stage of family development, which is marked by young adult children leaving home and developing emotional and financial"
+    },
+    {
+      "lineNumber": 23,
+      "title": "Forming a couple",
+      "context": "community and society. | Forming a couple | The second stage is that of couple formation, where the main process is commitment to a long-term relationship. The principal tasks include"
+    },
+    {
+      "lineNumber": 41,
+      "title": "Stage",
+      "context": "Table 1.1 Stages of the family lifecycle | Stage | Leaving home"
+    },
+    {
+      "lineNumber": 42,
+      "title": "Leaving home",
+      "context": "Stage | Leaving home | Emotional transition processes"
+    },
+    {
+      "lineNumber": 43,
+      "title": "Emotional transition processes",
+      "context": "Leaving home | Emotional transition processes | Developing emotional and financial autonomy"
+    },
+    {
+      "lineNumber": 45,
+      "title": "Forming a couple",
+      "context": "Developing emotional and financial autonomy | Forming a couple | Committing to a long-term relationship"
+    },
+    {
+      "lineNumber": 52,
+      "title": "Developing intimate peer relationships",
+      "context": "parents | Developing intimate peer relationships | Beginning a career and moving towards financial"
+    },
+    {
+      "lineNumber": 69,
+      "title": "Families with adolescents",
+      "context": " | Families with adolescents | Launching children and"
+    },
+    {
+      "lineNumber": 70,
+      "title": "Launching children and",
+      "context": "Families with adolescents | Launching children and | moving into midlife"
+    },
+    {
+      "lineNumber": 80,
+      "title": "Accepting new generational roles",
+      "context": "family system | Accepting new generational roles | Realigning family relationships with community and"
+    },
+    {
+      "lineNumber": 128,
+      "title": "Marital satisfaction",
+      "context": "contribute to the aetiology and maintenance of psychological difficulties. | Marital satisfaction | The following demographic factors are associated with marital satisfaction (Conger et al., 2010; Fincham & Beach, 2010; Gottman &"
+    },
+    {
+      "lineNumber": 147,
+      "title": "Marital interaction",
+      "context": "that it is sexual compatibility rather than frequency of sexual activity that is associated with marital satisfaction. | Marital interaction | Studies of belief systems and interaction patterns of well-adjusted couples show that they have distinctive features (Casey et al., 2010;"
+    },
+    {
+      "lineNumber": 190,
+      "title": "Types of marriages",
+      "context": "and to regulate their emotions so as to maximize relationship satisfaction. | Types of marriages | Fitzpatrick (1988) and Gottman (1993) have both identified three types of stable satisfactory marriages in questionnaire and observational"
+    },
+    {
+      "lineNumber": 204,
+      "title": "Intimate partner violence",
+      "context": "autonomy and in keeping attraction alive over long periods. | Intimate partner violence | Violence within intimate relationships is common. In a review of international community surveys Alhabib et al. (2010) found that while"
+    },
+    {
+      "lineNumber": 229,
+      "title": "Characteristics",
+      "context": "Stability Type | Characteristics | Stable Traditional couples"
+    },
+    {
+      "lineNumber": 239,
+      "title": "Androgynous couples",
+      "context": " | Androgynous couples | • At the outset of an episode of conflict resolution, each partner listens to the other and"
+    },
+    {
+      "lineNumber": 252,
+      "title": "Avoidant couples",
+      "context": "• A high level of both positive and negative emotions | Avoidant couples | • They adopt traditional sex roles"
+    },
+    {
+      "lineNumber": 269,
+      "title": "Disengaged couples",
+      "context": " | Disengaged couples | • They avoid conflict and have few conflict resolution skills"
+    },
+    {
+      "lineNumber": 289,
+      "title": "Families with young children",
+      "context": "Stith et al., 2005). | Families with young children | In the third stage of the family lifecycle model given in Table 1.1, the main tasks are for couples to adjust their roles within their"
+    }
+  ]
+}

@@ -1,0 +1,273 @@
+@import 'tailwindcss';
+
+/* Define custom dark mode variant */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* Define theme variables */
+@theme {
+  /* Light mode variables */
+  --background: #ffffff;
+  --foreground: #171717;
+  --bg-primary: #f1f5f9;
+  --bg-secondary: #e2e8f0;
+  --border-color: #cbd5e1;
+  --text-primary: #1e293b;
+  --text-secondary: #475569;
+  --button-primary: #4f46e5;
+  --button-hover: #4338ca;
+  --button-danger: #dc2626;
+  --button-danger-hover: #b91c1c;
+  --message-user: #3b82f6;
+  --message-assistant: #94a3b8;
+  --message-system: #cbd5e1;
+}
+
+/* Use @variant for dark mode variables */
+@layer base {
+  @variant dark {
+    --background: #131314;
+    --foreground: #ededed;
+    --bg-primary: #131314;
+    --bg-secondary: #1e1e1f;
+    --border-color: #2a2a2a;
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --button-primary: #4f46e5;
+    --button-hover: #4338ca;
+    --button-danger: #dc2626;
+    --button-danger-hover: #b91c1c;
+    --message-user: #2563eb;
+    --message-assistant: #222222;
+    --message-system: #333333;
+  }
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Ensure all form elements have good contrast */
+option, 
+select, 
+input, 
+textarea, 
+button,
+.text-content {
+  color: #1f2937; /* text-gray-800 equivalent */
+  font-weight: 500; /* font-medium equivalent */
+}
+
+option {
+  background-color: white;
+}
+
+/* Override disabled states with better contrast */
+select:disabled,
+input:disabled,
+textarea:disabled,
+button:disabled {
+  color: #4b5563 !important; /* text-gray-600 for better contrast when disabled */
+  opacity: 0.8;
+}
+
+/* Styles for StabilizedWebRTCWrapper and WebRTCModularUIStable components */
+.webrtc-page-container {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+}
+
+.webrtc-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.webrtc-stabilizing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border-radius: 0.75rem;
+  background-color: rgba(30, 41, 59, 0.05);
+  min-height: 150px;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.webrtc-error {
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border-radius: 0.5rem;
+  background-color: rgba(220, 38, 38, 0.1);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+  color: #ef4444;
+  font-size: 0.875rem;
+  width: 100%;
+  max-width: 400px;
+  text-align: center;
+}
+
+.webrtc-connecting {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 0.5rem;
+  background-color: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.3);
+  color: #2563eb;
+  font-size: 0.875rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.webrtc-recording-indicator {
+  display: flex;
+  align-items: center;
+  font-size: 0.875rem;
+  color: #ffffff;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 9999px;
+  padding: 0.375rem 0.875rem;
+  margin-bottom: 1rem;
+}
+
+.webrtc-offline-indicator {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  margin: 0.5rem 0;
+  border-radius: 0.375rem;
+  background-color: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 0.75rem;
+}
+
+.recording-dot {
+  width: 0.625rem;
+  height: 0.625rem;
+  background-color: #ef4444;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  animation: pulse 1.5s infinite;
+}
+
+.webrtc-start-button {
+  background-color: #3b82f6;
+  color: white;
+  font-weight: 500;
+  padding: 0.625rem 1.25rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+.webrtc-start-button:hover {
+  background-color: #2563eb;
+  transform: translateY(-1px);
+}
+
+.webrtc-start-button:active {
+  transform: translateY(0px);
+}
+
+.retry-button {
+  background-color: #ef4444;
+  color: white;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  transition: background-color 0.2s;
+  font-size: 0.875rem;
+}
+
+.retry-button:hover:not(:disabled) {
+  background-color: #dc2626;
+}
+
+.retry-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Loading spinner */
+.loading-spinner {
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid rgba(59, 130, 246, 0.3);
+  border-radius: 50%;
+  border-top-color: #3b82f6;
+  animation: spin 1s ease-in-out infinite;
+  margin-bottom: 0.75rem;
+}
+
+/* Network status indicator */
+.network-status-indicator {
+  position: fixed;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+}
+
+.status-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+}
+
+.bg-green-500 {
+  background-color: #10b981;
+}
+
+.bg-red-500 {
+  background-color: #ef4444;
+}
+
+.network-offline-message {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 0.5rem;
+}
+
+.build-version {
+  position: fixed;
+  bottom: 0.5rem;
+  right: 0.5rem;
+  opacity: 0.5;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

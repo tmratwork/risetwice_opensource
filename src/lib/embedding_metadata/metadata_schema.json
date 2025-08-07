@@ -1,0 +1,284 @@
+{
+  "namespace": "trauma_informed_youth_mental_health_companion_v250420",
+  "metadata_fields": {
+    "content_types": {
+      "description": "The type of content in the chunk (dialogue_example, table, module, etc.)",
+      "possible_values": [
+        "dialogue_example",
+        "module",
+        "references",
+        "table"
+      ],
+      "is_array": true,
+      "query_type": "$in operator (array contains any value)"
+    },
+    "principles": {
+      "description": "Trauma-informed care principles mentioned in the chunk",
+      "possible_values": [
+        "collaboration",
+        "cultural_humility",
+        "empowerment",
+        "safety",
+        "trust"
+      ],
+      "is_array": true,
+      "query_type": "$in operator (array contains any value)"
+    },
+    "techniques": {
+      "description": "Therapeutic techniques mentioned in the chunk",
+      "possible_values": [
+        "CBT",
+        "DBT",
+        "MI",
+        "TIC",
+        "grounding",
+        "problem_solving",
+        "validation"
+      ],
+      "is_array": true,
+      "query_type": "$in operator (array contains any value)"
+    },
+    "scenarios": {
+      "description": "User scenarios addressed in the chunk",
+      "possible_values": [
+        "basic_needs",
+        "distress",
+        "mistrust",
+        "safety_concern",
+        "substance_use",
+        "trauma_triggers"
+      ],
+      "is_array": true,
+      "query_type": "$in operator (array contains any value)"
+    },
+    "function_mapping": {
+      "description": "AI functions that should be triggered based on content",
+      "possible_values": [
+        "crisis_response_function",
+        "cultural_humility_function",
+        "grounding_function",
+        "problem_solving_function",
+        "psychoeducation_function",
+        "screening_function",
+        "thought_exploration_function",
+        "user_history_function",
+        "validation_function"
+      ],
+      "is_array": true,
+      "query_type": "$in operator (array contains any value)"
+    },
+    "urgency_level": {
+      "description": "Urgency level of the content (high, medium, normal)",
+      "possible_values": [
+        "high",
+        "medium",
+        "normal"
+      ],
+      "is_array": false,
+      "query_type": "exact match (equality)"
+    },
+    "conversation_stage": {
+      "description": "Which conversation stage this content applies to (initial, ongoing)",
+      "possible_values": [
+        "initial",
+        "ongoing"
+      ],
+      "is_array": false,
+      "query_type": "exact match (equality)"
+    },
+    "response_type": {
+      "description": "Suggested response type (ask_questions, call_function)",
+      "possible_values": [
+        "ask_questions",
+        "call_function"
+      ],
+      "is_array": false,
+      "query_type": "exact match (equality)"
+    },
+    "section": {
+      "description": "Document section title",
+      "possible_values": [
+        "Conclusion",
+        "Core Interaction Style - Foundations in Trauma-Informed Care (TIC) and Motivational Interviewing (MI)",
+        "Example Dialogue Flows",
+        "Incorporating Cultural Humility and Affirming Diverse Identities",
+        "Introduction",
+        "Safety and Crisis Response Protocols",
+        "Sensitive Integration of Screening Tools",
+        "Therapeutic Skill Module Design",
+        "User-Controlled Warm Hand-off Summary Sheet",
+        "Works Cited"
+      ],
+      "is_array": false,
+      "query_type": "exact match (equality)"
+    },
+    "subsection": {
+      "description": "Document subsection title",
+      "possible_values": [
+        "1.1 Defining the AI's Empathetic and Trustworthy Persona",
+        "1.2 Applying TIC Principles in AI Dialogue",
+        "1.3 Integrating MI Techniques (OARS) for Engagement and Support",
+        "1.4 Strategies for Building Rapport with Mistrustful Youth",
+        "2.1 Scenario: Expressing General Distress",
+        "2.1+N: Screens for substance use (alcohol, marijuana, other drugs) and associated risks, plus nicotine/vaping, in adolescents (ages 12-21).147 Self-administered versions are available and preferred by youth.81 (Note: CAGE/CAGE-AID is less recommended for adolescents 269).",
+        "2.2 Scenario: Inquiries about Basic Needs",
+        "2.3 Scenario: Expressions of Mistrust",
+        "2.4 Scenario: Discussions about Substance Use",
+        "2.5 Scenario: Exploration of Goals/Aspirations",
+        "2.6 Scenario: Responses to Trauma Triggers",
+        "3.1 Module: Grounding Techniques",
+        "3.2 Module: Simple CBT Thought Record",
+        "3.3 Module: DBT Skills (STOP/TIPP)",
+        "3.4 Module: Problem-Solving Steps",
+        "3.5 Module: MI Decisional Balance",
+        "3.6 Module: Anger/Stress Management Techniques",
+        "3.7 Module: Basic Psychoeducation Delivery",
+        "4.1 Rationale and Tool Selection",
+        "4.2 Protocols for Natural and Sensitive Integration",
+        "5.1 Functionality Design",
+        "5.2 Granular Consent Mechanism",
+        "5.3 Dialogue Examples for Feature Explanation and Consent",
+        "6.1 Communicating Limitations",
+        "6.2 Crisis Response Protocol (Suicidal Ideation/Self-Harm - SI/SH)",
+        "6.3 Mandatory Reporting Disclosures (If Applicable)",
+        "7.1 Using Inclusive and Affirming Language",
+        "7.2 Offering Identity-Specific Resources",
+        "7.3 Respectfully Acknowledging Cultural Context",
+        "7.4 Continuous Learning and Bias Mitigation"
+      ],
+      "is_array": false,
+      "query_type": "exact match (equality)"
+    },
+    "section_number": {
+      "description": "Section number in the document",
+      "possible_values": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7"
+      ],
+      "is_array": false,
+      "query_type": "exact match (equality)"
+    },
+    "subsection_number": {
+      "description": "Subsection number in the document",
+      "possible_values": [
+        "1.1",
+        "1.2",
+        "1.3",
+        "1.4",
+        "2.1",
+        "2.2",
+        "2.3",
+        "2.4",
+        "2.5",
+        "2.6",
+        "3.1",
+        "3.2",
+        "3.3",
+        "3.4",
+        "3.5",
+        "3.6",
+        "3.7",
+        "4.1",
+        "4.2",
+        "5.1",
+        "5.2",
+        "5.3",
+        "6.1",
+        "6.2",
+        "6.3",
+        "7.1",
+        "7.2",
+        "7.3",
+        "7.4"
+      ],
+      "is_array": false,
+      "query_type": "exact match (equality)"
+    }
+  },
+  "query_examples": [
+    {
+      "description": "Find chunks about grounding techniques for users in distress",
+      "query": {
+        "techniques": {
+          "$in": [
+            "grounding"
+          ]
+        },
+        "scenarios": {
+          "$in": [
+            "distress"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Find high urgency safety protocols",
+      "query": {
+        "urgency_level": "high",
+        "principles": {
+          "$in": [
+            "safety"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Find dialogue examples for trauma triggers",
+      "query": {
+        "content_types": {
+          "$in": [
+            "dialogue_example"
+          ]
+        },
+        "scenarios": {
+          "$in": [
+            "trauma_triggers"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Find content related to the crisis response function",
+      "query": {
+        "function_mapping": {
+          "$in": [
+            "crisis_response_function"
+          ]
+        }
+      }
+    },
+    {
+      "description": "Find all content from a specific section",
+      "query": {
+        "section": "Trauma-Informed Interaction Principles"
+      }
+    }
+  ],
+  "query_syntax": {
+    "exact_match": "field: 'value'",
+    "array_contains": "field: {'$in': ['value1', 'value2']}",
+    "combined_filters": "Use AND logic by adding multiple conditions to the same query object",
+    "pinecone_sdk": "index.query(vector=embedding, filter=query_object, namespace=NAMESPACE)",
+    "notes": "Filter queries in Pinecone require exact matches - use lowercase, watch for spaces and special characters"
+  },
+  "implementation": {
+    "nextjs_implementation": [
+      "1. Import schema at build time in your Next.js app",
+      "2. Use filter builders to construct valid queries based on user intent",
+      "3. Generate embedding from user query with same model (text-embedding-3-large)",
+      "4. Combine semantic search (vector) with metadata filters for hybrid search",
+      "5. Handle empty fields appropriately (they won't be included in Pinecone vectors)"
+    ],
+    "client_side_usage": [
+      "Use dropdown menus or checkboxes for array fields",
+      "Radio buttons for single-value fields like urgency_level",
+      "Auto-complete from known values to prevent query errors",
+      "Show users available filters based on schema"
+    ]
+  }
+}

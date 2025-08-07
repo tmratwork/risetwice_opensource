@@ -1,0 +1,982 @@
+/* chatbotV15.css */
+
+/* V15 Layout Root - CSS Grid three-row layout */
+.v15-layout-root {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh; /* Modern replacement for 100vh - accounts for mobile chrome */
+  overflow: hidden;
+}
+
+/* V11 Layout Root - CSS Grid three-row layout (V16 compatibility) */
+.v11-layout-root {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100dvh; /* Modern replacement for 100vh - accounts for mobile chrome */
+  overflow: hidden;
+}
+
+/* Header Row */
+.header-row {
+  /* Auto height based on content */
+}
+
+/* Main Content Row */
+.main-content-row {
+  overflow: auto; /* Allow scrolling for pages with many cards */
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto; /* Let grid row height flow down flex chain */
+  min-height: 0; /* Critical: allow shrinking so inheritance works */
+}
+
+/* Footer Row */
+.footer-row {
+  /* Auto height based on content */
+}
+
+/* Footer Navigation Styles */
+.mobile-footer-nav {
+  display: flex;
+}
+
+/* Hide navigation icons in header */
+.nav-icons {
+  display: none;
+}
+
+.main-container {
+  /* max-width: 1200px; */ /* REMOVED: Allow full width */
+  width: 100%; /* Take full width */
+  margin: 0; /* Remove auto margin centering */
+  padding: 8px 12px; /* Slightly more padding for better spacing */
+  flex: 1 1 auto; /* Grow to fill, shrink if needed */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden; /* Prevent overflow beyond grid row */
+  min-height: 0; /* Critical: allow shrinking so inheritance works */
+}
+
+/* Light/Dark theme variables */
+:root {
+  --bg-primary: #e7ece9;
+  --bg-secondary: #c1d7ca;
+  --border-color: #9dbbac;
+  --text-primary: #3b503c;
+  --text-secondary: #3b503c;
+  --button-primary: #9dbbac;
+  --button-hover: #3b503c;
+  --button-danger: #dc2626;
+  --button-danger-hover: #b91c1c;
+  --message-user: #9dbbac;
+  --message-assistant: #fdfefd;
+  --message-system: #e7ece9;
+  --comment-background: #fdfefd;
+  --warning-background: #3b503c;
+}
+
+:root.dark,
+html.dark {
+  --bg-primary: #131314;
+  --bg-secondary: #1e1e1f;
+  --border-color: #2a2a2a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --button-primary: #9dbbac;
+  --button-hover: #3b503c;
+  --button-danger: #dc2626;
+  --button-danger-hover: #b91c1c;
+  --message-user: #2563eb;
+  --message-assistant: #222222;
+  --comment-background: #222222;
+  --message-system: #333333;
+  --warning-background: #3b503c;
+}
+
+/* Direct application of background colors */
+.dark .main-container,
+.dark .conversation-container,
+.dark body,
+html.dark body {
+  background-color: #131314 !important;
+}
+
+.dark .conversation-container {
+  background-color: #1e1e1f !important;
+}
+
+/* Removed book-selection class as it's no longer needed */
+
+.control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  cursor: pointer;
+}
+
+.control-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Special case for the connecting state to ensure text remains visible */
+.control-button.connecting {
+  opacity: 0.9 !important;
+  background-color: #3b82f6;
+  color: white !important;
+  cursor: wait;
+}
+
+/* Special case for the preparing state to ensure text remains visible */
+.control-button.preparing {
+  opacity: 0.9 !important;
+  background-color: var(--button-primary);
+  color: white !important;
+  cursor: wait;
+}
+
+.control-button.primary {
+  background-color: var(--button-primary) !important;
+  color: white !important;
+  border-radius: 9999px !important;
+}
+
+.control-button.primary:hover:not(:disabled) {
+  background-color: var(--button-hover) !important;
+}
+
+.control-button.large-button {
+  font-size: 1.2rem !important;
+  padding: 0.75rem 2.5rem !important;
+  font-weight: 600 !important;
+  min-width: 140px !important;
+  background-color: var(--button-primary) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+  border-radius: 9999px !important;
+  color: white !important;
+}
+
+.control-button.large-button:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+  background-color: var(--button-hover) !important;
+}
+
+/* High specificity override for Let's Talk button */
+.control-button.primary.large-button {
+  background-color: var(--button-primary) !important;
+  color: white !important;
+  border-radius: 9999px !important;
+}
+
+.control-button.primary.large-button:hover:not(:disabled) {
+  background-color: var(--button-hover) !important;
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+}
+
+.control-triple {
+  display: flex !important;
+  width: 100% !important;
+  max-width: 500px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+.control-left {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.control-center {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+}
+
+.control-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.control-button.mute-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  margin: 0 !important;
+  background: transparent;
+}
+
+.control-button.mute-button img {
+  width: 32px;
+  height: 32px;
+}
+
+.fixed-mic-button {
+  position: fixed;
+  top: 220px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  background-color: rgba(79, 70, 229, 0.9);
+  border-radius: 50%;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fixed-mic-button:hover {
+  transform: scale(1.05);
+  background-color: rgba(67, 56, 202, 0.95);
+}
+
+.fixed-mic-button img {
+  width: 48px;
+  height: 48px;
+}
+
+/* Make mic button responsive */
+/* Let's Talk button positioned above chatbox with higher z-index */
+.start-button-overlay {
+  position: absolute;
+  top: 20%; /* Position button higher up in the main area */
+  left: 0;
+  right: 0;
+  z-index: 100; /* Higher than chatbox */
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none; /* Allow clicks through container */
+}
+
+.start-button-overlay .control-button {
+  pointer-events: auto; /* Re-enable clicks for button */
+}
+
+.start-button-overlay input[type="checkbox"],
+.start-button-overlay label {
+  pointer-events: auto !important; /* Re-enable clicks for checkbox and label */
+}
+
+.start-button-overlay .flex.items-center {
+  pointer-events: auto !important; /* Re-enable clicks for checkbox container */
+}
+
+/* Adjust conversation container to accommodate button overlay */
+.conversation-container-with-overlay {
+  padding-top: 120px; /* More space for better positioned button */
+}
+
+@media (max-width: 768px) {
+  .fixed-mic-button {
+    top: 200px;
+    left: 16px;
+    width: 72px;
+    height: 72px;
+  }
+
+  .fixed-mic-button img {
+    width: 40px;
+    height: 40px;
+  }
+
+  .start-button-overlay {
+    padding: 12px;
+    top: 15%; /* Slightly higher on mobile for better proportion */
+  }
+
+  .conversation-container-with-overlay {
+    padding-top: 100px; /* Adjusted for mobile button position */
+  }
+
+  .main-container {
+    padding: 6px 8px; /* Slightly less padding on mobile */
+  }
+}
+
+.spacer {
+  flex: 1;
+  min-width: 20px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.control-button.danger {
+  background-color: #64748b;
+  color: white;
+  margin: 0 !important;
+  opacity: 0.8;
+  font-size: 0.9rem;
+  padding: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  width: 40px;
+  border-radius: 50%;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.control-button.danger:hover:not(:disabled) {
+  background-color: #dc2626;
+  opacity: 1;
+  transform: scale(1.05);
+}
+
+/* Buttons at the bottom of the screen */
+.bottom-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin: 16px 0;
+  padding: 0 16px;
+}
+
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.status-indicator.connecting {
+  background-color: #ca8a04;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator.connected {
+  background-color: #22c55e;
+}
+
+.status-indicator.disconnected {
+  background-color: #dc2626;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.3;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Add better styling for messages that are currently being received */
+.message.animate-pulse {
+  animation: pulse 1.5s infinite, messageFadeIn 0.3s ease-in-out;
+  border-left: 2px solid var(--button-primary);
+}
+
+/* REMOVE NUCLEAR OPTION */
+
+.conversation-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Fill available space in main container */
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  margin-bottom: 10px;
+  margin-top: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-height: 0; /* Allow flex shrinking */
+  height: 100%; /* CRITICAL: Force it to fill parent height */
+}
+
+.conversation-history {
+  flex: 1 1 auto; /* Scrollable chat body */
+  overflow-y: auto;
+  min-height: 0; /* Allow proper flex sizing */
+  padding: 20px; /* Increased padding */
+  padding-bottom: 240px; /* Add bottom padding to prevent content from being hidden behind orb */
+  scroll-behavior: smooth; /* Smooth scrolling */
+}
+
+/* Clearfix for floating messages */
+.conversation-history::after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+.message {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  max-width: 85%;
+  position: relative;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-size: 1rem;
+  display: block; /* Changed from flexbox */
+  clear: both; /* Ensures proper flow */
+  animation: messageFadeIn 0.3s ease-in-out;
+  word-wrap: break-word; /* Ensures text wraps properly */
+}
+
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  float: right; /* Float to right instead of flex alignment */
+  background-color: var(--message-user);
+  color: var(--text-primary);
+  border-bottom-right-radius: 4px; /* Tailored corner */
+}
+
+.message.assistant {
+  float: left; /* Float to left instead of flex alignment */
+  background-color: var(--message-assistant);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px; /* Tailored corner */
+}
+
+/* Removed message role indicators for cleaner look */
+
+.message.system {
+  margin-left: auto;
+  margin-right: auto;
+  float: none; /* Don't float system messages */
+  background-color: var(--message-system);
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  max-width: 70%;
+  text-align: center;
+}
+
+.input-container {
+  display: flex;
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+.text-input {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  margin-left: 12px;
+  margin-right: 12px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) inset;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--button-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* Mute button styles */
+.mute-button {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.mute-button:hover {
+  background-color: var(--bg-primary);
+  border-color: var(--button-primary);
+  transform: scale(1.05);
+}
+
+.mute-button.muted {
+  background-color: rgba(239, 68, 68, 0.1);
+  border-color: rgb(239, 68, 68);
+  color: rgb(239, 68, 68);
+}
+
+
+/* Old send button styles kept for reference */
+.send-button {
+  display: none !important; /* Hide the old button completely */
+}
+
+/* New send button with clean styling */
+.send-button-new {
+  background-color: var(--button-primary);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+
+.send-button-new:hover:not(:disabled) {
+  background-color: var(--button-hover);
+  transform: scale(1.05);
+}
+
+.send-button-new:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.debug-panel {
+  margin-top: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.debug-panel h3 {
+  margin-top: 0;
+  margin-bottom: 10px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.debug-panel p {
+  margin: 5px 0;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.debug-panel .logs {
+  max-height: 150px;
+  overflow-y: auto;
+  border-radius: 4px;
+  background-color: var(--bg-primary);
+  padding: 10px;
+  margin-top: 10px;
+}
+
+.audio-visualizer {
+  height: 50px;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 300px;
+}
+
+.audio-visualizer.inactive .audio-bar {
+  transition: height 0.3s ease;
+  background-color: #475569;
+  /* More muted color when inactive */
+  opacity: 0.3;
+}
+
+.audio-visualizer.active .audio-bar {
+  transition: height 0.1s ease;
+  background-color: var(--button-primary);
+  opacity: 1;
+}
+
+.audio-bar {
+  width: 4px;
+  margin: 0 1px;
+  border-radius: 2px;
+}
+
+.speaking-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  margin-left: 0.5rem;
+}
+
+.speaking-indicator.recording {
+  background-color: #ef4444;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.speaking-indicator.thinking {
+  background-color: #ca8a04;
+  color: white;
+  animation: pulse 1.5s infinite;
+}
+
+.speaking-indicator.listening {
+  background-color: #3b82f6;
+  color: white;
+}
+
+.speaking-indicator.inactive {
+  background-color: #6b7280;
+  color: white;
+}
+
+/* Removed vertical-layout class as it's no longer needed */
+
+/* Simplified vertical-controls for cleaner UI */
+.vertical-controls {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 500px;
+  gap: 16px;
+  align-items: center;
+  margin: 0 auto;
+}
+
+.control-row {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+}
+
+.centered-input {
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+}
+
+.visualizer-container {
+  margin: 16px 0;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 100px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  min-height: 40px;
+  min-width: 200px;
+  max-width: 500px;
+  /* Increased to accommodate the End button */
+  margin: 0;
+  justify-content: center;
+  position: relative;
+  /* For positioning end button correctly */
+}
+
+.status-text {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin-left: 8px;
+  color: var(--text-secondary);
+}
+
+/* Removed transcription-display and latest-messages styles as they're no longer used */
+
+/* Utility classes */
+.ml-4 {
+  margin-left: 16px !important;
+}
+
+/* Add hover effects to BlueOrbVoiceUI when used as mute button */
+.visualization-container {
+  pointer-events: none; /* Allow clicks to pass through container */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+/* V15 Blue Orb specific styles */
+.blue-orb-v15 {
+  display: inline-flex;
+  flex-shrink: 0; /* Prevent flex container from shrinking */
+}
+
+.visualization-container .flex {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  pointer-events: auto; /* Re-enable pointer events for the orb itself */
+}
+
+.visualization-container .flex:hover {
+  opacity: 0.95;
+}
+
+.visualization-container .flex:active {
+  transform: scale(0.98);
+}
+
+/* Remove top margin since orb is now at bottom */
+.conversation-container {
+  margin-top: 20px !important;
+}
+
+/* Bug Report Button & Modal Styles */
+/* Simple styling without complex positioning */
+
+.bug-report-button {
+  position: relative;
+  background-color: #9e30ff;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 1000;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.bug-report-button:hover {
+  transform: scale(1.1);
+  background-color: #ff6b66;
+}
+
+.bug-report-button svg {
+  stroke: white;
+  stroke-width: 2;
+}
+
+.bug-report-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1001;
+}
+
+.bug-report-modal {
+  background-color: var(--bg-primary);
+  border-radius: 8px;
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: var(--text-primary);
+}
+
+.bug-report-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bug-report-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.bug-report-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.bug-report-form {
+  padding: 20px;
+}
+
+.bug-report-form-group {
+  margin-bottom: 15px;
+}
+
+.bug-report-form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+
+.bug-report-form-group textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.bug-report-info-text {
+  margin-bottom: 15px;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.bug-report-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.bug-report-button-cancel {
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bug-report-button-submit {
+  background-color: #ff3b30;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.bug-report-button-submit:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+/* Feedback form styles */
+.feedback-checkboxes {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 10px;
+}
+
+.checkbox-label {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  margin-bottom: 0 !important;
+  font-weight: normal !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.checkbox-text {
+  user-select: none;
+}
+
+.disclosure-checkbox {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+.disclosure-checkbox .checkbox-text {
+  font-weight: normal;
+}
+
+/* Feedback buttons in messages */
+.feedback-buttons {
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.feedback-button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.bug-report-success {
+  background-color: rgba(40, 167, 69, 0.2);
+  color: #28a745;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}
+
+.bug-report-error {
+  background-color: rgba(220, 53, 69, 0.2);
+  color: #dc3545;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+}

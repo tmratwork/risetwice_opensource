@@ -1,0 +1,98 @@
+{
+  "total_chunks": 61,
+  "function_mapping_stats": {
+    "validation_function": 35,
+    "psychoeducation_function": 31,
+    "problem_solving_function": 28,
+    "crisis_response_function": 22,
+    "screening_function": 16,
+    "grounding_function": 16,
+    "cultural_humility_function": 14,
+    "thought_exploration_function": 11,
+    "user_history_function": 5
+  },
+  "urgency_level_stats": {
+    "high": 22,
+    "medium": 19,
+    "normal": 20
+  },
+  "response_type_stats": {
+    "ask_questions": 11,
+    "call_function": 8,
+    "unspecified": 42
+  },
+  "function_coverage": "56/61 chunks have function mappings",
+  "chunk_distribution": {
+    "total_chunks": 61,
+    "total_tokens": 38292,
+    "mean_tokens": 627.7377049180328,
+    "median_tokens": 485.0,
+    "min_tokens": 8,
+    "max_tokens": 1639,
+    "std_dev_tokens": 525.8727921240763,
+    "size_percentiles": {
+      "10th": 30.0,
+      "25th": 214.0,
+      "50th": 485.0,
+      "75th": 815.0,
+      "90th": 1616.0
+    },
+    "chunks_by_size_range": {
+      "< 500": 32,
+      "500-1000": 16,
+      "1000-1500": 4,
+      "1500-2000": 9,
+      "2000-3000": 0,
+      "3000+": 0
+    },
+    "coef_of_variation": 0.8377269486986487,
+    "function_mapping_coverage": {
+      "count": 56,
+      "percentage": 91.80327868852459
+    },
+    "urgency_levels": {
+      "counts": {
+        "high": 22,
+        "medium": 19,
+        "normal": 20
+      },
+      "percentages": {
+        "high": 36.0655737704918,
+        "medium": 31.147540983606557,
+        "normal": 32.78688524590164
+      }
+    }
+  },
+  "high_urgency_examples": [
+    {
+      "chunk_id": "1",
+      "section": "Introduction",
+      "subsection": "",
+      "text_sample": "Introduction:Setting the Stage for a Trauma-Informed AI Companion for At-Risk Youth\nThe United States is confronting a significant youth mental health..."
+    },
+    {
+      "chunk_id": "2",
+      "section": "Core Interaction Style - Foundations in Trauma-Informed Care (TIC) and Motivational Interviewing (MI)",
+      "subsection": "1.1 Defining the AI's Empathetic and Trustworthy Persona",
+      "text_sample": "1.1 Defining the AI's Empathetic and Trustworthy Persona\nRationale: Establishing an appropriate persona is paramount. At-risk youth may harbor signifi..."
+    },
+    {
+      "chunk_id": "3",
+      "section": "Core Interaction Style - Foundations in Trauma-Informed Care (TIC) and Motivational Interviewing (MI)",
+      "subsection": "1.2 Applying TIC Principles in AI Dialogue",
+      "text_sample": "1.2 Applying TIC Principles in AI Dialogue\nTrauma-Informed Care provides a crucial framework for designing interactions that avoid re-traumatization a..."
+    },
+    {
+      "chunk_id": "10",
+      "section": "Example Dialogue Flows",
+      "subsection": "2.1 Scenario: Expressing General Distress",
+      "text_sample": "* User Input 2: \"i just feel so hopeless\"\n   * AI Response A (Reflection & Validation): \"Feeling hopeless sounds incredibly heavy and difficult. It ta..."
+    },
+    {
+      "chunk_id": "12",
+      "section": "Example Dialogue Flows",
+      "subsection": "2.2 Scenario: Inquiries about Basic Needs",
+      "text_sample": "* User Input 1: \"i need somewhere to sleep tonight\"\n   * AI Response A (Acknowledge Urgency & Offer Resources): \"Finding a safe place to sleep tonight..."
+    }
+  ]
+}

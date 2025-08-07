@@ -1,0 +1,2404 @@
+// src/stores/webrtc-store.ts
+// Zustand-based WebRTC Store for V15
+// Implements industry best practices to eliminate render storms and provide reliable disconnect detection
+
+import { create } from 'zustand';
+import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
+import { ConnectionManager } from '@/hooksV15/webrtc/connection-manager';
+import { ComprehensiveMessageHandler, type MessageHandlerCallbacks } from '@/hooksV15/webrtc/comprehensive-message-handler';
+import audioService from '@/hooksV15/audio/audio-service';
+import type { ConnectionConfig } from '@/hooksV15/types';
+
+console.log('[zustand-webrtc] Store module loaded');
+
+// Conversation message interface
+interface ConversationMessage {
+  id: string;
+  role: string;
+  text: string;
+  timestamp: string;
+  isFinal: boolean;
+  status?: "speaking" | "processing" | "final" | "thinking";
+}
+
+// Connection state type
+type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'failed';
+
+// Store state interface
+interface WebRTCStoreState {
+  // Connection state
+  isConnected: boolean;
+  connectionState: ConnectionState;
+
+  // Enhanced audio visualization state
+  currentVolume: number;
+  audioLevel: number;
+  isAudioPlaying: boolean;
+  isThinking: boolean;
+
+  // Mute state
+  isMuted: boolean;
+
+  // Conversation state
+  conversation: ConversationMessage[];
+  userMessage: string;
+  hasActiveConversation: boolean;
+
+  // Internal state (not reactive)
+  connectionManager: ConnectionManager | null;
+  messageHandler: ComprehensiveMessageHandler | null;
+  transcriptCallback: ((message: { id: string; data: string; metadata?: Record<string, unknown> }) => void) | null;
+  errorCallback: ((error: Error) => void) | null;
+
+  // End session flow state
+  expectingEndSessionGoodbye: boolean;
+  waitingForEndSession: boolean;
+  endSessionCallId: string | null;
+
+  // Smart fallback system
+  volumeMonitoringActive: boolean;
+  fallbackTimeoutId: number | null;
+
+  // Stored configuration for reconnection
+  storedConnectionConfig: ConnectionConfig | null;
+
+  // Function definitions for AI
+  availableFunctions: {
+    book: unknown[];
+    mentalHealth: unknown[];
+    sleep: unknown[];
+  };
+
+  // Store actions
+  connect: () => Promise<void>;
+  disconnect: () => Promise<void>;
+  sendMessage: (message: string) => boolean;
+  toggleMute: () => boolean;
+  addConversationMessage: (message: ConversationMessage) => void;
+  updateUserMessage: (message: string) => void;
+  clearUserMessage: () => void;
+
+  // Function registration
+  registerFunctions: (functions: { book?: unknown[]; mentalHealth?: unknown[]; sleep?: unknown[] }) => void;
+  clearFunctions: () => void;
+
+  // Connection lifecycle
+  preInitialize: (config: ConnectionConfig) => Promise<void>;
+  initialize: (config?: ConnectionConfig) => Promise<void>;
+  handleConnectionChange: (state: ConnectionState) => void;
+  handleDisconnectWithReset: () => void;
+
+  // Subscription management
+  onTranscript: (callback: (message: { id: string; data: string; metadata?: Record<string, unknown> }) => void) => () => void;
+  onError: (callback: (error: Error) => void) => () => void;
+
+  // Diagnostics
+  getDiagnostics: () => Record<string, unknown>;
+  getVisualizationData: () => Record<string, unknown>;
+}
+
+// Store-based silence detection using existing volume monitoring
+interface SilenceDetector {
+  isActive: boolean;
+  silentTime: number;
+  startTime: number;
+  timeoutId: number | null;
+  failsafeTimeoutId: number | null;
+  onComplete: (() => void) | null;
+}
+
+// Global silence detector state
+const silenceDetector: SilenceDetector = {
+  isActive: false,
+  silentTime: 0,
+  startTime: 0,
+  timeoutId: null,
+  failsafeTimeoutId: null,
+  onComplete: null // Keep for failsafe timeout compatibility
+};
+
+// Shared message handler factory to eliminate duplication between initial connection and reconnection
+const createMessageHandlerCallbacks = (
+  get: () => WebRTCStoreState, 
+  set: (partial: Partial<WebRTCStoreState> | ((state: WebRTCStoreState) => Partial<WebRTCStoreState>)) => void,
+  context: 'INITIAL' | 'RECONNECT'
+): MessageHandlerCallbacks => {
+  const logPrefix = context === 'INITIAL' ? '[V15-VISUAL-FEEDBACK]' : '[FUNCTION-RECONNECT]';
+
+  return {
+    onSpeechStarted: () => {
+      console.log(`${logPrefix} Creating listening user bubble`);
+      const listeningUserMessage: ConversationMessage = {
+        id: `user-listening-${Date.now()}`,
+        role: "user",
+        text: "Listening...",
+        timestamp: new Date().toISOString(),
+        isFinal: false,
+        status: "speaking"
+      };
+
+      set(state => ({
+        conversation: [...state.conversation, listeningUserMessage],
+        hasActiveConversation: true
+      }));
+    },
+
+    onSpeechStopped: () => {
+      console.log(`${logPrefix} Speech stopped, AI is thinking`);
+      set(state => {
+        console.log(`[function] Setting isThinking: true (${context} onSpeechStopped)`);
+        const newState = { ...state, isThinking: true };
+        console.log('[function] New state:', { isThinking: newState.isThinking });
+        return newState;
+      });
+    },
+
+    onAudioBufferCommitted: () => {
+      console.log(`${logPrefix} Setting "Thinking..." state`);
+
+      set(state => {
+        const updatedConversation = [...state.conversation];
+        const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
+
+        if (lastUserMessageIndex >= 0) {
+          updatedConversation[lastUserMessageIndex] = {
+            ...updatedConversation[lastUserMessageIndex],
+            text: "Thinking...",
+            status: "thinking"
+          };
+        }
+
+        return {
+          conversation: updatedConversation,
+          hasActiveConversation: true
+        };
+      });
+    },
+
+    onFunctionCall: (msg: Record<string, unknown>) => {
+      console.log(`${logPrefix} Function call received:`, msg);
+      optimizedAudioLogger.info('webrtc', 'function_call_received', msg);
+
+      const functionName = msg.name as string;
+      const callId = msg.call_id as string;
+      const args = msg.arguments as Record<string, unknown>;
+
+      console.log(`${logPrefix} Executing function:`, functionName, 'with args:', args);
+
+      // Add function call to conversation immediately
+      const functionCallMessage: ConversationMessage = {
+        id: `function-call-${callId}`,
+        role: "function",
+        text: `Calling ${functionName}...`,
+        timestamp: new Date().toISOString(),
+        isFinal: false,
+        status: "executing",
+        functionCall: {
+          name: functionName,
+          arguments: args,
+          callId: callId
+        }
+      };
+
+      set(state => ({
+        conversation: [...state.conversation, functionCallMessage],
+        hasActiveConversation: true
+      }));
+
+      // Execute the function
+      const currentState = get();
+      if (currentState.functionExecutor) {
+        currentState.functionExecutor(functionName, args, callId)
+          .then(result => {
+            console.log(`${logPrefix} Function execution completed:`, result);
+            
+            // Update the function call message with result
+            set(state => {
+              const updatedConversation = state.conversation.map(msg => 
+                msg.id === `function-call-${callId}` 
+                  ? { ...msg, text: `${functionName} completed`, status: "completed" as const, functionCall: { ...msg.functionCall!, result } }
+                  : msg
+              );
+              return { conversation: updatedConversation };
+            });
+
+            optimizedAudioLogger.info('session', 'function_execution_completed', { 
+              functionName, 
+              callId, 
+              success: true 
+            });
+          })
+          .catch(error => {
+            console.error(`${logPrefix} Function execution failed:`, error);
+            
+            // Update the function call message with error
+            set(state => {
+              const updatedConversation = state.conversation.map(msg => 
+                msg.id === `function-call-${callId}` 
+                  ? { ...msg, text: `${functionName} failed: ${error.message}`, status: "error" as const }
+                  : msg
+              );
+              return { conversation: updatedConversation };
+            });
+
+            optimizedAudioLogger.info('session', 'function_execution_failed', { 
+              functionName, 
+              callId, 
+              error: error.message 
+            });
+          });
+      }
+    },
+
+    onAudioTranscriptDelta: (msg: Record<string, unknown>) => {
+      const delta = msg.delta as string;
+      const responseId = msg.response_id as string;
+      
+      if (delta && responseId) {
+        console.log(`[V15-TRANSCRIPT-DEBUG] ${context} transcript delta:`, delta);
+        
+        const currentState = get();
+        if (currentState.transcriptCallback) {
+          console.log(`[V15-TRANSCRIPT-DEBUG] ${context} calling transcript callback with delta`);
+          currentState.transcriptCallback({
+            id: responseId,
+            data: delta,
+            metadata: { isTranscriptComplete: false, role: 'assistant' }
+          });
+        }
+      }
+    },
+
+    onAudioTranscriptDone: (msg: Record<string, unknown>) => {
+      const transcript = msg.transcript as string;
+      const responseId = msg.response_id as string;
+      const role = 'assistant';
+      
+      console.log(`[V15-TRANSCRIPT-DEBUG] ${context} transcript done:`, transcript);
+      
+      const currentState = get();
+      if (currentState.transcriptCallback && transcript) {
+        console.log(`[V15-TRANSCRIPT-DEBUG] ${context} calling transcript callback with complete transcript`);
+        currentState.transcriptCallback({
+          id: responseId,
+          data: transcript,
+          metadata: { isTranscriptComplete: true, role: role }
+        });
+      } else {
+        console.log(`[V15-TRANSCRIPT-DEBUG] ${context} no transcript callback set or no transcript data`);
+      }
+    },
+
+    onAudioDelta: (msg: Record<string, unknown>) => {
+      const delta = msg.delta as string;
+      const responseId = msg.response_id as string;
+
+      if (delta && responseId) {
+        // Audio playback will be handled by existing audio service
+      }
+    },
+
+    onAudioDone: (msg: Record<string, unknown>) => {
+      const onAudioDoneTime = performance.now();
+      console.log(`[END-SESSION-DEBUG] 🎵 ${context} onAudioDone CALLED at ${onAudioDoneTime.toFixed(2)}ms - checking state`);
+      optimizedAudioLogger.info('webrtc', 'response_audio_done', msg);
+
+      // Clear thinking state when AI finishes generating audio
+      set(state => {
+        console.log(`[function] Clearing isThinking: false (${context} onAudioDone)`);
+        const newState = { ...state, isThinking: false };
+        console.log('[function] New state:', { isThinking: newState.isThinking });
+        return newState;
+      });
+
+      const currentState = get();
+
+      console.log(`[END-SESSION-DEBUG] 🔍 ${context} onAudioDone state check:`, {
+        responseId: (msg as { response_id?: string }).response_id,
+        waitingForEndSession: currentState.waitingForEndSession,
+        expectingGoodbye: currentState.expectingEndSessionGoodbye,
+        endSessionCallId: currentState.endSessionCallId,
+        messageKeys: Object.keys(msg)
+      });
+
+      // CRITICAL: If we're waiting for end session, ONLY start end session detection
+      // Stop any regular conversation detection that might be running
+      if (currentState.waitingForEndSession) {
+        console.log(`[END-SESSION-DEBUG] 🛑 PRIORITY: ${context} end session mode - stopping any existing detection at ${performance.now().toFixed(2)}ms`);
+        stopSilenceDetection(); // Clear any existing detection first
+      }
+
+      if (currentState.waitingForEndSession) {
+        console.log(`[END-SESSION-DEBUG] 🎚️ ${context} starting silence detection for END SESSION at ${performance.now().toFixed(2)}ms`);
+
+        optimizedAudioLogger.info('session', 'server_audio_generation_complete', {
+          responseId: (msg as { response_id?: string }).response_id,
+          action: 'starting_store_based_silence_detection_end_session',
+          method: 'store_volume_monitoring_plus_silence_detection',
+          context: context
+        });
+
+        // End session completion callback - disconnect when done
+        const endSessionCallback = async () => {
+          console.log(`[END-SESSION-DEBUG] 🔍 ${context} END SESSION CALLBACK EXECUTING at ${performance.now().toFixed(2)}ms - this will disconnect the session`);
+          try {
+            await get().disconnect();
+            console.log(`[END-SESSION-DEBUG] ✅ ${context} disconnect() completed`);
+          } catch (error) {
+            console.log(`[END-SESSION-DEBUG] ❌ ${context} disconnect() ERROR:`, error);
+          }
+        };
+
+        console.log(`[END-SESSION-DEBUG] 🎯 ${context} creating END SESSION silence detection with disconnect callback at ${performance.now().toFixed(2)}ms`);
+        startSilenceDetection(endSessionCallback, get);
+      } else {
+        // Double-check: don't start regular detection if we're actually waiting for end session
+        const finalCheck = get();
+        if (finalCheck.waitingForEndSession) {
+          console.log(`[END-SESSION-DEBUG] ⚠️ ${context} RACE CONDITION: State changed to waitingForEndSession=true, skipping regular detection`);
+          return;
+        }
+        console.log(`[function] 🎚️ ${context} starting silence detection for REGULAR CONVERSATION`);
+
+        optimizedAudioLogger.info('session', 'server_audio_generation_complete', {
+          responseId: (msg as { response_id?: string }).response_id,
+          action: 'starting_store_based_silence_detection_regular',
+          method: 'store_volume_monitoring_plus_silence_detection',
+          context: context
+        });
+
+        // Regular conversation completion callback - just mark complete
+        const regularCallback = () => {
+          console.log(`[END-SESSION-DEBUG] 🔍 ${context} REGULAR CALLBACK EXECUTING - this is harmless`);
+          console.log(`[function] ✅ ${context} regular conversation silence detection complete`);
+          console.log(`[function] 🎯 ${context} AI finished speaking - user can speak again`);
+
+          optimizedAudioLogger.info('session', 'regular_conversation_audio_complete', {
+            responseId: (msg as { response_id?: string }).response_id,
+            method: 'store_based_silence_detection',
+            context: context
+          });
+
+          // No special state changes needed for regular conversation
+          // User can start speaking again naturally
+        };
+
+        console.log(`[END-SESSION-DEBUG] 🎯 ${context} creating REGULAR CHAT silence detection with harmless callback at ${performance.now().toFixed(2)}ms`);
+        startSilenceDetection(regularCallback, get);
+      }
+    },
+
+    onResponseDone: (msg: Record<string, unknown>) => {
+      optimizedAudioLogger.info('webrtc', 'response_completed', { 
+        responseId: (msg as { response_id?: string }).response_id,
+        context: context
+      });
+
+      // Don't clear thinking state here - wait for actual speech
+      // Thinking state persists through function calls
+
+      // Check if this is the goodbye response after end_session
+      const currentState = get();
+
+      // DEBUG: Always log response done events when expecting goodbye
+      if (currentState.expectingEndSessionGoodbye) {
+        console.log(`[function] 🔍 ${context} onResponseDone called while expecting goodbye:`, {
+          responseId: (msg as { response_id?: string }).response_id,
+          expectingGoodbye: currentState.expectingEndSessionGoodbye,
+          endSessionCallId: currentState.endSessionCallId,
+          fullMessage: msg
+        });
+
+        const response = (msg as { response?: Record<string, unknown> }).response;
+        const hasContent = response && response.status === 'completed';
+
+        console.log(`[function] 🔍 ${context} response content analysis:`, {
+          hasResponse: !!response,
+          status: response?.status,
+          hasContent: hasContent
+        });
+
+        if (hasContent) {
+          console.log(`[function] ✅ ${context} goodbye response completed - switching to waitingForEndSession=true`);
+          set({
+            expectingEndSessionGoodbye: false,
+            waitingForEndSession: true
+          });
+        }
+      }
+    },
+
+    onError: (error: Error) => {
+      console.error(`${logPrefix} Message handler error:`, error);
+
+      const currentState = get();
+      if (currentState.errorCallback) {
+        currentState.errorCallback(error);
+      }
+    }
+  };
+};
+
+// Store-based silence detection function that accepts get as parameter
+const startSilenceDetection = (onComplete: () => void, getState: () => WebRTCStoreState) => {
+  const silenceDetectionStartTime = performance.now();
+  console.log(`[END-SESSION-DEBUG] 🎯 Starting silence detection (waiting: ${getState().waitingForEndSession})`);
+  console.log(`[END-SESSION-DEBUG] 📊 Silence detection start time: ${silenceDetectionStartTime.toFixed(2)}ms`);
+  
+  // Clear any existing detection
+  if (silenceDetector.isActive) {
+    const existingElapsed = performance.now() - (silenceDetector.startTime || 0);
+    console.log(`[END-SESSION-DEBUG] ⚠️ Stopping existing detection (was running for ${existingElapsed.toFixed(2)}ms)`);
+    stopSilenceDetection();
+  }
+
+  silenceDetector.isActive = true;
+  silenceDetector.silentTime = 0;
+  silenceDetector.startTime = silenceDetectionStartTime;
+  // Don't store callback - keep it in closure to prevent stale reference
+
+  const checkInterval = 100; // Check every 100ms
+  const silenceThreshold = 0.01; // Volume threshold for silence
+  const silenceDuration = 2000; // 2 seconds of silence required
+
+  console.log(`[END-SESSION-DEBUG] ⚙️ Config: ${silenceDuration}ms silence required, 8000ms failsafe timeout`);
+
+  const checkSilence = () => {
+    if (!silenceDetector.isActive) return;
+
+    const currentTime = performance.now();
+    const totalElapsed = currentTime - silenceDetectionStartTime;
+    const state = getState(); // Use the passed getState function
+    const currentVolume = state.currentVolume;
+    const isAudioPlaying = state.isAudioPlaying;
+
+    // Check if audio is silent (low volume and not playing)
+    const isSilent = currentVolume < silenceThreshold && !isAudioPlaying;
+
+    if (isSilent) {
+      silenceDetector.silentTime += checkInterval;
+      // Only log major milestones to reduce verbosity
+      if (silenceDetector.silentTime % 500 === 0 || silenceDetector.silentTime >= silenceDuration - 100) {
+        console.log(`[END-SESSION-DEBUG] 🔇 Silent: ${silenceDetector.silentTime}ms / ${silenceDuration}ms (total elapsed: ${totalElapsed.toFixed(2)}ms)`);
+      }
+
+      if (silenceDetector.silentTime >= silenceDuration) {
+        console.log(`[END-SESSION-DEBUG] ✅ 2 seconds silence reached - executing callback (total elapsed: ${totalElapsed.toFixed(2)}ms)`);
+        stopSilenceDetection();
+        try {
+          onComplete(); // Use closure callback instead of stored reference
+        } catch (error) {
+          console.log('[END-SESSION-DEBUG] ❌ Callback error:', error);
+        }
+        return;
+      }
+    } else {
+      // Reset silence timer when audio is detected
+      if (silenceDetector.silentTime > 0) {
+        console.log(`[END-SESSION-DEBUG] 🔊 Audio detected - reset timer (was ${silenceDetector.silentTime}ms, total elapsed: ${totalElapsed.toFixed(2)}ms)`);
+        silenceDetector.silentTime = 0;
+      }
+    }
+
+    // Schedule next check
+    silenceDetector.timeoutId = window.setTimeout(checkSilence, checkInterval);
+  };
+
+  // Start checking
+  checkSilence();
+
+  // Failsafe timeout (8 seconds maximum)
+  console.log(`[END-SESSION-DEBUG] 🚨 Setting failsafe timeout for 8000ms at ${performance.now().toFixed(2)}ms`);
+  silenceDetector.failsafeTimeoutId = window.setTimeout(() => {
+    if (silenceDetector.isActive) {
+      const actualElapsed = performance.now() - silenceDetectionStartTime;
+      console.log(`[END-SESSION-DEBUG] ⏰ FAILSAFE TIMEOUT TRIGGERED - actual elapsed: ${actualElapsed.toFixed(2)}ms (expected 8000ms)`);
+      console.log(`[END-SESSION-DEBUG] 🔍 Root cause analysis - failsafe fired after only ${actualElapsed.toFixed(2)}ms instead of 8000ms`);
+      console.log(`[END-SESSION-DEBUG] 🔍 Silence time accumulated: ${silenceDetector.silentTime}ms / 2000ms required`);
+      console.log(`[END-SESSION-DEBUG] 🔍 Detection start: ${silenceDetectionStartTime.toFixed(2)}ms, current: ${performance.now().toFixed(2)}ms`);
+      stopSilenceDetection();
+      try {
+        onComplete(); // Use closure callback for failsafe too
+      } catch (error) {
+        console.log('[END-SESSION-DEBUG] ❌ Failsafe callback error:', error);
+      }
+    }
+  }, 8000);
+
+  console.log('[SILENCE-DETECTOR] ✅ Store-based silence detection started');
+};
+
+const stopSilenceDetection = () => {
+  const stopTime = performance.now();
+  const elapsed = silenceDetector.startTime ? stopTime - silenceDetector.startTime : 0;
+  console.log(`[END-SESSION-DEBUG] 🛑 Stopping silence detection after ${elapsed.toFixed(2)}ms`);
+  console.log(`[END-SESSION-DEBUG] 📊 Final state - silentTime: ${silenceDetector.silentTime}ms, isActive: ${silenceDetector.isActive}`);
+  
+  if (silenceDetector.timeoutId) {
+    console.log(`[END-SESSION-DEBUG] 🔧 Clearing checkSilence timeout`);
+    clearTimeout(silenceDetector.timeoutId);
+    silenceDetector.timeoutId = null;
+  }
+  
+  if (silenceDetector.failsafeTimeoutId) {
+    console.log(`[END-SESSION-DEBUG] 🔧 Clearing failsafe timeout (was set for 8000ms)`);
+    clearTimeout(silenceDetector.failsafeTimeoutId);
+    silenceDetector.failsafeTimeoutId = null;
+  }
+  
+  silenceDetector.isActive = false;
+  silenceDetector.silentTime = 0;
+  silenceDetector.startTime = 0;
+  silenceDetector.onComplete = null;
+  
+  console.log(`[END-SESSION-DEBUG] ✅ Silence detection stopped at ${stopTime.toFixed(2)}ms`);
+};
+
+// Create the Zustand store
+export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
+  console.log('[zustand-webrtc] Creating store instance');
+
+  // Function registry cache - use robust registry manager with fallback validation
+  const getFunctionRegistry = (): Record<string, (args: unknown) => Promise<unknown>> => {
+    const registryManager = FunctionRegistryManager.getInstance();
+
+    if (!registryManager.isInitialized()) {
+      console.warn('[FUNCTION-REGISTRY] Registry not yet initialized, checking window fallback');
+      // Fallback to window object if registry manager not ready
+      return (window as unknown as { webrtcFunctionRegistry?: Record<string, (args: unknown) => Promise<unknown>> }).webrtcFunctionRegistry || {};
+    }
+
+    const registry = registryManager.getRegistry();
+    console.log('[FUNCTION-REGISTRY] Retrieved registry with', Object.keys(registry).length, 'functions');
+    return registry;
+  };
+
+
+  return {
+    // Initial state
+    isConnected: false,
+    connectionState: 'disconnected' as ConnectionState,
+
+    // Enhanced audio visualization state
+    currentVolume: 0,
+    audioLevel: 0,
+    isAudioPlaying: false,
+    isThinking: false,
+
+    // Mute state - V15: Start in muted state by default
+    isMuted: true,
+
+    conversation: [],
+    userMessage: '',
+    hasActiveConversation: false,
+    connectionManager: null,
+    messageHandler: null,
+    transcriptCallback: null,
+    errorCallback: null,
+    expectingEndSessionGoodbye: false,
+    waitingForEndSession: false,
+    endSessionCallId: null,
+    volumeMonitoringActive: false,
+    fallbackTimeoutId: null,
+    storedConnectionConfig: null,
+
+    // Function definitions for AI
+    availableFunctions: {
+      book: [],
+      mentalHealth: [],
+      sleep: []
+    },
+
+    // Pre-initialize services (called on page load)
+    preInitialize: async (config: ConnectionConfig) => {
+      console.log('[V15-OPTIMIZATION] 🚀 Pre-initializing services on page load');
+      console.log('[zustand-webrtc] 🔧 Pre-initializing WebRTC with config:', config);
+
+      optimizedAudioLogger.info('webrtc', 'zustand_store_pre_initializing', {
+        config,
+        version: 'v15-zustand-optimized'
+      });
+
+      // V15 GREENFIELD FIX: Get function definitions from store
+      const currentState = get();
+      const bookFunctionDefinitions = currentState.availableFunctions.book;
+      const mentalHealthFunctionDefinitions = currentState.availableFunctions.mentalHealth;
+      const sleepFunctionDefinitions = currentState.availableFunctions.sleep;
+
+      console.log('[AI-INTERACTION] Book function definitions from store:', (bookFunctionDefinitions as { name: string }[]).map(f => f.name));
+      console.log('[AI-INTERACTION] Mental health function definitions from store:', (mentalHealthFunctionDefinitions as { name: string }[]).map(f => f.name));
+      console.log('[AI-INTERACTION] Sleep function definitions from store:', (sleepFunctionDefinitions as { name: string }[]).map(f => f.name));
+
+      // V15 GREENFIELD FIX: Fetch AI instructions from Supabase like V11 - NO FALLBACKS - FAIL LOUDLY
+      let finalInstructions = '';
+      let aiInstructionsSource = '';
+
+      try {
+        const userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+        const bookId = typeof localStorage !== 'undefined' ? localStorage.getItem('selectedBookId') : null;
+
+        // Build AI instructions URL like V11 does
+        const aiUrl = '/api/v11/ai-instructions';
+        const params = new URLSearchParams();
+
+        if (userId) {
+          console.log('[zustand-webrtc] 🔍 Fetching custom AI instructions for user:', userId);
+          params.append('userId', userId);
+        } else {
+          console.log('[zustand-webrtc] 🔍 No user ID found, fetching global AI instructions');
+          params.append('anonymous', 'true');
+        }
+
+        // Add bookId parameter if available
+        if (bookId) {
+          console.log(`[zustand-webrtc] 📖 Including book context: ${bookId}`);
+          params.append('bookId', bookId);
+
+          // Check if this is a sleep book and log accordingly
+          const sleepBooks = ['325f8e1a-c9f9-4fbd-a6e4-5b04fb3c9a0a', '486fbb7e-19ec-474e-8296-60ff1d82580d'];
+          if (sleepBooks.includes(bookId)) {
+            console.log(`[sleep-book] 🏪 WebRTC store detected sleep book: ${bookId}`);
+            console.log(`[sleep-book] 🎯 Will fetch book-specific AI instructions during initialization`);
+          }
+        }
+
+        const fullUrl = `${aiUrl}?${params.toString()}`;
+        console.log('[AI_instructions] FETCHING AI INSTRUCTIONS FROM:', fullUrl);
+
+        const aiResponse = await fetch(fullUrl);
+        if (!aiResponse.ok) {
+          throw new Error(`HTTP ${aiResponse.status}: Failed to fetch AI instructions`);
+        }
+
+        const aiData = await aiResponse.json();
+        if (!aiData.promptContent) {
+          throw new Error('No AI instructions found in response - neither custom user nor global instructions available');
+        }
+
+        if (aiData.source === 'default') {
+          throw new Error('Only default instructions available - no custom user or global instructions found in Supabase');
+        }
+
+        finalInstructions = aiData.promptContent;
+        aiInstructionsSource = aiData.source || 'supabase';
+        console.log(`[zustand-webrtc] ✅ AI instructions loaded from ${aiInstructionsSource} source`);
+
+        // ===== COMPREHENSIVE AI INSTRUCTIONS LOGGING =====
+        console.log(`[AI_instructions] ===== AI INSTRUCTIONS FETCHED FROM SUPABASE =====`);
+        console.log(`[AI_instructions] Source: ${aiInstructionsSource}`);
+        console.log(`[AI_instructions] User ID: ${userId || 'anonymous'}`);
+        console.log(`[AI_instructions] Instructions Character Count: ${finalInstructions.length}`);
+        console.log(`[AI_instructions] AI INSTRUCTIONS sent to OpenAI Realtime API (first 200 chars):`);
+        console.log(`[AI_instructions]`, finalInstructions.substring(0, 200) + '...');
+        console.log(`[AI_instructions] ===== END OF AI INSTRUCTIONS FROM SUPABASE =====`);
+
+        // V15 GREENFIELD FIX: Determine which functions to use based on bookId (replacing unreliable AI instructions text-based logic)
+        console.log(`[AI-INTERACTION] Determining function set based on bookId: ${bookId}`);
+        
+        let selectedToolsRaw;
+        let functionMode = '';
+        
+        if (bookId === 'f95206aa-165e-4c49-b43a-69d91bef8ed4') {
+          selectedToolsRaw = mentalHealthFunctionDefinitions;
+          functionMode = 'mental health';
+          console.log(`[AI-INTERACTION] Using mental health functions for bookId: ${bookId}`);
+        } else if (bookId === '325f8e1a-c9f9-4fbd-a6e4-5b04fb3c9a0a' || bookId === '486fbb7e-19ec-474e-8296-60ff1d82580d') {
+          selectedToolsRaw = sleepFunctionDefinitions;
+          functionMode = 'sleep';
+          console.log(`[AI-INTERACTION] Using sleep functions for bookId: ${bookId}`);
+        } else {
+          selectedToolsRaw = bookFunctionDefinitions;
+          functionMode = 'book';
+          console.log(`[AI-INTERACTION] Using book functions for bookId: ${bookId}`);
+        }
+
+        // Type the tools properly for ConnectionConfig
+        const toolsToUse = selectedToolsRaw as Array<{
+          type: 'function';
+          name: string;
+          description: string;
+          parameters: Record<string, unknown>;
+        }>;
+
+        console.log(`[AI-INTERACTION] Using ${functionMode} functions based on bookId`);
+        console.log(`[AI-INTERACTION] BookId: ${bookId}`);
+        console.log(`[AI-INTERACTION] Book functions available: ${bookFunctionDefinitions.length}, Mental health functions available: ${mentalHealthFunctionDefinitions.length}, Sleep functions available: ${sleepFunctionDefinitions.length}`);
+        console.log(`[AI-INTERACTION] Selected function definitions count: ${toolsToUse.length}`);
+        console.log(`[AI-INTERACTION] Functions being sent to AI: ${toolsToUse.map(f => f.name).join(', ')}`);
+        
+        // CRITICAL VERIFICATION: Check if resource_search_function is included
+        const hasResourceSearch = toolsToUse.some(f => f.name === 'resource_search_function' || f.name === 'sleep_resource_search_function');
+        console.log(`[AI-INTERACTION] ✅ RESOURCE SEARCH VERIFICATION: resource_search_function or sleep_resource_search_function included: ${hasResourceSearch}`);
+        if (!hasResourceSearch) {
+          console.error(`[AI-INTERACTION] ❌ CRITICAL ERROR: resource_search_function missing from tools!`);
+          console.error(`[AI-INTERACTION] ❌ Current mode: ${functionMode} functions for bookId: ${bookId}`);
+          console.error(`[AI-INTERACTION] ❌ This indicates the selected function set doesn't include resource search capabilities`);
+        }
+        
+        console.log('[FUNCTION-INIT] CRITICAL DEBUG - Tools being passed to AI:', JSON.stringify(toolsToUse, null, 2));
+
+        // ===== COMPREHENSIVE FUNCTION DEFINITIONS LOGGING =====
+        console.log(`[AI_instructions] ===== FUNCTION DEFINITIONS SELECTED FOR AI =====`);
+        console.log(`[AI_instructions] Mode: ${functionMode.charAt(0).toUpperCase() + functionMode.slice(1)} Functions`);
+        console.log(`[AI_instructions] Function Count: ${toolsToUse.length}`);
+        console.log(`[AI_instructions] Function Names: ${toolsToUse.map(f => f.name).join(', ')}`);
+        console.log(`[AI_instructions] COMPLETE FUNCTION DEFINITIONS:`);
+        toolsToUse.forEach((tool, index) => {
+          console.log(`[AI_instructions] === FUNCTION ${index + 1}: ${tool.name} ===`);
+          console.log(`[AI_instructions]`, JSON.stringify(tool, null, 2));
+          console.log(`[AI_instructions] === END FUNCTION ${index + 1} ===`);
+        });
+        console.log(`[AI_instructions] ===== END OF FUNCTION DEFINITIONS =====`);
+
+        const connectionConfig: ConnectionConfig = {
+          ...config,
+          instructions: finalInstructions, // V15 FIX: Use Supabase instructions
+          tools: toolsToUse, // V15 FIX: Use actual function definitions
+          tool_choice: 'auto' as const
+        };
+
+        // ===== COMPREHENSIVE CONNECTION CONFIG LOGGING =====
+        console.log(`[AI_instructions] ===== FINAL CONNECTION CONFIG FOR AI =====`);
+        console.log(`[AI_instructions] Voice: ${connectionConfig.voice || 'default'}`);
+        console.log(`[AI_instructions] Tool Choice: ${connectionConfig.tool_choice}`);
+        console.log(`[AI_instructions] Timeout: ${connectionConfig.timeout || 'default'}`);
+        console.log(`[AI_instructions] Enable Diagnostics: ${connectionConfig.enableDiagnostics || false}`);
+        console.log(`[AI_instructions] Retry Attempts: ${connectionConfig.retryAttempts || 'default'}`);
+        if (connectionConfig.greetingInstructions) {
+          console.log(`[AI_instructions] Greeting Instructions Character Count: ${connectionConfig.greetingInstructions.length}`);
+          console.log(`[AI_instructions] GREETING INSTRUCTIONS (first 200 chars):`);
+          console.log(`[AI_instructions]`, connectionConfig.greetingInstructions.substring(0, 200) + '...');
+        } else {
+          console.log(`[AI_instructions] NO GREETING INSTRUCTIONS IN CONFIG`);
+        }
+        console.log(`[AI_instructions] Instructions Character Count: ${connectionConfig.instructions?.length || 0}`);
+        console.log(`[AI_instructions] Function Count: ${(connectionConfig.tools as Array<unknown>)?.length || 0}`);
+        console.log(`[AI_instructions] COMPLETE CONNECTION CONFIG JSON:`);
+        console.log(`[AI_instructions]`, JSON.stringify(connectionConfig, null, 2));
+        console.log(`[AI_instructions] ===== END OF CONNECTION CONFIG =====`);
+
+        // Store configuration for later use (don't create connection yet)
+        set({
+          storedConnectionConfig: connectionConfig
+        });
+
+      } catch (error) {
+        console.error('[zustand-webrtc] ❌ CRITICAL ERROR: Cannot initialize without custom user or global AI instructions');
+        console.error('[zustand-webrtc] ❌ Error details:', error);
+
+        // V15 GREENFIELD: FAIL LOUDLY - no fallbacks allowed
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        optimizedAudioLogger.error('webrtc', 'ai_instructions_load_failed', error as Error, {
+          userId: typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null,
+          errorType: 'no_fallback_policy',
+          requiresAction: 'add_global_instructions_in_admin'
+        });
+
+        throw new Error(`V15 INITIALIZATION FAILED: ${errorMessage}. Please add global AI instructions in the admin interface at /chatbotV11/admin`);
+      }
+
+      console.log('[V15-OPTIMIZATION] ✅ Pre-initialization complete - config stored');
+      optimizedAudioLogger.info('webrtc', 'zustand_store_pre_initialized', {
+        version: 'v15-zustand-optimized',
+        configStored: true
+      });
+    },
+
+    // Initialize WebRTC connection manager (called on "Let's Talk" click)
+    initialize: async (config: ConnectionConfig = {}) => {
+      console.log('[V15-OPTIMIZATION] 🚀 Fast initialize using pre-computed config');
+      console.log('[zustand-webrtc] 🔧 Fast initialization using pre-computed config');
+
+      optimizedAudioLogger.info('webrtc', 'zustand_store_fast_initializing', {
+        config,
+        version: 'v15-zustand-optimized'
+      });
+
+      // Use stored config - should already be available from preInitialize
+      const currentState = get();
+      const finalConfig = currentState.storedConnectionConfig;
+
+      if (!finalConfig) {
+        console.error('[V15-OPTIMIZATION] ❌ No stored config found - preInitialize should have been called');
+        throw new Error('No stored configuration found. Please ensure preInitialize was called on page load.');
+      }
+
+      console.log('[V15-OPTIMIZATION] ✅ Using pre-computed config with', (finalConfig.tools as Array<unknown>).length, 'tools');
+
+      // ===== COMPREHENSIVE FAST INITIALIZE LOGGING =====
+      console.log('[AI_instructions] ===== FAST INITIALIZE USING PRE-COMPUTED CONFIG =====');
+      console.log('[AI_instructions] This is when "Let\'s Connect" is clicked and we use stored configuration');
+      console.log('[AI_instructions] Stored Config Available: YES');
+      console.log('[AI_instructions] Instructions Character Count:', finalConfig.instructions?.length || 0);
+      console.log('[AI_instructions] Function Count:', (finalConfig.tools as Array<unknown>)?.length || 0);
+      console.log('[AI_instructions] Voice:', finalConfig.voice || 'default');
+      console.log('[AI_instructions] Tool Choice:', finalConfig.tool_choice);
+      console.log('[AI_instructions] STORED CONFIG WILL BE SENT TO OPENAI VIA SESSION API');
+      console.log('[AI_instructions] ===== END OF FAST INITIALIZE =====');
+
+      // Create connection manager with pre-computed config (fast!)
+      const connectionManager = new ConnectionManager(finalConfig);
+
+      // Subscribe to connection state changes - this is the key to reliable disconnect detection
+      const handleConnectionStateChange = (state: ConnectionState) => {
+        console.log('[zustand-webrtc] 🔍 Native WebRTC state change:', state);
+
+        const currentState = get();
+        const wasConnected = currentState.isConnected;
+        const isNowConnected = state === 'connected';
+
+        // Detect disconnect with conversation reset
+        if (wasConnected && !isNowConnected && currentState.hasActiveConversation) {
+          console.log('[zustand-webrtc] 🔄 DISCONNECT DETECTED - Resetting conversation');
+          console.log('[zustand-webrtc] 📝 Conversation length before reset:', currentState.conversation.length);
+          console.log('[zustand-webrtc] 🧹 Clearing conversation, user message, and session state');
+
+          optimizedAudioLogger.info('webrtc', 'disconnect_detected_conversation_reset', {
+            previousState: currentState.connectionState,
+            newState: state,
+            conversationLength: currentState.conversation.length,
+            hadUserMessage: currentState.userMessage.length > 0,
+            conversationCleared: true
+          });
+
+          // Reset conversation immediately using Zustand
+          set({
+            conversation: [],
+            hasActiveConversation: false,
+            userMessage: '',
+            expectingEndSessionGoodbye: false,
+            waitingForEndSession: false,
+            endSessionCallId: null
+          });
+
+          console.log('[zustand-webrtc] ✅ Reset complete - conversation cleared');
+        }
+
+        // Update connection state
+        const shouldSetThinking = state === 'connected';
+        const currentIsThinking = get().isThinking;
+        console.log('[function] Connection state change:', {
+          connectionState: state,
+          shouldSetThinking,
+          currentIsThinking
+        });
+
+        set({
+          connectionState: state,
+          isConnected: isNowConnected,
+          // Set thinking state when connection is established (waiting for AI greeting)
+          isThinking: shouldSetThinking ? true : currentIsThinking
+        });
+
+        if (shouldSetThinking) {
+          console.log('[function] Setting isThinking: true (connection established)');
+        }
+      };
+
+      connectionManager.onStateChange(handleConnectionStateChange);
+
+      // Create comprehensive message handler using shared factory
+      const messageCallbacks: MessageHandlerCallbacks = createMessageHandlerCallbacks(get, set, 'INITIAL');
+          console.log('[V15-VISUAL-FEEDBACK] Creating listening user bubble');
+          const listeningUserMessage: ConversationMessage = {
+            id: `user-listening-${Date.now()}`,
+            role: "user",
+            text: "Listening...",
+            timestamp: new Date().toISOString(),
+            isFinal: false,
+            status: "speaking"
+          };
+
+          set(state => ({
+            conversation: [...state.conversation, listeningUserMessage],
+            hasActiveConversation: true
+          }));
+        },
+
+        onSpeechStopped: () => {
+          console.log('[V15-VISUAL-FEEDBACK] Speech stopped, AI is thinking');
+          // Set thinking state when user stops speaking
+          set(state => {
+            console.log('[function] Setting isThinking: true (onSpeechStopped)');
+            const newState = { ...state, isThinking: true };
+            console.log('[function] New state:', { isThinking: newState.isThinking });
+            return newState;
+          });
+        },
+
+        onAudioBufferCommitted: () => {
+          console.log('[V15-VISUAL-FEEDBACK] Setting "Thinking..." state');
+
+          // Find the most recent user message and update it to "Thinking..."
+          set(state => {
+            const updatedConversation = [...state.conversation];
+            const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
+
+            if (lastUserMessageIndex >= 0) {
+              updatedConversation[lastUserMessageIndex] = {
+                ...updatedConversation[lastUserMessageIndex],
+                text: "Thinking...",
+                status: "thinking"
+              };
+            }
+
+            const newState = {
+              conversation: updatedConversation,
+              isThinking: true  // Set thinking state for orb visualization
+            };
+            console.log('[function] Setting isThinking: true (onAudioBufferCommitted)');
+            console.log('[function] New state:', { isThinking: newState.isThinking });
+            return newState;
+          });
+        },
+
+        onFunctionCall: async (msg: Record<string, unknown>) => {
+          const functionName = msg.name as string;
+          const callId = msg.call_id as string;
+          const argumentsStr = msg.arguments as string;
+
+          console.log(`[FUNCTION-CALL] AI called function: ${functionName} with callId: ${callId}`);
+          console.log(`[FUNCTION-CALL] Function arguments: ${argumentsStr}`);
+
+          // Keep thinking state active during function execution
+
+          try {
+            const parsedArgs = JSON.parse(argumentsStr);
+            console.log(`[FUNCTION-CALL] Parsed arguments:`, parsedArgs);
+
+            // Get function from registry
+            const currentFunctionRegistry = getFunctionRegistry();
+            console.log(`[FUNCTION-CALL] Available functions in registry:`, Object.keys(currentFunctionRegistry));
+
+            const fn = currentFunctionRegistry[functionName];
+            if (fn) {
+              console.log(`[FUNCTION-CALL] Function ${functionName} found in registry, executing...`);
+              const result = await fn(parsedArgs);
+              console.log(`[FUNCTION-CALL] Function ${functionName} execution result:`, result);
+
+              // Send function result back using connection manager
+              const currentState = get();
+              if (currentState.connectionManager) {
+                const success = currentState.connectionManager.sendFunctionResult(callId, result);
+                if (success) {
+                  console.log(`[FUNCTION-CALL] Function result sent successfully for ${functionName} (callId: ${callId})`);
+
+                  // For end_session, track that we're expecting a goodbye response
+                  if (functionName === 'end_session' && (result as { success: boolean }).success) {
+                    console.log(`[FUNCTION-CALL] end_session function succeeded, setting expectingEndSessionGoodbye=true`);
+                    set({
+                      expectingEndSessionGoodbye: true,
+                      endSessionCallId: callId
+                    });
+                  }
+                } else {
+                  console.error(`[FUNCTION-CALL] Failed to send function result for ${functionName} (callId: ${callId})`);
+                }
+              } else {
+                console.error(`[FUNCTION-CALL] No connection manager available to send function result for ${functionName}`);
+              }
+            } else {
+              console.error(`[FUNCTION-CALL] Function ${functionName} not found in registry. Available functions:`, Object.keys(currentFunctionRegistry));
+            }
+
+          } catch (error) {
+            console.error(`[FUNCTION-CALL] Error executing function ${functionName}:`, error);
+          }
+        },
+
+        onAudioTranscriptDelta: (msg: Record<string, unknown>) => {
+          const delta = msg.delta as string;
+          const responseId = msg.response_id as string || 'unknown';
+          const role = msg.role as string || 'assistant';
+
+          console.log('[V15-TRANSCRIPT-DEBUG] Audio transcript delta received:', { delta, responseId, role });
+
+          // Only clear thinking state when AI assistant starts responding (not for user transcripts)
+          if (role === 'assistant') {
+            set(state => {
+              console.log('[function] Clearing isThinking: false (onAudioTranscriptDelta - assistant)');
+              const newState = { ...state, isThinking: false };
+              console.log('[function] New state:', { isThinking: newState.isThinking });
+              return newState;
+            });
+          } else {
+            console.log('[function] Keeping thinking state - transcript is from user role');
+          }
+
+          const currentState = get();
+          if (delta && currentState.transcriptCallback) {
+            console.log('[V15-TRANSCRIPT-DEBUG] Calling transcript callback with delta');
+            currentState.transcriptCallback({
+              id: responseId,
+              data: delta,
+              metadata: { isTranscriptComplete: false, role: role }
+            });
+          } else {
+            console.log('[V15-TRANSCRIPT-DEBUG] No transcript callback set or no delta data');
+          }
+        },
+
+        onAudioTranscriptDone: (msg: Record<string, unknown>) => {
+          const transcript = msg.transcript as string;
+          const responseId = msg.response_id as string || 'unknown';
+          const role = msg.role as string || 'assistant';
+
+          console.log('[V15-TRANSCRIPT-DEBUG] Audio transcript done received:', { transcript, responseId, role });
+
+          const currentState = get();
+          if (transcript && currentState.transcriptCallback) {
+            console.log('[V15-TRANSCRIPT-DEBUG] Calling transcript callback with complete transcript');
+            currentState.transcriptCallback({
+              id: responseId,
+              data: transcript,
+              metadata: { isTranscriptComplete: true, role: role }
+            });
+          } else {
+            console.log('[V15-TRANSCRIPT-DEBUG] No transcript callback set or no transcript data');
+          }
+        },
+
+        onAudioDelta: (msg: Record<string, unknown>) => {
+          // Handle audio chunks for playback
+          const delta = msg.delta as string;
+          const responseId = msg.response_id as string;
+
+          if (delta && responseId) {
+            // Audio playback will be handled by existing audio service
+          }
+        },
+
+        onAudioDone: (msg: Record<string, unknown>) => {
+          const onAudioDoneTime = performance.now();
+          console.log(`[END-SESSION-DEBUG] 🎵 onAudioDone CALLED at ${onAudioDoneTime.toFixed(2)}ms - checking state`);
+          optimizedAudioLogger.info('webrtc', 'response_audio_done', msg);
+
+          // Clear thinking state when AI finishes generating audio
+          set(state => {
+            console.log('[function] Clearing isThinking: false (onAudioDone)');
+            const newState = { ...state, isThinking: false };
+            console.log('[function] New state:', { isThinking: newState.isThinking });
+            return newState;
+          });
+
+          const currentState = get();
+
+          console.log('[END-SESSION-DEBUG] 🔍 onAudioDone state check:', {
+            responseId: msg.response_id,
+            waitingForEndSession: currentState.waitingForEndSession,
+            expectingGoodbye: currentState.expectingEndSessionGoodbye,
+            endSessionCallId: currentState.endSessionCallId,
+            messageKeys: Object.keys(msg)
+          });
+
+          // CRITICAL: If we're waiting for end session, ONLY start end session detection
+          // Stop any regular conversation detection that might be running
+          if (currentState.waitingForEndSession) {
+            console.log(`[END-SESSION-DEBUG] 🛑 PRIORITY: End session mode - stopping any existing detection at ${performance.now().toFixed(2)}ms`);
+            stopSilenceDetection(); // Clear any existing detection first
+          }
+
+          if (currentState.waitingForEndSession) {
+            console.log(`[END-SESSION-DEBUG] 🎚️ Starting silence detection for END SESSION at ${performance.now().toFixed(2)}ms`);
+
+            optimizedAudioLogger.info('session', 'server_audio_generation_complete', {
+              responseId: msg.response_id,
+              action: 'starting_store_based_silence_detection_end_session',
+              method: 'store_volume_monitoring_plus_silence_detection'
+            });
+
+            // End session completion callback - disconnect when done
+            const endSessionCallback = async () => {
+              console.log(`[END-SESSION-DEBUG] 🔍 END SESSION CALLBACK EXECUTING at ${performance.now().toFixed(2)}ms - this will disconnect the session`);
+              try {
+                await get().disconnect();
+                console.log('[END-SESSION-DEBUG] ✅ disconnect() completed');
+              } catch (error) {
+                console.log('[END-SESSION-DEBUG] ❌ disconnect() ERROR:', error);
+              }
+            };
+
+            console.log(`[END-SESSION-DEBUG] 🎯 Creating END SESSION silence detection with disconnect callback at ${performance.now().toFixed(2)}ms`);
+            startSilenceDetection(endSessionCallback, get);
+          } else {
+            // Double-check: don't start regular detection if we're actually waiting for end session
+            const finalCheck = get();
+            if (finalCheck.waitingForEndSession) {
+              console.log('[END-SESSION-DEBUG] ⚠️ RACE CONDITION: State changed to waitingForEndSession=true, skipping regular detection');
+              return;
+            }
+            console.log('[function] 🎚️ Starting silence detection for REGULAR CONVERSATION');
+
+            optimizedAudioLogger.info('session', 'server_audio_generation_complete', {
+              responseId: msg.response_id,
+              action: 'starting_store_based_silence_detection_regular',
+              method: 'store_volume_monitoring_plus_silence_detection'
+            });
+
+            // Regular conversation completion callback - just mark complete
+            const regularCallback = () => {
+              console.log('[END-SESSION-DEBUG] 🔍 REGULAR CALLBACK EXECUTING - this is harmless');
+              console.log('[function] ✅ Regular conversation silence detection complete');
+              console.log('[function] 🎯 AI finished speaking - user can speak again');
+
+              optimizedAudioLogger.info('session', 'regular_conversation_audio_complete', {
+                responseId: msg.response_id,
+                method: 'store_based_silence_detection'
+              });
+
+              // No special state changes needed for regular conversation
+              // User can start speaking again naturally
+            };
+
+            console.log(`[END-SESSION-DEBUG] 🎯 Creating REGULAR CHAT silence detection with harmless callback at ${performance.now().toFixed(2)}ms`);
+            startSilenceDetection(regularCallback, get);
+          }
+        },
+
+        onResponseDone: (msg: Record<string, unknown>) => {
+          optimizedAudioLogger.info('webrtc', 'response_completed', { responseId: msg.response_id });
+
+          // Don't clear thinking state here - wait for actual speech
+          // Thinking state persists through function calls
+
+          // Check if this is the goodbye response after end_session
+          const currentState = get();
+
+          // DEBUG: Always log response done events when expecting goodbye
+          if (currentState.expectingEndSessionGoodbye) {
+            console.log('[function] 🔍 onResponseDone called while expecting goodbye:', {
+              responseId: msg.response_id,
+              expectingGoodbye: currentState.expectingEndSessionGoodbye,
+              endSessionCallId: currentState.endSessionCallId,
+              fullMessage: msg
+            });
+
+            const response = msg.response as Record<string, unknown> | undefined;
+            const hasContent = response && response.status === 'completed';
+
+            console.log('[function] 🔍 Response content analysis:', {
+              response,
+              hasContent,
+              responseStatus: response?.status,
+              responseKeys: response ? Object.keys(response) : 'no response object'
+            });
+
+            if (hasContent) {
+              console.log('[END-SESSION-DEBUG] ✅ Goodbye response detected! Setting waitingForEndSession=true');
+
+              optimizedAudioLogger.info('session', 'goodbye_response_detected', {
+                responseId: msg.response_id,
+                callId: currentState.endSessionCallId,
+                nextStep: 'waiting_for_server_audio_done_signal'
+              });
+
+              // CRITICAL FIX: Stop any existing silence detection to prevent race conditions
+              console.log('[END-SESSION-DEBUG] 🛁 Stopping all regular audio monitoring to prevent race conditions');
+              stopSilenceDetection();
+              
+              // Mark that goodbye was received, now wait for server audio done signal
+              set({
+                expectingEndSessionGoodbye: false,
+                waitingForEndSession: true
+              });
+
+              console.log('[END-SESSION-DEBUG] 🎯 State transition complete:', {
+                expectingEndSessionGoodbye: false,
+                waitingForEndSession: true
+              });
+
+              optimizedAudioLogger.info('debug', 'end_session_flow_ready', {
+                waitingForServerAudioDone: true,
+                flow: 'server_signal_plus_volume_monitoring'
+              });
+            } else {
+              console.log('[function] ❌ Response did not meet goodbye criteria');
+
+              optimizedAudioLogger.warn('debug', 'unexpected_response_after_end_session', {
+                responseId: msg.response_id,
+                hasContent,
+                expectedGoodbye: true,
+                responseStatus: response?.status,
+                fullResponse: response
+              });
+            }
+          } else {
+            console.log('[function] 📝 Normal response done (not expecting goodbye):', {
+              responseId: msg.response_id
+            });
+          }
+        },
+
+        onError: (error: Error) => {
+          optimizedAudioLogger.error('webrtc', 'comprehensive_handler_error', error);
+
+          const currentState = get();
+          if (currentState.errorCallback) {
+            currentState.errorCallback(error);
+          }
+        }
+      };
+
+      const messageHandler = new ComprehensiveMessageHandler(messageCallbacks);
+
+      // Subscribe to connection messages
+      connectionManager.onMessage(async (event) => {
+        if (messageHandler) {
+          await messageHandler.handleMessage(event);
+        }
+      });
+
+      // Subscribe to connection errors
+      connectionManager.onError((error) => {
+        optimizedAudioLogger.error('webrtc', 'connection_error', error);
+
+        const currentState = get();
+        if (currentState.errorCallback) {
+          currentState.errorCallback(error);
+        }
+      });
+
+      // Subscribe to incoming audio streams for real-time audio monitoring
+      connectionManager.onAudioStream((stream) => {
+        console.log('[V15-ORB-DEBUG] Zustand store onAudioStream callback triggered:', {
+          streamId: stream.id,
+          trackCount: stream.getTracks().length,
+          audioTracks: stream.getAudioTracks().length,
+          streamActive: stream.active,
+          tracks: stream.getTracks().map(track => ({
+            id: track.id,
+            kind: track.kind,
+            enabled: track.enabled,
+            readyState: track.readyState
+          })),
+          timestamp: Date.now()
+        });
+
+        optimizedAudioLogger.info('webrtc', 'audio_stream_connected', {
+          streamId: stream.id,
+          trackCount: stream.getTracks().length,
+          audioTracks: stream.getAudioTracks().length
+        });
+
+        // Create audio element with stable event handlers
+        const audioElement = document.createElement('audio');
+        audioElement.srcObject = stream;
+        audioElement.autoplay = true;
+        audioElement.volume = 1.0;
+        audioElement.style.display = 'none';
+        audioElement.id = `zustand-audio-${stream.id}`;
+
+        console.log('[V15-ORB-DEBUG] Audio element created in Zustand store:', {
+          elementId: audioElement.id,
+          srcObject: !!audioElement.srcObject,
+          autoplay: audioElement.autoplay,
+          volume: audioElement.volume,
+          streamId: stream.id
+        });
+
+        // Real-time volume monitoring setup
+        let audioContext: AudioContext | null = null;
+        let analyser: AnalyserNode | null = null;
+        let volumeMonitoringInterval: number | null = null;
+
+        const setupVolumeMonitoring = () => {
+          console.log('[V15-ORB-DEBUG] setupVolumeMonitoring called for element:', audioElement.id);
+          try {
+            audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+            analyser = audioContext.createAnalyser();
+
+            console.log('[V15-ORB-DEBUG] AudioContext created:', {
+              contextState: audioContext.state,
+              sampleRate: audioContext.sampleRate,
+              elementId: audioElement.id
+            });
+
+            const source = audioContext.createMediaElementSource(audioElement);
+            source.connect(analyser);
+            source.connect(audioContext.destination);
+
+            analyser.fftSize = 256;
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            console.log('[V15-ORB-DEBUG] Volume monitoring setup complete:', {
+              fftSize: analyser.fftSize,
+              bufferLength: bufferLength,
+              audioContextState: audioContext.state,
+              elementId: audioElement.id,
+              sourceConnected: true
+            });
+
+            // Volume monitoring state tracking
+            let lastLogTime = 0;
+
+            // Start optimized volume monitoring loop
+            volumeMonitoringInterval = window.setInterval(() => {
+              if (!analyser) return;
+
+              const currentState = get();
+
+              // Continue monitoring during all states - let actual audio levels determine values
+
+              analyser.getByteFrequencyData(dataArray);
+
+              // Calculate RMS (Root Mean Square) for volume
+              let sum = 0;
+              for (let i = 0; i < bufferLength; i++) {
+                sum += dataArray[i] * dataArray[i];
+              }
+              const rms = Math.sqrt(sum / bufferLength);
+              const normalizedVolume = rms / 255; // Normalize to 0-1
+              const audioLevel = Math.floor(rms); // Keep original scale for compatibility
+              const isAudioPlaying = rms > 10; // Threshold for detecting audio activity
+              
+              // Minimal logging during end session only for critical events
+              if (currentState.waitingForEndSession && silenceDetector.isActive && (rms < 5 || rms > 50)) {
+                console.log(`[END-SESSION-DEBUG] 🎤 Audio: ${rms.toFixed(1)} (${isAudioPlaying ? 'playing' : 'silent'})`);
+              }
+
+              // STATE CHANGE DETECTION: Only update if values actually changed
+              const volumeChanged = Math.abs(currentState.currentVolume - normalizedVolume) > 0.01;
+              const levelChanged = Math.abs(currentState.audioLevel - audioLevel) > 1;
+              const playingChanged = currentState.isAudioPlaying !== isAudioPlaying;
+
+              if (volumeChanged || levelChanged || playingChanged) {
+                // REDUCED LOGGING: Only log during audio activity or every 2 seconds during silence
+                const now = Date.now();
+                const shouldLog = isAudioPlaying || (now - lastLogTime > 2000);
+
+                if (shouldLog) {
+                  console.log('[V15-VOLUME] Audio state change:', {
+                    rms: rms.toFixed(2),
+                    normalizedVolume: normalizedVolume.toFixed(4),
+                    audioLevel: audioLevel,
+                    isAudioPlaying: isAudioPlaying,
+                    changes: { volumeChanged, levelChanged, playingChanged }
+                  });
+                  lastLogTime = now;
+                }
+
+                // Update store only when values actually change
+                set(state => ({
+                  ...state,
+                  currentVolume: normalizedVolume,
+                  audioLevel: audioLevel,
+                  isAudioPlaying: isAudioPlaying
+                }));
+                
+                // Debug logging for blue orb rotation issue
+                if (isAudioPlaying || normalizedVolume > 0.05) {
+                  console.log(`[BLUE-ORB-ROTATION] WebRTC store volume update: rms=${rms.toFixed(2)}, normalizedVolume=${normalizedVolume.toFixed(4)}, isAudioPlaying=${isAudioPlaying}, threshold=10`);
+                }
+                
+                // Check if webrtc-audio-level events should be dispatched (like the old system)
+                if (isAudioPlaying && typeof window !== 'undefined') {
+                  // Dispatch webrtc-audio-level event for blue orb (this might be what's missing)
+                  const event = new CustomEvent('webrtc-audio-level', {
+                    detail: { level: rms } // Send raw RMS value (0-255 scale)
+                  });
+                  window.dispatchEvent(event);
+                  console.log(`[BLUE-ORB-ROTATION] Dispatched webrtc-audio-level event: level=${rms}`);
+                }
+              }
+            }, 100); // Reduced to 10fps - still smooth but less intensive
+
+            console.log('[zustand-webrtc] ✅ Real-time volume monitoring started');
+          } catch (error) {
+            console.error('[zustand-webrtc] ❌ Failed to setup volume monitoring:', error);
+          }
+        };
+
+        audioElement.onplay = () => {
+          console.log('[V15-ORB-DEBUG] Zustand audio element onplay event:', {
+            elementId: audioElement.id,
+            streamId: stream.id,
+            currentTime: audioElement.currentTime,
+            duration: audioElement.duration,
+            paused: audioElement.paused,
+            readyState: audioElement.readyState
+          });
+          optimizedAudioLogger.audioPlayback('started', stream.id);
+          setupVolumeMonitoring();
+          set(state => ({ ...state, isAudioPlaying: true }));
+        };
+
+        audioElement.onended = () => {
+          optimizedAudioLogger.audioPlayback('ended', stream.id);
+          set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+          if (volumeMonitoringInterval) {
+            clearInterval(volumeMonitoringInterval);
+            volumeMonitoringInterval = null;
+          }
+        };
+
+        audioElement.onpause = () => {
+          set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+          if (volumeMonitoringInterval) {
+            clearInterval(volumeMonitoringInterval);
+            volumeMonitoringInterval = null;
+          }
+        };
+
+        audioElement.onerror = (error) => {
+          console.log('[V15-ORB-DEBUG] Zustand audio element error:', {
+            elementId: audioElement.id,
+            streamId: stream.id,
+            error: error
+          });
+          optimizedAudioLogger.error('webrtc', 'audio_element_error', new Error(`Audio element error: ${error}`));
+          set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+        };
+
+        document.body.appendChild(audioElement);
+
+        console.log('[V15-ORB-DEBUG] Audio element appended to DOM:', {
+          elementId: audioElement.id,
+          parentNode: !!audioElement.parentNode,
+          inDOM: document.contains(audioElement),
+          streamId: stream.id
+        });
+
+        stream.getTracks().forEach(track => {
+          track.onended = () => {
+            optimizedAudioLogger.info('webrtc', 'audio_track_ended', { trackId: track.id });
+            if (volumeMonitoringInterval) {
+              clearInterval(volumeMonitoringInterval);
+              volumeMonitoringInterval = null;
+            }
+            if (audioElement.parentNode) {
+              document.body.removeChild(audioElement);
+            }
+            set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+          };
+        });
+      });
+
+      // Store the connection manager and message handler (config already stored)
+      set({
+        connectionManager,
+        messageHandler
+      });
+
+      optimizedAudioLogger.info('webrtc', 'zustand_store_initialized', {
+        version: 'v15-zustand'
+      });
+    },
+
+    // Connect action - optimized for fast connection
+    connect: async () => {
+      const currentState = get();
+      let { connectionManager } = currentState;
+      const { storedConnectionConfig } = currentState;
+
+      // If no connection manager, create one using fast initialize
+      if (!connectionManager) {
+        console.log('[V15-OPTIMIZATION] 🚀 First connection - calling fast initialize');
+
+        if (!storedConnectionConfig) {
+          console.error('[V15-OPTIMIZATION] ❌ No stored config - preInitialize should have been called on page load');
+          throw new Error('No stored configuration found. Please ensure the page loaded correctly and try refreshing.');
+        }
+
+        // Fast initialize using pre-computed config (no function definitions needed - already stored)
+        await get().initialize();
+        connectionManager = get().connectionManager;
+
+        if (!connectionManager) {
+          throw new Error('Fast initialization failed to create connection manager');
+        }
+      }
+      // If connection manager exists but needs reconnection setup
+      else if (connectionManager.getState() === 'disconnected' && connectionManager.isCleanedUp()) {
+        console.log('[FUNCTION-RECONNECT] Creating new connection manager for reconnection');
+
+        if (!storedConnectionConfig) {
+          console.error('[FUNCTION-RECONNECT] No stored connection config available - need to reinitialize');
+          throw new Error('Connection manager lost and no stored config - please refresh the page to reinitialize');
+        }
+
+        console.log('[FUNCTION-RECONNECT] Using stored connection config with', (storedConnectionConfig.tools as Array<unknown>).length, 'tools');
+        console.log('[FUNCTION-RECONNECT] Available functions:', (storedConnectionConfig.tools as Array<{ name: string }>).map(f => f.name));
+
+        // Create new connection manager with stored config
+        connectionManager = new ConnectionManager(storedConnectionConfig);
+
+        // Set up the COMPLETE event handlers for reconnection (NOT simplified!)
+        const handleConnectionStateChange = (state: ConnectionState) => {
+          console.log('[FUNCTION-RECONNECT] Connection state changed:', state);
+          const currentState = get();
+          const wasConnected = currentState.isConnected;
+          const isNowConnected = state === 'connected';
+
+          // Detect disconnect with conversation reset
+          if (wasConnected && !isNowConnected && currentState.hasActiveConversation) {
+            console.log('[FUNCTION-RECONNECT] DISCONNECT DETECTED - Resetting conversation');
+            set({
+              conversation: [],
+              hasActiveConversation: false,
+              userMessage: '',
+              expectingEndSessionGoodbye: false,
+              waitingForEndSession: false,
+              endSessionCallId: null
+            });
+          }
+
+          const shouldSetThinking = state === 'connected';
+          const currentIsThinking = get().isThinking;
+          console.log('[function] RECONNECT Connection state change:', {
+            connectionState: state,
+            shouldSetThinking,
+            currentIsThinking
+          });
+
+          set({
+            connectionState: state,
+            isConnected: isNowConnected,
+            // Set thinking state when connection is established (waiting for AI greeting)
+            isThinking: shouldSetThinking ? true : currentIsThinking
+          });
+
+          if (shouldSetThinking) {
+            console.log('[function] Setting isThinking: true (RECONNECT connection established)');
+          }
+        };
+
+        connectionManager.onStateChange(handleConnectionStateChange);
+
+        // Create comprehensive message handler using shared factory
+        const messageCallbacks: MessageHandlerCallbacks = createMessageHandlerCallbacks(get, set, 'RECONNECT');
+            const listeningUserMessage: ConversationMessage = {
+              id: `user-listening-${Date.now()}`,
+              role: "user",
+              text: "Listening...",
+              timestamp: new Date().toISOString(),
+              isFinal: false,
+              status: "speaking"
+            };
+
+            set(state => ({
+              conversation: [...state.conversation, listeningUserMessage],
+              hasActiveConversation: true
+            }));
+          },
+
+          onSpeechStopped: () => {
+            console.log('[FUNCTION-RECONNECT] Speech stopped, AI is thinking');
+            // Set thinking state when user stops speaking
+            set(state => {
+              console.log('[function] Setting isThinking: true (RECONNECT onSpeechStopped)');
+              const newState = { ...state, isThinking: true };
+              console.log('[function] New state:', { isThinking: newState.isThinking });
+              return newState;
+            });
+          },
+
+          onAudioBufferCommitted: () => {
+            console.log('[FUNCTION-RECONNECT] Setting "Thinking..." state');
+
+            set(state => {
+              const updatedConversation = [...state.conversation];
+              const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
+
+              if (lastUserMessageIndex >= 0) {
+                updatedConversation[lastUserMessageIndex] = {
+                  ...updatedConversation[lastUserMessageIndex],
+                  text: "Thinking...",
+                  status: "thinking"
+                };
+              }
+
+              const newState = {
+                conversation: updatedConversation,
+                isThinking: true  // Set thinking state for orb visualization
+              };
+              console.log('[function] Setting isThinking: true (RECONNECT onAudioBufferCommitted)');
+              console.log('[function] New state:', { isThinking: newState.isThinking });
+              return newState;
+            });
+          },
+
+          onFunctionCall: async (msg: Record<string, unknown>) => {
+            const functionName = msg.name as string;
+            const callId = msg.call_id as string;
+            const argumentsStr = msg.arguments as string;
+
+            console.log(`[FUNCTION-CALL] AI called function: ${functionName} with callId: ${callId}`);
+            console.log(`[FUNCTION-CALL] Function arguments: ${argumentsStr}`);
+
+            // Keep thinking state active during function execution
+
+            try {
+              const parsedArgs = JSON.parse(argumentsStr);
+              console.log(`[FUNCTION-CALL] Parsed arguments:`, parsedArgs);
+
+              // Get function from registry
+              const currentFunctionRegistry = getFunctionRegistry();
+              console.log(`[FUNCTION-CALL] Available functions in registry:`, Object.keys(currentFunctionRegistry));
+
+              const fn = currentFunctionRegistry[functionName];
+              if (fn) {
+                console.log(`[FUNCTION-CALL] Function ${functionName} found in registry, executing...`);
+                const result = await fn(parsedArgs);
+                console.log(`[FUNCTION-CALL] Function ${functionName} execution result:`, result);
+
+                // Send function result back using connection manager
+                const currentState = get();
+                if (currentState.connectionManager) {
+                  const success = currentState.connectionManager.sendFunctionResult(callId, result);
+                  if (success) {
+                    console.log(`[FUNCTION-CALL] Function result sent successfully for ${functionName} (callId: ${callId})`);
+
+                    // For end_session, track that we're expecting a goodbye response
+                    if (functionName === 'end_session' && (result as { success: boolean }).success) {
+                      console.log('[function] 🎯 end_session function succeeded, setting expectingEndSessionGoodbye=true');
+                      console.log('[function] ⏰ Setting smart fallback timeout for voice-activated end session');
+
+                      // SMART FALLBACK: Only activates if volume monitoring fails to start
+                      const timeoutId = window.setTimeout(() => {
+                        const currentState = get();
+                        const isVolumeMonitoringActive = currentState.volumeMonitoringActive;
+                        const needsFallback = currentState.expectingEndSessionGoodbye || currentState.waitingForEndSession;
+
+                        if (!isVolumeMonitoringActive && needsFallback) {
+                          console.log('[function] 🚨 Smart fallback triggered - volume monitoring never started');
+                          console.log('[function] Current state:', {
+                            expectingGoodbye: currentState.expectingEndSessionGoodbye,
+                            waitingForEndSession: currentState.waitingForEndSession,
+                            volumeMonitoringActive: isVolumeMonitoringActive,
+                            callId: currentState.endSessionCallId
+                          });
+
+                          optimizedAudioLogger.warn('session', 'zustand_smart_fallback_timeout', {
+                            reason: 'volume_monitoring_failed_to_start',
+                            volumeMonitoringActive: isVolumeMonitoringActive,
+                            forcingDisconnect: true
+                          });
+
+                          // Reset all end session state
+                          set({
+                            expectingEndSessionGoodbye: false,
+                            waitingForEndSession: false,
+                            endSessionCallId: null,
+                            volumeMonitoringActive: false,
+                            fallbackTimeoutId: null
+                          });
+
+                          // Force disconnect using store's disconnect method (same as button)
+                          console.log('[function] 🔌 Smart fallback calling store disconnect() (same as button)');
+                          get().disconnect();
+                        } else if (isVolumeMonitoringActive) {
+                          console.log('[function] 🎯 Smart fallback skipped - volume monitoring is active');
+                        } else {
+                          console.log('[function] ✅ Smart fallback skipped - graceful flow completed');
+                        }
+
+                        // Clear the timeout reference
+                        set({ fallbackTimeoutId: null });
+                      }, 15000); // 15 second timeout since it's only for failure cases
+
+                      // Store the timeout ID
+                      set({
+                        expectingEndSessionGoodbye: true,
+                        endSessionCallId: callId,
+                        fallbackTimeoutId: timeoutId
+                      });
+                    }
+                  } else {
+                    console.error(`[FUNCTION-CALL] Failed to send function result for ${functionName} (callId: ${callId})`);
+                  }
+                } else {
+                  console.error(`[FUNCTION-CALL] No connection manager available to send function result for ${functionName}`);
+                }
+              } else {
+                console.error(`[FUNCTION-CALL] Function ${functionName} not found in registry. Available functions:`, Object.keys(currentFunctionRegistry));
+              }
+
+            } catch (error) {
+              console.error(`[FUNCTION-CALL] Error executing function ${functionName}:`, error);
+            }
+          },
+
+          onAudioTranscriptDelta: (msg: Record<string, unknown>) => {
+            const delta = msg.delta as string;
+            const responseId = msg.response_id as string || 'unknown';
+            const role = msg.role as string || 'assistant';
+
+            // Only clear thinking state when AI assistant starts responding (not for user transcripts)
+            if (role === 'assistant') {
+              set(state => {
+                console.log('[function] Clearing isThinking: false (RECONNECT onAudioTranscriptDelta - assistant)');
+                const newState = { ...state, isThinking: false };
+                console.log('[function] New state:', { isThinking: newState.isThinking });
+                return newState;
+              });
+            } else {
+              console.log('[function] Keeping thinking state - transcript is from user role (RECONNECT)');
+            }
+
+            const currentState = get();
+            if (delta && currentState.transcriptCallback) {
+              currentState.transcriptCallback({
+                id: responseId,
+                data: delta,
+                metadata: { isTranscriptComplete: false, role: role }
+              });
+            }
+          },
+
+          onAudioTranscriptDone: (msg: Record<string, unknown>) => {
+            const transcript = msg.transcript as string;
+            const responseId = msg.response_id as string || 'unknown';
+            const role = msg.role as string || 'assistant';
+
+            const currentState = get();
+            if (transcript && currentState.transcriptCallback) {
+              currentState.transcriptCallback({
+                id: responseId,
+                data: transcript,
+                metadata: { isTranscriptComplete: true, role: role }
+              });
+            }
+          },
+
+          onAudioDelta: (msg: Record<string, unknown>) => {
+            // Handle audio chunks for playback
+            const delta = msg.delta as string;
+            const responseId = msg.response_id as string;
+
+            if (delta && responseId) {
+              // Audio playback will be handled by existing audio service
+            }
+          },
+
+          onAudioDone: () => {
+            console.log('[FUNCTION-RECONNECT] Response audio done - starting volume monitoring');
+
+            // Clear thinking state when AI finishes generating audio
+            set(state => {
+              console.log('[function] Clearing isThinking: false (RECONNECT onAudioDone)');
+              const newState = { ...state, isThinking: false };
+              console.log('[function] New state:', { isThinking: newState.isThinking });
+              return newState;
+            });
+
+            const currentState = get();
+
+            if (currentState.waitingForEndSession) {
+              console.log('[FUNCTION-RECONNECT] Starting volume monitoring for END SESSION');
+
+              const endSessionCallback = () => {
+                console.log('[END-SESSION-DEBUG] 🔍 END SESSION CALLBACK EXECUTING - starting 2-second grace period');
+                
+                // Add 2-second grace period before disconnecting
+                setTimeout(() => {
+                  console.log('[END-SESSION-DEBUG] 🔚 Grace period complete - disconnecting session');
+                  
+                  const state = get();
+
+                  if (state.fallbackTimeoutId) {
+                    clearTimeout(state.fallbackTimeoutId);
+                  }
+
+                  set({
+                    waitingForEndSession: false,
+                    endSessionCallId: null,
+                    expectingEndSessionGoodbye: false,
+                    volumeMonitoringActive: false,
+                    fallbackTimeoutId: null
+                  });
+
+                  get().disconnect();
+                }, 2000);
+              };
+
+              startSilenceDetection(endSessionCallback, get);
+            } else {
+              console.log('[FUNCTION-RECONNECT] Starting silence detection for REGULAR CONVERSATION');
+
+              const regularCallback = () => {
+                console.log('[FUNCTION-RECONNECT] Regular conversation silence detection complete');
+              };
+
+              startSilenceDetection(regularCallback, get);
+            }
+          },
+
+          onResponseDone: (msg: Record<string, unknown>) => {
+            console.log('[FUNCTION-RECONNECT] Response completed');
+
+            // Don't clear thinking state here - wait for actual speech
+            // Thinking state persists through function calls
+
+            const currentState = get();
+            if (currentState.expectingEndSessionGoodbye) {
+              const response = msg.response as Record<string, unknown> | undefined;
+              const hasContent = response && response.status === 'completed';
+
+              if (hasContent) {
+                set({
+                  expectingEndSessionGoodbye: false,
+                  waitingForEndSession: true
+                });
+              }
+            }
+          },
+
+          onError: (error: Error) => {
+            console.error('[FUNCTION-RECONNECT] Message handler error:', error);
+
+            const currentState = get();
+            if (currentState.errorCallback) {
+              currentState.errorCallback(error);
+            }
+          }
+        };
+
+        const messageHandler = new ComprehensiveMessageHandler(messageCallbacks);
+
+        // Subscribe to connection messages
+        connectionManager.onMessage(async (event) => {
+          if (messageHandler) {
+            await messageHandler.handleMessage(event);
+          }
+        });
+
+        // Subscribe to connection errors
+        connectionManager.onError((error) => {
+          console.error('[FUNCTION-RECONNECT] Connection error:', error);
+
+          const currentState = get();
+          if (currentState.errorCallback) {
+            currentState.errorCallback(error);
+          }
+        });
+
+        // Re-register enhanced audio stream handler for reconnection
+        connectionManager.onAudioStream((stream) => {
+          console.log('[V15-ORB-DEBUG] Zustand store onAudioStream callback triggered (reconnection):', {
+            streamId: stream.id,
+            trackCount: stream.getTracks().length,
+            audioTracks: stream.getAudioTracks().length,
+            streamActive: stream.active,
+            tracks: stream.getTracks().map(track => ({
+              id: track.id,
+              kind: track.kind,
+              enabled: track.enabled,
+              readyState: track.readyState
+            })),
+            timestamp: Date.now()
+          });
+
+          optimizedAudioLogger.info('webrtc', 'audio_stream_connected_reconnection', {
+            streamId: stream.id,
+            trackCount: stream.getTracks().length,
+            audioTracks: stream.getAudioTracks().length
+          });
+
+          // Create audio element with stable event handlers
+          const audioElement = document.createElement('audio');
+          audioElement.srcObject = stream;
+          audioElement.autoplay = true;
+          audioElement.volume = 1.0;
+          audioElement.style.display = 'none';
+          audioElement.id = `zustand-audio-reconnect-${stream.id}`;
+
+          console.log('[V15-ORB-DEBUG] Audio element created in Zustand store (reconnection):', {
+            elementId: audioElement.id,
+            srcObject: !!audioElement.srcObject,
+            autoplay: audioElement.autoplay,
+            volume: audioElement.volume,
+            streamId: stream.id
+          });
+
+          // Real-time volume monitoring setup (same as main handler)
+          let audioContext: AudioContext | null = null;
+          let analyser: AnalyserNode | null = null;
+          let volumeMonitoringInterval: number | null = null;
+
+          const setupVolumeMonitoring = () => {
+            console.log('[V15-ORB-DEBUG] setupVolumeMonitoring called for element (reconnection):', audioElement.id);
+            try {
+              audioContext = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+              analyser = audioContext.createAnalyser();
+
+              console.log('[V15-ORB-DEBUG] AudioContext created (reconnection):', {
+                contextState: audioContext.state,
+                sampleRate: audioContext.sampleRate,
+                elementId: audioElement.id
+              });
+
+              const source = audioContext.createMediaElementSource(audioElement);
+              source.connect(analyser);
+              source.connect(audioContext.destination);
+
+              analyser.fftSize = 256;
+              const bufferLength = analyser.frequencyBinCount;
+              const dataArray = new Uint8Array(bufferLength);
+
+              console.log('[V15-ORB-DEBUG] Volume monitoring setup complete (reconnection):', {
+                fftSize: analyser.fftSize,
+                bufferLength: bufferLength,
+                audioContextState: audioContext.state,
+                elementId: audioElement.id,
+                sourceConnected: true
+              });
+
+              // Volume monitoring state tracking (reconnection)
+              let lastLogTime = 0;
+
+              // Start optimized volume monitoring loop (reconnection)
+              volumeMonitoringInterval = window.setInterval(() => {
+                if (!analyser) return;
+
+                const currentState = get();
+
+                // Continue monitoring during all states - let actual audio levels determine values
+
+                analyser.getByteFrequencyData(dataArray);
+
+                // Calculate RMS (Root Mean Square) for volume
+                let sum = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                  sum += dataArray[i] * dataArray[i];
+                }
+                const rms = Math.sqrt(sum / bufferLength);
+                const normalizedVolume = rms / 255; // Normalize to 0-1
+                const audioLevel = Math.floor(rms); // Keep original scale for compatibility
+                const isAudioPlaying = rms > 10; // Threshold for detecting audio activity
+
+                // STATE CHANGE DETECTION: Only update if values actually changed
+                const volumeChanged = Math.abs(currentState.currentVolume - normalizedVolume) > 0.01;
+                const levelChanged = Math.abs(currentState.audioLevel - audioLevel) > 1;
+                const playingChanged = currentState.isAudioPlaying !== isAudioPlaying;
+
+                if (volumeChanged || levelChanged || playingChanged) {
+                  // REDUCED LOGGING: Only log during audio activity or every 2 seconds during silence
+                  const now = Date.now();
+                  const shouldLog = isAudioPlaying || (now - lastLogTime > 2000);
+
+                  if (shouldLog) {
+                    console.log('[V15-VOLUME-RECONNECT] Audio state change:', {
+                      rms: rms.toFixed(2),
+                      normalizedVolume: normalizedVolume.toFixed(4),
+                      audioLevel: audioLevel,
+                      isAudioPlaying: isAudioPlaying,
+                      changes: { volumeChanged, levelChanged, playingChanged }
+                    });
+                    lastLogTime = now;
+                  }
+
+                  // Update store only when values actually change
+                  set(state => ({
+                    ...state,
+                    currentVolume: normalizedVolume,
+                    audioLevel: audioLevel,
+                    isAudioPlaying: isAudioPlaying
+                  }));
+                }
+              }, 100); // Reduced to 10fps - still smooth but less intensive
+
+              console.log('[zustand-webrtc] ✅ Real-time volume monitoring started (reconnection)');
+            } catch (error) {
+              console.error('[zustand-webrtc] ❌ Failed to setup volume monitoring (reconnection):', error);
+            }
+          };
+
+          audioElement.onplay = () => {
+            console.log('[V15-ORB-DEBUG] Zustand audio element onplay event (reconnection):', {
+              elementId: audioElement.id,
+              streamId: stream.id,
+              currentTime: audioElement.currentTime,
+              duration: audioElement.duration,
+              paused: audioElement.paused,
+              readyState: audioElement.readyState
+            });
+            optimizedAudioLogger.audioPlayback('started', stream.id);
+            setupVolumeMonitoring();
+            set(state => ({ ...state, isAudioPlaying: true }));
+          };
+
+          audioElement.onended = () => {
+            optimizedAudioLogger.audioPlayback('ended', stream.id);
+            set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+            if (volumeMonitoringInterval) {
+              clearInterval(volumeMonitoringInterval);
+              volumeMonitoringInterval = null;
+            }
+          };
+
+          audioElement.onpause = () => {
+            set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+            if (volumeMonitoringInterval) {
+              clearInterval(volumeMonitoringInterval);
+              volumeMonitoringInterval = null;
+            }
+          };
+
+          audioElement.onerror = (error) => {
+            console.log('[V15-ORB-DEBUG] Zustand audio element error (reconnection):', {
+              elementId: audioElement.id,
+              streamId: stream.id,
+              error: error
+            });
+            optimizedAudioLogger.error('webrtc', 'audio_element_error', new Error(`Audio element error: ${error}`));
+            set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+          };
+
+          document.body.appendChild(audioElement);
+
+          console.log('[V15-ORB-DEBUG] Audio element appended to DOM (reconnection):', {
+            elementId: audioElement.id,
+            parentNode: !!audioElement.parentNode,
+            inDOM: document.contains(audioElement),
+            streamId: stream.id
+          });
+
+          stream.getTracks().forEach(track => {
+            track.onended = () => {
+              optimizedAudioLogger.info('webrtc', 'audio_track_ended', { trackId: track.id });
+              if (volumeMonitoringInterval) {
+                clearInterval(volumeMonitoringInterval);
+                volumeMonitoringInterval = null;
+              }
+              if (audioElement.parentNode) {
+                document.body.removeChild(audioElement);
+              }
+              set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+            };
+          });
+        });
+
+        // Store the new connection manager AND message handler
+        set({ connectionManager, messageHandler });
+
+        console.log('[FUNCTION-RECONNECT] Connection manager recreated successfully with stored config');
+      }
+
+      optimizedAudioLogger.logUserAction('connect_requested', {
+        currentState: get().connectionState,
+        isReconnection: false
+      });
+
+      try {
+        await connectionManager.connect();
+        optimizedAudioLogger.logUserAction('connect_succeeded');
+      } catch (error) {
+        optimizedAudioLogger.error('webrtc', 'connect_failed', error as Error);
+        throw error;
+      }
+    },
+
+    // Disconnect action
+    disconnect: async () => {
+      console.log('[END-SESSION-DEBUG] 🔚 DISCONNECT METHOD CALLED - starting disconnect sequence');
+
+      const currentState = get();
+      const { connectionManager, conversation, userMessage, hasActiveConversation } = currentState;
+
+      // IMMEDIATE RESET: Don't wait for WebRTC state change - manual disconnect should reset immediately
+      if (hasActiveConversation && conversation.length > 0) {
+        console.log('[zustand-webrtc] 🔄 MANUAL DISCONNECT - Resetting conversation immediately');
+        console.log('[zustand-webrtc] 📝 Conversation length before reset:', conversation.length);
+        console.log('[zustand-webrtc] 📝 User message before reset:', userMessage.length > 0 ? `"${userMessage}"` : 'empty');
+
+        // Reset conversation and session state immediately
+        set({
+          conversation: [],
+          hasActiveConversation: false,
+          userMessage: '',
+          expectingEndSessionGoodbye: false,
+          waitingForEndSession: false,
+          endSessionCallId: null,
+          // Update connection state immediately too
+          isConnected: false,
+          connectionState: 'disconnected',
+          // Reset mute state to default
+          isMuted: true
+        });
+
+        console.log('[END-SESSION-DEBUG] ✅ Immediate reset complete - conversation cleared');
+
+        optimizedAudioLogger.info('webrtc', 'manual_disconnect_conversation_reset', {
+          conversationLength: conversation.length,
+          hadUserMessage: userMessage.length > 0,
+          resetMethod: 'immediate_manual_reset'
+        });
+      }
+
+      if (!connectionManager) {
+        console.log('[zustand-webrtc] ❌ No connection manager - but conversation already reset');
+        return;
+      }
+
+      console.log('[zustand-webrtc] 🔌 Connection manager exists, proceeding with WebRTC disconnect');
+      optimizedAudioLogger.logUserAction('disconnect_requested');
+
+      try {
+        console.log('[zustand-webrtc] 📞 Calling connectionManager.disconnect()');
+        await connectionManager.disconnect();
+
+        console.log('[zustand-webrtc] 🧹 Clearing audio service state');
+        // Clear audio state
+        audioService.clearAll();
+
+        console.log('[END-SESSION-DEBUG] ✅ WebRTC disconnect completed successfully - SESSION ENDED');
+        optimizedAudioLogger.logUserAction('disconnect_succeeded');
+      } catch (error) {
+        console.log('[zustand-webrtc] ❌ WebRTC disconnect failed:', error);
+        optimizedAudioLogger.error('webrtc', 'disconnect_failed', error as Error);
+        throw error;
+      }
+    },
+
+    // Send message action
+    sendMessage: (message: string): boolean => {
+      const { connectionManager } = get();
+      if (!connectionManager) {
+        optimizedAudioLogger.error('webrtc', 'send_message_failed', new Error('Connection manager not initialized'));
+        return false;
+      }
+
+      const success = connectionManager.sendMessage(message);
+
+      if (success) {
+        // Mark that we have an active conversation
+        set({ hasActiveConversation: true });
+      }
+
+      return success;
+    },
+
+    // Toggle mute action - implements V11-style mute functionality
+    toggleMute: (): boolean => {
+      const currentState = get();
+      const { connectionManager, isMuted } = currentState;
+
+      if (!connectionManager) {
+        optimizedAudioLogger.warn('webrtc', 'toggle_mute_no_connection', {
+          currentMuteState: isMuted,
+          hasConnectionManager: false
+        });
+        return isMuted; // Return current state if no connection manager
+      }
+
+      // Use connection manager's toggle mute functionality
+      const newMutedState = connectionManager.toggleMute();
+
+      // Update store state
+      set({ isMuted: newMutedState });
+
+      return newMutedState;
+    },
+
+    // Add conversation message
+    addConversationMessage: (message: ConversationMessage) => {
+      set(state => ({
+        conversation: [...state.conversation, message],
+        hasActiveConversation: true
+      }));
+    },
+
+    // Update user message
+    updateUserMessage: (message: string) => {
+      set({ userMessage: message });
+    },
+
+    // Clear user message
+    clearUserMessage: () => {
+      set({ userMessage: '' });
+    },
+
+    // Function registration actions
+    registerFunctions: (functions: { book?: unknown[]; mentalHealth?: unknown[]; sleep?: unknown[] }) => {
+      const currentState = get();
+      const newFunctions = {
+        book: functions.book || currentState.availableFunctions.book,
+        mentalHealth: functions.mentalHealth || currentState.availableFunctions.mentalHealth,
+        sleep: functions.sleep || currentState.availableFunctions.sleep
+      };
+      
+      console.log(`[AI-INTERACTION] 📝 Registering functions to store:`, {
+        book: newFunctions.book.length,
+        mentalHealth: newFunctions.mentalHealth.length,
+        sleep: newFunctions.sleep.length
+      });
+      
+      set({ availableFunctions: newFunctions });
+    },
+
+    clearFunctions: () => {
+      console.log(`[AI-INTERACTION] 🗑️ Clearing all functions from store`);
+      set({ 
+        availableFunctions: {
+          book: [],
+          mentalHealth: [],
+          sleep: []
+        }
+      });
+    },
+
+    // Handle connection state changes (native WebRTC events)
+    handleConnectionChange: (state: ConnectionState) => {
+      const currentState = get();
+      const wasConnected = currentState.isConnected;
+      const isNowConnected = state === 'connected';
+
+      // Detect disconnect with conversation reset
+      if (wasConnected && !isNowConnected && currentState.hasActiveConversation) {
+        console.log('[zustand-webrtc] 🔄 DISCONNECT DETECTED - Resetting conversation');
+
+        optimizedAudioLogger.info('webrtc', 'disconnect_detected_conversation_reset', {
+          previousState: currentState.connectionState,
+          newState: state,
+          conversationCleared: true
+        });
+
+        // Reset conversation immediately
+        set({
+          conversation: [],
+          hasActiveConversation: false,
+          userMessage: '',
+          expectingEndSessionGoodbye: false,
+          waitingForEndSession: false,
+          endSessionCallId: null,
+          // Reset mute state to default
+          isMuted: true
+        });
+      }
+
+      // Update connection state
+      set({
+        connectionState: state,
+        isConnected: isNowConnected,
+        // Set thinking state when connection is established (waiting for AI greeting)
+        isThinking: state === 'connected' ? true : get().isThinking
+      });
+    },
+
+    // Handle disconnect with conversation reset
+    handleDisconnectWithReset: () => {
+      set({
+        isConnected: false,
+        connectionState: 'disconnected',
+        conversation: [],
+        hasActiveConversation: false,
+        userMessage: '',
+        expectingEndSessionGoodbye: false,
+        waitingForEndSession: false,
+        endSessionCallId: null,
+        // Reset mute state to default
+        isMuted: true
+      });
+    },
+
+    // Subscribe to transcript events
+    onTranscript: (callback) => {
+      set({ transcriptCallback: callback });
+
+      return () => {
+        set({ transcriptCallback: null });
+      };
+    },
+
+    // Subscribe to error events
+    onError: (callback) => {
+      set({ errorCallback: callback });
+
+      return () => {
+        set({ errorCallback: null });
+      };
+    },
+
+    // Get diagnostics - Enhanced with V11-style diagnostic data
+    getDiagnostics: () => {
+      const state = get();
+      const { connectionManager } = state;
+      const connectionDiagnostics = connectionManager?.getDiagnostics() || {};
+      const audioDiagnostics = audioService.getDiagnostics();
+
+      return {
+        timestamp: Date.now(),
+        connection: connectionDiagnostics,
+        audio: audioDiagnostics,
+
+        // V11-style diagnostic data for orb compatibility
+        diagnosticData: {
+          isThinking: state.isThinking,
+          audioLevel: state.audioLevel,
+          currentVolume: state.currentVolume,
+          isAudioPlaying: state.isAudioPlaying,
+          connectionState: state.connectionState,
+          isConnected: state.isConnected
+        },
+
+        zustandStore: {
+          storeType: 'zustand',
+          version: 'v15',
+          enhancedVisualization: true
+        },
+        optimizedAudioLogger: {
+          sessionId: optimizedAudioLogger.getSessionId(),
+          diagnosticCount: optimizedAudioLogger.getDiagnosticData().length
+        }
+      };
+    },
+
+    // Get enhanced visualization data (V11 compatibility)
+    getVisualizationData: () => {
+      const state = get();
+      return {
+        currentVolume: state.currentVolume,
+        audioLevel: state.audioLevel,
+        isAudioPlaying: state.isAudioPlaying,
+        isThinking: state.isThinking,
+        connectionState: state.connectionState,
+        isConnected: state.isConnected,
+
+        // V11-style calculated values
+        effectiveVolume: state.isConnected ? (state.isAudioPlaying ? state.currentVolume : 0.1) : 0,
+        isActuallyPlaying: state.isAudioPlaying && state.currentVolume > 0.01,
+        isAiThinking: state.connectionState === 'connecting' || state.isThinking
+      };
+    }
+  };
+});
+
+// Function Registry Manager - Robust global registry pattern
+export class FunctionRegistryManager {
+  private static instance: FunctionRegistryManager;
+  private registry: Record<string, (args: unknown) => Promise<unknown>> = {};
+  private initialized = false;
+
+  static getInstance(): FunctionRegistryManager {
+    if (!FunctionRegistryManager.instance) {
+      FunctionRegistryManager.instance = new FunctionRegistryManager();
+    }
+    return FunctionRegistryManager.instance;
+  }
+
+  setRegistry(functions: Record<string, (args: unknown) => Promise<unknown>>) {
+    this.registry = { ...functions };
+    this.initialized = true;
+
+    // Also set on window for backward compatibility
+    if (typeof window !== 'undefined') {
+      (window as unknown as { webrtcFunctionRegistry?: Record<string, (args: unknown) => Promise<unknown>> }).webrtcFunctionRegistry = this.registry;
+    }
+
+    console.log('[FUNCTION-REGISTRY] Registry updated with functions:', Object.keys(this.registry));
+  }
+
+  getRegistry(): Record<string, (args: unknown) => Promise<unknown>> {
+    return this.registry;
+  }
+
+  isInitialized(): boolean {
+    return this.initialized;
+  }
+}
+
+// V15 ARCHITECTURE: Function registration now handled at component level
+// Components use hooks directly and register functions to store via registerFunctions action
+
+console.log('[zustand-webrtc] Store created successfully');
