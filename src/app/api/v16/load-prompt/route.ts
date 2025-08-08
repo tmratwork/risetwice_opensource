@@ -350,7 +350,8 @@ export async function GET(request: NextRequest) {
     }
 
     // V16: Add language preference injection (applied after all other enhancements)
-    if (languagePreference && languagePreference !== 'en') {
+    // ALWAYS inject language instructions, even for English, to prevent AI language switching
+    if (languagePreference) {
       const beforeLanguageLength = finalContent?.length || 0;
       finalContent = enhancePromptWithLanguage(finalContent, languagePreference);
       
@@ -359,16 +360,8 @@ export async function GET(request: NextRequest) {
         languagePreference,
         beforeLength: beforeLanguageLength,
         afterLength: finalContent.length,
-        source: 'api-load-prompt-language-enhancement'
-      });
-    } else if (languagePreference === 'en') {
-      // Still add language instruction for English to be explicit
-      finalContent = enhancePromptWithLanguage(finalContent, 'en');
-      
-      logTriageHandoff('✅ API: Enhanced prompt with default English language preference', {
-        promptType,
-        languagePreference: 'en',
-        source: 'api-load-prompt-english-enhancement'
+        source: 'api-load-prompt-language-enhancement',
+        alwaysInject: 'Language instructions now injected for ALL languages including English'
       });
     }
 

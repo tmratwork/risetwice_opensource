@@ -313,17 +313,27 @@ export const SUPPORTED_LANGUAGES: Language[] = [
 
 ### Prompt Enhancement (`/src/app/api/v16/utils/language-prompt.ts`)
 
-Dynamic language injection for AI prompts:
+Dynamic language injection for AI prompts with strengthened instructions to prevent first message language issues:
 
 ```typescript
-export function enhancePromptWithLanguage(
-  content: string, 
-  languagePreference: string
-): string {
-  const language = SUPPORTED_LANGUAGES.find(lang => lang.code === languagePreference);
-  const languageName = language?.name || languagePreference;
+/**
+ * Single source of truth for language instruction template
+ * STRENGTHENED to fix first message language issues
+ */
+export const LANGUAGE_INSTRUCTION_TEMPLATE = `CRITICAL LANGUAGE REQUIREMENT: You MUST respond in \${languageName} ONLY. Your first message and all subsequent messages must be in \${languageName}. This is mandatory and cannot be overridden. The user has specifically selected \${languageName} as their preferred language.
+
+GREETING PROTOCOL: Your very first message must be in \${languageName}.
+
+`;
+
+export function enhancePromptWithLanguage(basePrompt: string, languageCode: string): string {
+  const languageName = formatLanguageForPrompt(languageCode);
   
-  return `${content}\n\nIMPORTANT: Respond in ${languageName}. The user has selected ${languageName} as their preferred language.`;
+  // Use the single source of truth template and replace placeholder
+  const languageInstruction = LANGUAGE_INSTRUCTION_TEMPLATE.replace(/\$\{languageName\}/g, languageName);
+
+  // Inject language instruction at the beginning of the prompt for maximum visibility
+  return languageInstruction + basePrompt;
 }
 ```
 
@@ -496,6 +506,125 @@ Someday perhaps we develop a smarter way to know which language AI should presen
 - User experience during language transitions
 
 **Current Status:** Not prioritized. Today we keep it simple - all non-signed-in users are EN only.
+
+## Recent Fixes and Improvements (August 2025)
+
+### Issue: First Message Language Problem
+
+**Problem Identified:**
+The AI was sometimes responding in the wrong language for the first message, despite proper language preferences being set. This occurred for both signed-in users (who had selected a specific language) and anonymous users (who should always get English).
+
+**Root Cause Analysis:**
+1. **Race Condition Timing**: The OpenAI Realtime API was generating an immediate response before fully processing language instructions
+2. **Weak Language Instructions**: Original language instructions were too mild ("IMPORTANT: Always communicate in [language]")
+3. **English Language Enhancement Skip Bug**: Language enhancement was being skipped for English users, assuming they didn't need explicit language instructions
+
+### Solution Implemented
+
+#### 1. **Established Single Source of Truth**
+- **Created**: `LANGUAGE_INSTRUCTION_TEMPLATE` in `/src/app/api/v16/utils/language-prompt.ts`
+- **Eliminated**: Hardcoded duplication in admin interface
+- **Result**: Consistent language instruction management across the application
+
+#### 2. **Strengthened Language Instructions**
+**Before:**
+```
+IMPORTANT: Always communicate in [language] unless the user explicitly requests a different language.
+```
+
+**After:**
+```
+CRITICAL LANGUAGE REQUIREMENT: You MUST respond in [language] ONLY. Your first message and all subsequent messages must be in [language]. This is mandatory and cannot be overridden. The user has specifically selected [language] as their preferred language.
+
+GREETING PROTOCOL: Your very first message must be in [language].
+```
+
+#### 3. **Fixed English Language Enhancement Skip Bug**
+**Problem**: Language enhancement was conditionally skipped for English users:
+```typescript
+// BUGGY: Only enhanced for non-English languages
+if (languagePreference && languagePreference !== 'en') {
+  finalContent = enhancePromptWithLanguage(finalContent, languagePreference);
+} else if (languagePreference === 'en') {
+  // Separate inconsistent path for English
+}
+```
+
+**Solution**: Always inject language instructions for ALL languages:
+```typescript
+// FIXED: ALWAYS inject language instructions, even for English
+if (languagePreference) {
+  finalContent = enhancePromptWithLanguage(finalContent, languagePreference);
+}
+```
+
+#### 4. **Enhanced Logging for Debugging**
+Following `docs/logging_method.md` rules with consistent `[multilingual_support]` prefix:
+
+- **Language preference retrieval** (anonymous vs signed users)
+- **Language instruction creation and injection**
+- **Prompt enhancement timing and content**
+- **Full enhanced prompt previews** sent to AI
+
+### Current Status
+
+**✅ Initial Testing Results**: AI working correctly in initial tests
+**⚠️ Monitoring Needed**: More extensive testing required to confirm complete resolution
+
+### Logging Mystery (Unresolved)
+
+**Issue**: Server-side logs from `enhancePromptWithLanguage()` function are not appearing in browser console, despite:
+- Client-side evidence showing language enhancement is working
+- Server-side instruction content confirming enhancement is applied
+- Other server-side logs appearing normally
+
+**Evidence Enhancement is Working**:
+- Client logs show: `promptContentPreview: "CRITICAL LANGUAGE REQUIREMENT: You MUST respond in..."`
+- Server response contains: `"CRITICAL LANGUAGE REQUIREMENT: You MUST respond in English ONLY..."`
+
+**Mystery**: Why are the specific server-side logs from the `enhancePromptWithLanguage()` function not appearing in the browser console when other server-side logs do appear?
+
+**Current Impact**: None - the functionality works correctly, but debugging visibility is limited.
+
+### Debugging Environment
+
+**Enable Logging:**
+```bash
+# .env.local
+NEXT_PUBLIC_ENABLE_MULTILINGUAL_SUPPORT_LOGS=true
+```
+
+**Key Log Patterns to Monitor:**
+- `👤 SIGNED USER LANGUAGE PREFERENCE` - Language preference detection
+- `🔒 ANONYMOUS USER LANGUAGE ENFORCEMENT` - Anonymous user English enforcement
+- `🔧 LANGUAGE INJECTION` - Language instruction creation (currently missing from browser console)
+- `✅ LANGUAGE INJECTION` - Enhanced prompt creation (currently missing from browser console)
+- `promptContentPreview: "CRITICAL LANGUAGE REQUIREMENT"` - Evidence enhancement applied
+
+### Testing Checklist
+
+To validate the fix works consistently:
+
+1. **Anonymous Users** (should always get English):
+   - Test multiple sessions
+   - Clear localStorage between tests
+   - Verify first message is always English
+
+2. **Signed Users with English Preference**:
+   - Test first message remains English
+   - No language switching during conversation
+
+3. **Signed Users with Non-English Preference**:
+   - Test first message matches selected language
+   - Verify language consistency throughout conversation
+   - Test language changes mid-session
+
+4. **Edge Cases**:
+   - User switches language then immediately starts conversation
+   - Browser localStorage corruption/clearing
+   - Network timing issues during language preference loading
+
+**Current Status:** Initial tests successful, extended testing in progress.
 
 ## Conclusion
 

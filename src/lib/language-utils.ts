@@ -91,15 +91,40 @@ export function getLanguageNativeName(code: string): string {
 export function getStoredLanguagePreference(isAuthenticated?: boolean): string {
   if (typeof window === 'undefined') return DEFAULT_LANGUAGE;
   
+  // Add comprehensive multilingual support logging
+  const logMultilingualSupport = (message: string, ...args: unknown[]) => {
+    if (process.env.NEXT_PUBLIC_ENABLE_MULTILINGUAL_SUPPORT_LOGS === 'true') {
+      console.log(`[multilingual_support] ${message}`, ...args);
+    }
+  };
+  
   // Force anonymous users to always use English, ignore localStorage completely
   // TODO: Future enhancement - implement smarter anonymous language detection
   // (browser language, geolocation, session storage, AI detection)
   // See docs/multilingual_language_management.md "Future Enhancements" section
   if (isAuthenticated === false) {
+    logMultilingualSupport('🔒 ANONYMOUS USER LANGUAGE ENFORCEMENT: Forcing English for anonymous user', {
+      isAuthenticated,
+      forcedLanguage: DEFAULT_LANGUAGE,
+      source: 'language-utils-anonymous-enforcement',
+      impact: 'Anonymous user will always get English regardless of any other settings',
+      timestamp: new Date().toISOString()
+    });
     return DEFAULT_LANGUAGE;
   }
   
-  return localStorage.getItem('languagePreference') || DEFAULT_LANGUAGE;
+  const storedLanguage = localStorage.getItem('languagePreference') || DEFAULT_LANGUAGE;
+  
+  logMultilingualSupport('👤 SIGNED USER LANGUAGE PREFERENCE: Retrieved language for signed user', {
+    isAuthenticated,
+    storedLanguage,
+    source: 'language-utils-signed-user',
+    fromLocalStorage: !!localStorage.getItem('languagePreference'),
+    isDefault: storedLanguage === DEFAULT_LANGUAGE,
+    timestamp: new Date().toISOString()
+  });
+  
+  return storedLanguage;
 }
 
 export function setStoredLanguagePreference(languageCode: string): void {

@@ -6,6 +6,7 @@ import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { Copy, Check, ExternalLink, Save } from 'lucide-react';
 import { THERAPEUTIC_CONTINUITY_GUIDELINES } from '@/app/api/v16/utils/memory-prompt';
+import { getLanguageInstructionTemplate } from '@/app/api/v16/utils/language-prompt';
 
 // V16 Prompt configurations based on V16.md
 const V16_PROMPT_CONFIGS = {
@@ -634,7 +635,7 @@ ${THERAPEUTIC_CONTINUITY_GUIDELINES}`}
                       The system automatically injects language preference instructions based on user selection:
                     </p>
                     <pre className="text-xs text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/40 p-2 rounded border font-mono overflow-x-auto">
-{`IMPORTANT: Always communicate in \${languagePreference} unless the user explicitly requests a different language. The user has selected \${languagePreference} as their preferred language for this conversation.`}
+{getLanguageInstructionTemplate().replace(/\${languageName}/g, '${languagePreference}')}
                     </pre>
                     <p className="text-xs text-green-600 dark:text-green-400 mt-2">
                       • Default language: English
