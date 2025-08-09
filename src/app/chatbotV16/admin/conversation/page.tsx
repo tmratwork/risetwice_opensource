@@ -1,6 +1,8 @@
 'use client';
 
 import { useState } from 'react';
+import { ExternalLink } from 'lucide-react';
+import { useAdminAuth } from '@/hooks/useAdminAuth';
 
 interface Message {
   id: string;
@@ -11,6 +13,7 @@ interface Message {
 }
 
 export default function ConversationViewerPage() {
+  const { isAdmin, loading: authLoading, error: authError } = useAdminAuth();
   const [conversationId, setConversationId] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
@@ -56,6 +59,69 @@ export default function ConversationViewerPage() {
     e.preventDefault();
     fetchMessages();
   };
+
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 pt-24">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600 dark:text-gray-400">Verifying admin access...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there was an issue checking permissions
+  if (authError) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 pt-24">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+              <h2 className="text-xl font-semibold text-red-800 dark:text-red-200 mb-2">
+                Authentication Error
+              </h2>
+              <p className="text-red-600 dark:text-red-300 mb-4">{authError}</p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Contact developers to gain access to these admin pages.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show access denied for non-admin users
+  if (!isAdmin) {
+    return (
+      <div className="max-w-6xl mx-auto p-6 pt-24">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-8">
+              <div className="mb-4">
+                <div className="mx-auto w-16 h-16 bg-blue-100 dark:bg-blue-900/40 rounded-full flex items-center justify-center">
+                  <ExternalLink className="w-8 h-8 text-blue-600 dark:text-blue-400" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-semibold text-blue-800 dark:text-blue-200 mb-3">
+                Admin Access Required
+              </h2>
+              <p className="text-blue-600 dark:text-blue-300 mb-2">
+                This page requires administrator privileges.
+              </p>
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Contact developers to gain access to these admin pages.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-4xl mx-auto p-6 pt-24">
