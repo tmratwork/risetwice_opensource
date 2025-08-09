@@ -83,13 +83,23 @@ export async function GET() {
     const usageData = Array.from(conversationUsageMap.values())
       .sort((a, b) => new Date(b.first_message_date).getTime() - new Date(a.first_message_date).getTime());
 
+    // Calculate user breakdown
+    const userIds = usageData.map(conv => conv.user_id);
+    const uniqueUserIds = new Set(userIds);
+    const authenticatedUsers = Array.from(uniqueUserIds).filter(id => !id.startsWith('anonymous'));
+    const anonymousUsers = Array.from(uniqueUserIds).filter(id => id.startsWith('anonymous'));
+    const anonymousConversationCount = usageData.filter(conv => conv.user_id.startsWith('anonymous')).length;
+
     return NextResponse.json({
       success: true,
       data: usageData,
       summary: {
         total_conversations: usageData.length,
         total_user_messages: usageData.reduce((sum, conv) => sum + conv.message_count, 0),
-        unique_users: new Set(usageData.map(conv => conv.user_id)).size
+        unique_users: uniqueUserIds.size,
+        authenticated_users: authenticatedUsers.length,
+        anonymous_users: anonymousUsers.length,
+        anonymous_conversation_count: anonymousConversationCount
       }
     });
   } catch (error) {

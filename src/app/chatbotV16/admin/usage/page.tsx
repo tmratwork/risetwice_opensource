@@ -14,6 +14,9 @@ interface UsageSummary {
   total_conversations: number;
   total_user_messages: number;
   unique_users: number;
+  authenticated_users: number;
+  anonymous_users: number;
+  anonymous_conversation_count: number;
 }
 
 interface UserGroup {
@@ -42,6 +45,7 @@ export default function UsagePage() {
   const [conversationMessages, setConversationMessages] = useState<Map<string, Message[]>>(new Map());
   const [loadingMessages, setLoadingMessages] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [showLegend, setShowLegend] = useState(false);
 
   useEffect(() => {
     const fetchUsageData = async () => {
@@ -337,20 +341,128 @@ export default function UsagePage() {
       </div>
 
       {summary && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Conversations</div>
-            <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{summary.total_conversations}</div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+              <div className="text-sm text-blue-600 dark:text-blue-400 font-medium">Total Conversations</div>
+              <div className="text-2xl font-bold text-blue-800 dark:text-blue-200">{summary.total_conversations}</div>
+            </div>
+            <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+              <div className="text-sm text-green-600 dark:text-green-400 font-medium">Total User Messages</div>
+              <div className="text-2xl font-bold text-green-800 dark:text-green-200">{summary.total_user_messages}</div>
+            </div>
+            <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
+              <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Unique Users</div>
+              <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">{summary.unique_users}</div>
+              <div className="text-xs text-purple-600 dark:text-purple-400 mt-1 space-y-0.5">
+                <div>✓ {summary.authenticated_users} authenticated</div>
+                <div>⚠️ {summary.anonymous_users} anonymous {summary.anonymous_conversation_count > 0 && `(${summary.anonymous_conversation_count} conversations)`}</div>
+              </div>
+            </div>
           </div>
-          <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
-            <div className="text-sm text-green-600 dark:text-green-400 font-medium">Total User Messages</div>
-            <div className="text-2xl font-bold text-green-800 dark:text-green-200">{summary.total_user_messages}</div>
+
+          <div className="mb-8 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <button
+              onClick={() => setShowLegend(!showLegend)}
+              className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-lg"
+            >
+              <div className="flex items-center space-x-2">
+                <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300">How are these metrics calculated?</span>
+              </div>
+              <svg 
+                className={`w-4 h-4 text-gray-600 dark:text-gray-400 transform transition-transform ${showLegend ? 'rotate-180' : ''}`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            
+            {showLegend && (
+              <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="pt-4 space-y-4">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+                    All metrics are calculated based on data from the <strong>past 7 days</strong>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex items-start space-x-3">
+                      <div className="w-3 h-3 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                      <div>
+                        <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Total Conversations</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          Count of unique conversations that contain at least one user message in the past 7 days
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <div className="w-3 h-3 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                      <div>
+                        <div className="text-sm font-medium text-green-700 dark:text-green-300">Total User Messages</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400">
+                          Sum of all user messages across all conversations (excludes assistant responses)
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-3">
+                      <div className="w-3 h-3 bg-purple-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                      <div>
+                        <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Unique Users</div>
+                        <div className="text-xs text-gray-600 dark:text-gray-400 mb-2">
+                          Count of distinct user IDs across all conversations in the reporting period
+                        </div>
+                        {summary && (
+                          <div className="text-xs space-y-1">
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-green-700 dark:text-green-300">Authenticated: {summary.authenticated_users}</span>
+                              <span className="text-gray-500 dark:text-gray-400">(reliable count)</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                              <span className="text-orange-700 dark:text-orange-300">
+                                Anonymous: {summary.anonymous_users}
+                                {summary.anonymous_conversation_count > 0 && 
+                                  ` (${summary.anonymous_conversation_count} conversations)`
+                                }
+                              </span>
+                              <span className="text-gray-500 dark:text-gray-400">(likely overcount)</span>
+                            </div>
+                            {summary.anonymous_users > 0 && (
+                              <div className="text-xs space-y-1 mt-1 pl-4 border-l-2 border-orange-200 dark:border-orange-800">
+                                <div className="text-orange-600 dark:text-orange-400">
+                                  <strong>⚠️ Anonymous User Overcounting:</strong>
+                                </div>
+                                <div className="text-orange-700 dark:text-orange-300">
+                                  • Each browser/device generates a unique anonymous ID
+                                </div>
+                                <div className="text-orange-700 dark:text-orange-300">
+                                  • Same person using multiple browsers/devices = multiple "users"
+                                </div>
+                                <div className="text-orange-700 dark:text-orange-300">
+                                  • Clearing browser data or incognito mode = new anonymous ID
+                                </div>
+                                <div className="text-orange-700 dark:text-orange-300">
+                                  • True anonymous users likely fewer than {summary.anonymous_users}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
-          <div className="bg-purple-50 dark:bg-purple-900/20 p-4 rounded-lg">
-            <div className="text-sm text-purple-600 dark:text-purple-400 font-medium">Unique Users</div>
-            <div className="text-2xl font-bold text-purple-800 dark:text-purple-200">{summary.unique_users}</div>
-          </div>
-        </div>
+        </>
       )}
 
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
