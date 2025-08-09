@@ -258,7 +258,7 @@ export default function V16AdminPage() {
     },
     {
       id: 'usage',
-      name: 'View Usage Report',
+      name: 'Conversation Report',
       description: 'View usage statistics and conversation activity from the past 7 days',
       href: '/chatbotV16/admin/usage'
     },

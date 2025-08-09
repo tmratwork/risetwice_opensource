@@ -312,20 +312,20 @@ export default function UsagePage() {
                     </tr>
                     {expandedUsers.has(userGroup.user_id) && userGroup.conversations.length > 1 && userGroup.conversations.map((conversation) => (
                       <tr key={conversation.conversation_id} className="bg-gray-50 dark:bg-gray-900">
-                        <td className="px-6 py-3 pl-12 whitespace-nowrap text-sm">
+                        <td className="px-6 py-3 pl-12 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          -
+                        </td>
+                        <td className="px-6 py-3 whitespace-nowrap text-sm">
                           <button
                             onClick={() => copyToClipboard(conversation.conversation_id)}
                             className="font-mono text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
-                            title="Click to copy full ID"
+                            title="Click to copy full conversation ID"
                           >
                             {conversation.conversation_id.slice(0, 8)}...
                             {copiedId === conversation.conversation_id && (
                               <span className="ml-2 text-green-600 dark:text-green-400">✓ Copied!</span>
                             )}
                           </button>
-                        </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          -
                         </td>
                         <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                           {conversation.message_count}
