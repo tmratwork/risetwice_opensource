@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/auth-context';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
 import { SUPPORTED_LANGUAGES } from '@/lib/language-utils';
 import { ExternalLink } from 'lucide-react';
@@ -30,7 +29,6 @@ const GREETING_TYPES: GreetingType[] = [
 ];
 
 export default function GreetingsAdmin() {
-  const { user } = useAuth();
   const { isAdmin, loading: authLoading, error: authError } = useAdminAuth();
   const [greetings, setGreetings] = useState<Greeting[]>([]);
   const [loading, setLoading] = useState(true);
@@ -61,8 +59,6 @@ export default function GreetingsAdmin() {
   } | null>(null);
   const [showTranslationModal, setShowTranslationModal] = useState(false);
 
-  // Check if user has admin access (implement your admin check logic)
-  const isAdmin = user?.uid === "NbewAuSvZNgrb64yNDkUebjMHa23"; // Adjust based on your admin logic
 
   useEffect(() => {
     if (!isAdmin) {
@@ -70,7 +66,7 @@ export default function GreetingsAdmin() {
       setLoading(false);
       return;
     }
-    
+
     loadGreetings();
   }, [isAdmin]);
 
@@ -80,7 +76,7 @@ export default function GreetingsAdmin() {
       setError(null);
 
       const response = await fetch('/api/v16/admin/greetings');
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
@@ -97,8 +93,8 @@ export default function GreetingsAdmin() {
   };
 
   const getCurrentGreeting = (): Greeting | undefined => {
-    return greetings.find(g => 
-      g.greeting_type === selectedType && 
+    return greetings.find(g =>
+      g.greeting_type === selectedType &&
       g.language_code === selectedLanguage &&
       g.is_active
     );
@@ -126,12 +122,12 @@ export default function GreetingsAdmin() {
       setSaving(true);
       setError(null);
 
-      const url = editingGreeting 
+      const url = editingGreeting
         ? `/api/v16/admin/greetings/${editingGreeting.id}`
         : '/api/v16/admin/greetings';
-      
+
       const method = editingGreeting ? 'PUT' : 'POST';
-      
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -155,7 +151,7 @@ export default function GreetingsAdmin() {
       setEditingGreeting(null);
       setNewGreetingContent('');
       setIsCreatingNew(false);
-      
+
     } catch (err) {
       console.error('Error saving greeting:', err);
       setError(`Failed to save greeting: ${(err as Error).message}`);
@@ -193,8 +189,8 @@ export default function GreetingsAdmin() {
 
   const handleAutoTranslate = async () => {
     // Check if English greeting exists
-    const englishGreeting = greetings.find(g => 
-      g.greeting_type === selectedType && 
+    const englishGreeting = greetings.find(g =>
+      g.greeting_type === selectedType &&
       g.language_code === 'en' &&
       g.is_active
     );
@@ -206,7 +202,7 @@ export default function GreetingsAdmin() {
 
     // Estimate cost (rough estimate: ~$0.001 per language * 56 languages = ~$0.056)
     const estimatedCost = (56 * 0.001).toFixed(3);
-    
+
     if (!confirm(`This will translate the English greeting for &apos;${selectedType}&apos; into 56 other languages using GPT-4o.\n\nEstimated cost: ~$${estimatedCost}\n\nExisting translations will be preserved unless you enable overwrite.\n\nContinue?`)) {
       return;
     }
@@ -238,10 +234,10 @@ export default function GreetingsAdmin() {
       }
 
       setTranslationResults(data);
-      
+
       // Reload greetings to show new translations
       await loadGreetings();
-      
+
     } catch (err) {
       console.error('Error during auto-translation:', err);
       setError(`Auto-translation failed: ${(err as Error).message}`);
@@ -404,7 +400,7 @@ export default function GreetingsAdmin() {
             <h2 className="text-lg font-medium text-sage-500 dark:text-gray-200 mb-3">
               Current Greeting: {selectedType} - {currentLanguage?.nativeName}
             </h2>
-            
+
             {loading ? (
               <div className="p-4 bg-sage-50 dark:bg-gray-700 rounded border">
                 <p className="text-sage-400 dark:text-gray-400">Loading...</p>
@@ -458,7 +454,7 @@ export default function GreetingsAdmin() {
               <h3 className="text-lg font-medium text-blue-800 dark:text-blue-300 mb-3">
                 {editingGreeting ? 'Edit Greeting' : 'Create New Greeting'}
               </h3>
-              
+
               <div className="mb-4">
                 <label className="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
                   Greeting Content ({selectedType} - {currentLanguage?.nativeName})
@@ -500,7 +496,7 @@ export default function GreetingsAdmin() {
               Statistics
             </h3>
             <div className="text-xs text-sage-400 dark:text-gray-400">
-              Total greetings: {greetings.length} | 
+              Total greetings: {greetings.length} |
               Languages available: {new Set(greetings.map(g => g.language_code)).size} |
               Types available: {new Set(greetings.map(g => g.greeting_type)).size}
             </div>
@@ -561,35 +557,33 @@ export default function GreetingsAdmin() {
                     <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-3">
                       Translation Results:
                     </h4>
-                    
+
                     {translationResults.results?.map((result, index: number) => (
-                      <div 
+                      <div
                         key={index}
-                        className={`p-3 rounded border text-sm ${
-                          result.success 
-                            ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700' 
-                            : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
-                        }`}
+                        className={`p-3 rounded border text-sm ${result.success
+                          ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700'
+                          : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-700'
+                          }`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-medium">
                             {result.language_name} ({result.language_code})
                           </span>
-                          <span className={`text-xs px-2 py-1 rounded ${
-                            result.success 
-                              ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200' 
-                              : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
-                          }`}>
+                          <span className={`text-xs px-2 py-1 rounded ${result.success
+                            ? 'bg-green-100 dark:bg-green-800 text-green-800 dark:text-green-200'
+                            : 'bg-red-100 dark:bg-red-800 text-red-800 dark:text-red-200'
+                            }`}>
                             {result.success ? '✓ Success' : '✗ Failed'}
                           </span>
                         </div>
-                        
+
                         {result.success && result.translation_preview && (
                           <p className="text-gray-600 dark:text-gray-400 mt-1 text-xs">
                             {result.translation_preview}
                           </p>
                         )}
-                        
+
                         {!result.success && result.error && (
                           <p className="text-red-600 dark:text-red-400 mt-1 text-xs">
                             Error: {result.error}
