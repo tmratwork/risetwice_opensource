@@ -443,7 +443,7 @@ export default function UsagePage() {
                                   • Each browser/device generates a unique anonymous ID
                                 </div>
                                 <div className="text-orange-700 dark:text-orange-300">
-                                  • Same person using multiple browsers/devices = multiple "users"
+                                  • Same person using multiple browsers/devices = multiple &quot;users&quot;
                                 </div>
                                 <div className="text-orange-700 dark:text-orange-300">
                                   • Clearing browser data or incognito mode = new anonymous ID
