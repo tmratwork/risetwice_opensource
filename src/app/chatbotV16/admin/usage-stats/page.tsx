@@ -46,6 +46,7 @@ export default function UsageStatsPage() {
   const [days, setDays] = useState(1);
   const [showUserIds, setShowUserIds] = useState(false);
   const [showAuthenticatedOnly, setShowAuthenticatedOnly] = useState(false);
+  const [showLegend, setShowLegend] = useState(false);
 
   useEffect(() => {
     fetchStats();
@@ -174,6 +175,203 @@ export default function UsageStatsPage() {
           value={`${stats.averageSessionDuration}m`}
           icon={Clock}
         />
+      </div>
+
+      {/* Key/Legend */}
+      <div className="mb-8 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+        <button
+          onClick={() => setShowLegend(!showLegend)}
+          className="w-full px-4 py-3 flex items-center justify-between text-left hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors rounded-lg"
+        >
+          <div className="flex items-center space-x-2">
+            <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">How are these metrics calculated?</span>
+          </div>
+          <svg 
+            className={`w-4 h-4 text-gray-600 dark:text-gray-400 transform transition-transform ${showLegend ? 'rotate-180' : ''}`} 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+        
+        {showLegend && (
+          <div className="px-4 pb-4 border-t border-gray-200 dark:border-gray-700">
+            <div className="pt-4 space-y-6">
+              <div className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+                All metrics are calculated based on the selected time period using the dropdown above.
+              </div>
+              
+              {/* Overview Statistics */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 pb-1">
+                  Overview Statistics
+                </h3>
+                
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <Users size={16} className="text-sage-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Users</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Count of unique user identifiers (both authenticated and anonymous) who had sessions during the selected period.
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 space-y-1">
+                        <div>• <span className="text-blue-600 dark:text-blue-400">Authenticated:</span> Users logged in with Firebase accounts</div>
+                        <div>• <span className="text-orange-600 dark:text-orange-400">Anonymous:</span> Browser-generated identifiers (may overcount actual people)</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <Activity size={16} className="text-sage-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Sessions</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Count of distinct user sessions that occurred during the selected period. A session starts when a user visits the site and ends when they leave or become inactive.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <Eye size={16} className="text-sage-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Total Page Views</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Sum of all individual page views across all sessions during the selected period. Each navigation to a new page increments this count.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <Clock size={16} className="text-sage-500 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Average Session Duration</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Average time (in minutes) calculated only from sessions that successfully recorded an end time via browser unload events. Most sessions (~79%) don&apos;t record end times due to unreliable browser unload tracking, making this metric incomplete and potentially inflated.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Today's Activity */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 pb-1">
+                  Today&apos;s Activity
+                </h3>
+                
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <UserPlus size={16} className="text-green-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-green-700 dark:text-green-300">New Users</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Count of users whose first_visit timestamp in user_usage_summary occurred today. This can be inaccurate due to summary record creation issues or upsert conflicts that reset first_visit dates.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <UserCheck size={16} className="text-blue-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Active Users</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Count of unique user identifiers (authenticated user_id or anonymous anonymous_id) who had at least one session today.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <TrendingUp size={16} className="text-purple-600 mt-0.5 flex-shrink-0" />
+                    <div>
+                      <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Returning Users</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Count of users whose first_visit in user_usage_summary is before today AND who also had a session today. Often shows 0 due to data integrity issues where first_visit dates get incorrectly reset to recent dates.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Daily Activity Chart */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 pb-1">
+                  Daily Activity Chart
+                </h3>
+                
+                <div className="space-y-3">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-3 h-3 bg-green-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                    <div>
+                      <div className="text-sm font-medium text-green-700 dark:text-green-300">Sessions (Green Line)</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Number of sessions that started on each day within the selected period.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <div className="w-3 h-3 bg-blue-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                    <div>
+                      <div className="text-sm font-medium text-blue-700 dark:text-blue-300">Unique Users (Blue Line)</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Number of distinct users who had sessions on each day within the selected period.
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <div className="w-3 h-3 bg-purple-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                    <div>
+                      <div className="text-sm font-medium text-purple-700 dark:text-purple-300">Page Views (Purple Line)</div>
+                      <div className="text-xs text-gray-600 dark:text-gray-400">
+                        Total number of pages viewed on each day within the selected period.
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Top Pages */}
+              <div className="space-y-4">
+                <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 border-b border-gray-200 dark:border-gray-600 pb-1">
+                  Top Pages
+                </h3>
+                
+                <div className="flex items-start space-x-3">
+                  <div className="w-3 h-3 bg-gray-500 rounded-full mt-1.5 flex-shrink-0"></div>
+                  <div>
+                    <div className="text-sm font-medium text-gray-700 dark:text-gray-300">Page Views</div>
+                    <div className="text-xs text-gray-600 dark:text-gray-400">
+                      Count of individual page views for each URL path during the selected period, sorted by most viewed.
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Data Collection Notes */}
+              <div className="space-y-4 border-t border-orange-200 dark:border-orange-800 pt-4">
+                <h3 className="text-sm font-semibold text-orange-700 dark:text-orange-300">
+                  ⚠️ Data Collection Notes
+                </h3>
+                
+                <div className="space-y-2 text-xs text-orange-700 dark:text-orange-300">
+                  <div>• <strong>Anonymous User Counting:</strong> Each browser/device generates a unique anonymous ID, so the same person using multiple browsers appears as multiple users.</div>
+                  <div>• <strong>Session Duration Reliability:</strong> Only ~21% of sessions successfully record end times due to unreliable browser unload events (sendBeacon/fetch failures). The reported average may be inflated as it excludes the majority of shorter sessions that don&apos;t complete the end-session tracking.</div>
+                  <div>• <strong>Date Filtering:</strong> &quot;Today&quot; uses full day (00:00-23:59), &quot;Yesterday&quot; uses previous full day, other periods use X days ago to now.</div>
+                  <div>• <strong>Real-time Data:</strong> Today&apos;s activity metrics are always calculated for the current day, regardless of the selected time period filter.</div>
+                  <div>• <strong>Sessions vs Page Views Discrepancy:</strong> If Total Sessions exceeds Total Page Views, this indicates a tracking system bug where multiple phantom sessions are created per actual user visit. These duplicate sessions have 0 page views while only the valid sessions record actual page navigation. <em>A fix was implemented on August 8, 2025 to prevent duplicate session creation - we are monitoring to verify the fix is working.</em></div>
+                  <div>• <strong>Today&apos;s Activity Data Issues:</strong> &quot;Returning Users&quot; often shows 0 because the user_usage_summary table&apos;s first_visit timestamps get incorrectly reset due to upsert conflicts or summary table bugs. Users who have visited before may appear as &quot;New Users&quot; instead of &quot;Returning Users&quot;. <em>Fixes implemented on August 9, 2025 to preserve first_visit timestamps and prevent session double-counting - monitoring to verify effectiveness.</em></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Today's Activity */}

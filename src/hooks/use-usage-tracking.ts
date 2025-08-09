@@ -25,7 +25,7 @@ export function useUsageTracking({
     };
     
     initializeTracking();
-  }, [firebaseUser]);
+  }, [firebaseUser?.uid]); // Only re-initialize when actual user ID changes, not object reference
 
   // Track page changes
   useEffect(() => {
@@ -37,7 +37,7 @@ export function useUsageTracking({
     };
     
     trackPage();
-  }, [pathname, firebaseUser, enablePageTracking]);
+  }, [pathname, firebaseUser?.uid, enablePageTracking]); // Only depend on user ID, not full object
 
   // End session on page unload
   useEffect(() => {

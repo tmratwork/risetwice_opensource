@@ -29,6 +29,7 @@ class UsageTracker {
   };
 
   private isInitialized = false;
+  private isInitializing = false; // Prevent race conditions
 
   /**
    * Force end current session (useful for cleanup)
@@ -39,6 +40,12 @@ class UsageTracker {
         console.log(`[usage_tracking] ${message}`, ...args);
       }
     };
+
+    // Clear initializing flag if stuck
+    if (this.isInitializing) {
+      logUsageTracking('🔧 Clearing stuck initializing flag');
+      this.isInitializing = false;
+    }
 
     if (this.sessionData.sessionId) {
       logUsageTracking('🔧 Force ending current session for cleanup', {
@@ -68,24 +75,44 @@ class UsageTracker {
       userId, 
       anonymousId, 
       isInitialized: this.isInitialized,
+      isInitializing: this.isInitializing,
       currentSessionId: this.sessionData.sessionId 
     });
+    
+    // Prevent race conditions - if already initializing, wait
+    if (this.isInitializing) {
+      logUsageTracking('Already initializing, waiting...');
+      // Wait for initialization to complete with timeout
+      const timeout = Date.now() + 5000; // 5 second timeout
+      while (this.isInitializing && Date.now() < timeout) {
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      logUsageTracking('Initialization wait completed', {
+        isInitialized: this.isInitialized,
+        isInitializing: this.isInitializing
+      });
+      return;
+    }
     
     // Check if we need to reinitialize for a different user
     if (this.isInitialized && 
         this.sessionData.userId === userId && 
-        this.sessionData.anonymousId === anonymousId) {
-      logUsageTracking('Already initialized for same user, skipping');
+        this.sessionData.anonymousId === anonymousId &&
+        this.sessionData.sessionId) {
+      logUsageTracking('Already initialized for same user with valid session, skipping');
       return;
     }
     
-    // If user changed, end the current session first
-    if (this.isInitialized && this.sessionData.sessionId) {
-      logUsageTracking('User changed, ending current session');
-      await this.endSession();
-    }
+    // Set initializing flag to prevent duplicate calls
+    this.isInitializing = true;
     
     try {
+      // If user changed, end the current session first
+      if (this.isInitialized && this.sessionData.sessionId) {
+        logUsageTracking('User changed, ending current session');
+        await this.endSession();
+      }
+      
       logUsageTracking('Starting new session...');
       const response = await fetch('/api/usage/start-session', {
         method: 'POST',
@@ -118,6 +145,10 @@ class UsageTracker {
       }
     } catch (error) {
       logUsageTracking('❌ Failed to initialize usage tracking', { error });
+    } finally {
+      // Always clear the initializing flag
+      this.isInitializing = false;
+      logUsageTracking('Initialization flag cleared');
     }
   }
 
@@ -320,6 +351,7 @@ class UsageTracker {
     this.sessionData.anonymousId = null;
     this.sessionData.pageViews = 0;
     this.isInitialized = false;
+    this.isInitializing = false;
   }
 
   /**

@@ -78,25 +78,75 @@ export async function POST(request: NextRequest) {
 
     logUsageTracking('Session created successfully', { sessionId: session.id });
 
-    // Update or create user summary with FIXED upsert logic
-    const summaryData = {
-      user_id: userId,
-      anonymous_id: anonymousId,
-      first_visit: timestamp,
-      last_visit: timestamp,
-      total_sessions: 1,
-      total_page_views: 0,
-      total_time_spent_minutes: 0
-    };
+    // Update or create user summary with PROPER upsert logic that preserves first_visit
+    const whereClause = userId ? { user_id: userId } : { anonymous_id: anonymousId };
+    const conflictColumn = userId ? 'user_id' : 'anonymous_id';
 
-    logUsageTracking('Attempting user summary upsert', {
+    logUsageTracking('Checking for existing user summary', {
       hasUserId: !!userId,
       hasAnonymousId: !!anonymousId,
-      onConflictColumn: userId ? 'user_id' : 'anonymous_id'
+      whereClause
     });
 
-    // FIX: Use proper column name, not conditional expression
-    const conflictColumn = userId ? 'user_id' : 'anonymous_id';
+    // Check if user already exists
+    const { data: existingUser, error: fetchError } = await supabase
+      .from('user_usage_summary')
+      .select('first_visit, total_sessions, total_page_views, total_time_spent_minutes')
+      .match(whereClause)
+      .maybeSingle();
+
+    if (fetchError) {
+      logUsageTracking('❌ Failed to fetch existing user summary', {
+        error: fetchError.message,
+        whereClause
+      });
+      return NextResponse.json(
+        { error: 'Failed to check user summary', details: fetchError.message },
+        { status: 500 }
+      );
+    }
+
+    let summaryData;
+    if (existingUser) {
+      // User exists - preserve first_visit, increment counters
+      logUsageTracking('Existing user found, preserving first_visit and incrementing counters', {
+        existingFirstVisit: existingUser.first_visit,
+        existingTotalSessions: existingUser.total_sessions
+      });
+      
+      summaryData = {
+        user_id: userId,
+        anonymous_id: anonymousId,
+        first_visit: existingUser.first_visit, // PRESERVE existing first_visit
+        last_visit: timestamp,
+        total_sessions: (existingUser.total_sessions || 0) + 1,
+        total_page_views: existingUser.total_page_views || 0,
+        total_time_spent_minutes: existingUser.total_time_spent_minutes || 0
+      };
+    } else {
+      // New user - set first_visit to current timestamp
+      logUsageTracking('New user, setting first_visit to current timestamp', {
+        timestamp
+      });
+      
+      summaryData = {
+        user_id: userId,
+        anonymous_id: anonymousId,
+        first_visit: timestamp, // NEW user gets current timestamp as first_visit
+        last_visit: timestamp,
+        total_sessions: 1,
+        total_page_views: 0,
+        total_time_spent_minutes: 0
+      };
+    }
+
+    logUsageTracking('Attempting user summary upsert with corrected data', {
+      conflictColumn,
+      isNewUser: !existingUser,
+      preservedFirstVisit: summaryData.first_visit,
+      totalSessions: summaryData.total_sessions
+    });
+
     const { error: summaryError } = await supabase
       .from('user_usage_summary')
       .upsert(summaryData, {

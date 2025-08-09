@@ -121,18 +121,18 @@ export async function POST(request: NextRequest) {
         timeMinutes: currentSummary.total_time_spent_minutes
       },
       incrementing: {
-        sessions: 1,
+        sessions: 0, // Sessions already counted in start-session
         pageViews,
         timeMinutes: sessionDurationMinutes
       }
     });
 
-    // Update summary with new totals
+    // Update summary with new totals (DON'T double-count sessions - already counted in start-session)
     const { error: updateError } = await supabase
       .from('user_usage_summary')
       .update({
         last_visit: timestamp,
-        total_sessions: (currentSummary.total_sessions || 0) + 1,
+        // DON'T increment total_sessions here - it's already counted in start-session API
         total_page_views: (currentSummary.total_page_views || 0) + pageViews,
         total_time_spent_minutes: (currentSummary.total_time_spent_minutes || 0) + sessionDurationMinutes,
         updated_at: timestamp
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     logUsageTracking('✅ User summary updated successfully', {
       userType,
       newTotals: {
-        sessions: (currentSummary.total_sessions || 0) + 1,
+        sessions: currentSummary.total_sessions || 0, // Sessions unchanged - counted in start-session
         pageViews: (currentSummary.total_page_views || 0) + pageViews,
         timeMinutes: (currentSummary.total_time_spent_minutes || 0) + sessionDurationMinutes
       }
