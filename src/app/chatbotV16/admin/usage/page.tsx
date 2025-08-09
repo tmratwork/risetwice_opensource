@@ -24,12 +24,23 @@ interface UserGroup {
   last_message_date: string;
 }
 
+interface Message {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  created_at: string;
+}
+
 export default function UsagePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usageData, setUsageData] = useState<ConversationUsage[]>([]);
   const [summary, setSummary] = useState<UsageSummary | null>(null);
   const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
+  const [expandedConversations, setExpandedConversations] = useState<Set<string>>(new Set());
+  const [conversationMessages, setConversationMessages] = useState<Map<string, Message[]>>(new Map());
+  const [loadingMessages, setLoadingMessages] = useState<Set<string>>(new Set());
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,6 +95,10 @@ export default function UsagePage() {
     }
   };
 
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleString();
+  };
+
   const groupByUser = (conversations: ConversationUsage[]): UserGroup[] => {
     const userMap = new Map<string, UserGroup>();
 
@@ -135,6 +150,143 @@ export default function UsagePage() {
       // console.error('Failed to copy:', err);
       void err; // Avoid unused variable error
     }
+  };
+
+  const fetchConversationMessages = async (conversationId: string) => {
+    if (conversationMessages.has(conversationId)) {
+      return; // Already fetched
+    }
+
+    setLoadingMessages(prev => new Set([...prev, conversationId]));
+
+    try {
+      const response = await fetch(`/api/v16/get-messages?conversationId=${encodeURIComponent(conversationId)}`);
+      
+      if (!response.ok) {
+        throw new Error(`Error ${response.status}: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success && result.messages) {
+        setConversationMessages(prev => new Map([...prev, [conversationId, result.messages]]));
+      }
+    } catch (err) {
+      console.error('Failed to fetch messages:', err);
+      // Set empty array to prevent retry
+      setConversationMessages(prev => new Map([...prev, [conversationId, []]]));
+    } finally {
+      setLoadingMessages(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(conversationId);
+        return newSet;
+      });
+    }
+  };
+
+  const toggleConversationExpansion = async (conversationId: string) => {
+    const isExpanded = expandedConversations.has(conversationId);
+    
+    if (isExpanded) {
+      // Collapse
+      setExpandedConversations(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(conversationId);
+        return newSet;
+      });
+    } else {
+      // Expand and fetch messages
+      setExpandedConversations(prev => new Set([...prev, conversationId]));
+      await fetchConversationMessages(conversationId);
+    }
+  };
+
+  const renderMessages = (conversationId: string, userId: string) => {
+    const isLoading = loadingMessages.has(conversationId);
+    const messages = conversationMessages.get(conversationId) || [];
+
+    if (isLoading) {
+      return (
+        <div className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+          Loading messages...
+        </div>
+      );
+    }
+
+    if (messages.length === 0) {
+      return (
+        <div className="px-6 py-4 text-center text-gray-500 dark:text-gray-400">
+          No messages found for this conversation.
+        </div>
+      );
+    }
+
+    return (
+      <div className="px-6 py-4 space-y-3">
+        <div className="flex justify-between items-center mb-3">
+          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            {messages.length} message{messages.length === 1 ? '' : 's'}
+          </span>
+          <button
+            onClick={() => {
+              const header = `User ID: ${userId}\nConversation ID: ${conversationId}\n\n`;
+              const conversationText = messages.map(msg => 
+                `${msg.role === 'user' ? 'User' : 'Assistant'} (${formatDate(msg.created_at)}):\n${msg.content}`
+              ).join('\n\n---\n\n');
+              const fullText = header + conversationText;
+              
+              navigator.clipboard.writeText(fullText).then(() => {
+                setCopiedId(`copied-${conversationId}`);
+                setTimeout(() => setCopiedId(null), 2000);
+              }).catch((err) => {
+                void err; // Avoid unused variable error
+              });
+            }}
+            className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+            title="Copy all messages to clipboard"
+          >
+            {copiedId === `copied-${conversationId}` ? (
+              <svg className="w-4 h-4 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg className="w-4 h-4 text-gray-600 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+            )}
+          </button>
+        </div>
+        
+        <div className="space-y-2 max-h-96 overflow-y-auto">
+          {messages.map((message) => (
+            <div 
+              key={message.id} 
+              className={`p-3 rounded text-sm ${
+                message.role === 'user' 
+                  ? 'bg-blue-50 dark:bg-blue-900/20 ml-4' 
+                  : 'bg-gray-100 dark:bg-gray-700 mr-4'
+              }`}
+            >
+              <div className="flex justify-between items-start mb-1">
+                <span className={`font-medium text-xs ${
+                  message.role === 'user' 
+                    ? 'text-blue-700 dark:text-blue-300' 
+                    : 'text-gray-700 dark:text-gray-300'
+                }`}>
+                  {message.role === 'user' ? 'User' : 'Assistant'}
+                </span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">
+                  {formatDate(message.created_at)}
+                </span>
+              </div>
+              <div className="text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+                {message.content}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
   if (loading) {
@@ -301,47 +453,65 @@ export default function UsagePage() {
                             {expandedUsers.has(userGroup.user_id) ? 'Collapse' : 'Expand'}
                           </button>
                         ) : (
-                          <Link
-                            href={`/chatbotV15/admin/conversation?conversationId=${userGroup.conversations[0].conversation_id}`}
+                          <button
+                            onClick={() => toggleConversationExpansion(userGroup.conversations[0].conversation_id)}
                             className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
                           >
-                            View Messages
-                          </Link>
+                            {expandedConversations.has(userGroup.conversations[0].conversation_id) ? 'Hide Messages' : 'View Messages'}
+                          </button>
                         )}
                       </td>
                     </tr>
-                    {expandedUsers.has(userGroup.user_id) && userGroup.conversations.length > 1 && userGroup.conversations.map((conversation) => (
-                      <tr key={conversation.conversation_id} className="bg-gray-50 dark:bg-gray-900">
-                        <td className="px-6 py-3 pl-12 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          -
-                        </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-sm">
-                          <button
-                            onClick={() => copyToClipboard(conversation.conversation_id)}
-                            className="font-mono text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
-                            title="Click to copy full conversation ID"
-                          >
-                            {conversation.conversation_id.slice(0, 8)}...
-                            {copiedId === conversation.conversation_id && (
-                              <span className="ml-2 text-green-600 dark:text-green-400">✓ Copied!</span>
-                            )}
-                          </button>
-                        </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {conversation.message_count}
-                        </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-                          {formatRelativeTime(conversation.first_message_date)}
-                        </td>
-                        <td className="px-6 py-3 whitespace-nowrap text-sm">
-                          <Link
-                            href={`/chatbotV15/admin/conversation?conversationId=${conversation.conversation_id}`}
-                            className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            View Messages
-                          </Link>
+                    {/* Messages for single conversation */}
+                    {userGroup.conversations.length === 1 && expandedConversations.has(userGroup.conversations[0].conversation_id) && (
+                      <tr key={`${userGroup.conversations[0].conversation_id}-messages`} className="bg-gray-50 dark:bg-gray-900">
+                        <td colSpan={5} className="p-0">
+                          {renderMessages(userGroup.conversations[0].conversation_id, userGroup.user_id)}
                         </td>
                       </tr>
+                    )}
+                    {expandedUsers.has(userGroup.user_id) && userGroup.conversations.length > 1 && userGroup.conversations.map((conversation) => (
+                      <React.Fragment key={conversation.conversation_id}>
+                        <tr className="bg-gray-50 dark:bg-gray-900">
+                          <td className="px-6 py-3 pl-12 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            -
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => copyToClipboard(conversation.conversation_id)}
+                              className="font-mono text-gray-600 dark:text-gray-300 hover:text-gray-800 dark:hover:text-gray-100 transition-colors"
+                              title="Click to copy full conversation ID"
+                            >
+                              {conversation.conversation_id.slice(0, 8)}...
+                              {copiedId === conversation.conversation_id && (
+                                <span className="ml-2 text-green-600 dark:text-green-400">✓ Copied!</span>
+                              )}
+                            </button>
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {conversation.message_count}
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {formatRelativeTime(conversation.first_message_date)}
+                          </td>
+                          <td className="px-6 py-3 whitespace-nowrap text-sm">
+                            <button
+                              onClick={() => toggleConversationExpansion(conversation.conversation_id)}
+                              className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            >
+                              {expandedConversations.has(conversation.conversation_id) ? 'Hide Messages' : 'View Messages'}
+                            </button>
+                          </td>
+                        </tr>
+                        {/* Messages for this conversation */}
+                        {expandedConversations.has(conversation.conversation_id) && (
+                          <tr className="bg-gray-100 dark:bg-gray-800">
+                            <td colSpan={5} className="p-0">
+                              {renderMessages(conversation.conversation_id, userGroup.user_id)}
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
                     ))}
                   </React.Fragment>
                 ))}
