@@ -93,243 +93,46 @@ If you're seeing API errors and the logs don't make the cause clear:
 - **NEVER attempt to "patch around" schema issues with workarounds**
 - **REAL DATA OR ERROR - never fabricate data when sources are unavailable**
 
-## V11 WebRTC and Audio Integration Issues
+# Project V16 Memory
 
-Based on diagnostic analysis, the V11 implementation has a dual audio processing path:
+## Project Context
+We are working on V16. Ignore previous versions, they will be deleted. 
 
-1. **Parallel Audio Processing Paths**:
-   - WebRTC sends audio data directly to the audio service
-   - Stop signals are routed through the integration layer
-   - These parallel paths cause ID mapping errors but don't affect actual functionality
+**Do not start coding until I specify the task.**
 
-2. **Key Diagnostic Findings**:
-   - `processAudioChunk` function is bypassed - no chunk logging appears
-   - All stop signals show the same error pattern: `[WEBRTC-AUDIO-INTEGRATION] Mapped to internal ID: not found`
-   - Despite error messages, audio playback completes normally as confirmed by completion stats
+## Project Structure
+- Reference files in folder: `docs/`
 
-3. **Root Cause**:
-   - Integration layer never receives audio chunks, preventing ID mapping
-   - WebRTC audio flows directly to audio service while stop signals go through integration
-   - Console errors are noise rather than functional issues
+## TypeScript Requirements
+- Strict TypeScript compliance
+- No `any`, `unknown`, or underscore-prefixed variables. Use proper specific types instead of `any` or `unknown`
+- Preserve functionality when fixing TypeScript errors
+- Handle specific linting errors properly
+- If a variable is never reassigned, use `const` instead
+- Reminder: `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;` (react/no-unescaped-entities)
 
-This architectural disconnect produces console warnings but doesn't impact actual audio functionality.
+## Code Guidelines
+- Do not add fallbacks. Our project is in beta, errors should be visible
+- All AI prompts and functions are fetched from Supabase tables, DO NOT hard code prompts or functions
+- Minimal changes only
+- No mock data, placeholders, or stubs
+- Breaking errors should be visible (no fallbacks that hide them)
+- Check web for WebRTC breaking changes if modifying WebRTC code
+- Ignore `.bak` files
+- Instead of guessing when fixing errors, add detailed logs to flush out why code is failing. Follow strict logging rules at file: @docs/logging_method.md
+- Do not code until your plan is approved
 
-## V11 Audio Cutoff Diagnostics Implementation
+## Database
+- Connect to Supabase project directly via MCP for queries
+- Present SQL statements if Supabase project needs changing
+- Assume `.sql` files may be out-of-date
 
-To diagnose premature audio cutoffs, a comprehensive diagnostic system has been implemented in V11:
-
-1. **Modular Configuration-Based System**:
-   - Easily disabled with `ENABLE_AUDIO_CUTOFF_DIAGNOSTICS` toggle
-   - Configurable detail levels (0-3) for controlling verbosity
-   - All components designed for easy removal when issues are resolved
-
-2. **Direct Browser Audio Monitoring**:
-   - Browser Audio API event listeners track HTML5 audio elements
-   - Monitors all events: play, pause, ended, stalled, waiting, timeupdate
-   - Captures premature ending events with detailed timing data
-
-3. **High-Precision Time Tracking**:
-   - Session and segment-based tracking of all audio chunks
-   - Performance.now() for microsecond precision timing
-   - Precise duration calculation and verification for each audio segment
-
-4. **Waveform Analysis**:
-   - Direct access to audio output buffer for waveform monitoring
-   - RMS volume calculation to detect silence periods
-   - Automated detection of silent segments that should contain audio
-
-5. **WebRTC Integration**:
-   - Hooks into existing WebRTC audio flow non-invasively
-   - Tracks message IDs, stop signals, and audio chunks individually
-   - Maps diagnostic data to corresponding WebRTC messages
-
-6. **Comprehensive Logging**:
-   - Structured diagnostic events saved to localStorage
-   - Timing checkpoints throughout audio playback lifecycle
-   - Automatic analysis of potential cutoff points
-
-This system provides multiple layers of verification to detect exactly when and why audio might be stopping prematurely, without affecting the underlying audio playback functionality.
-
-## V11 Enhanced Audio Cutoff Diagnostics (May 2025 Update)
-
-The diagnostic system was enhanced with targeted logging to identify the exact cause of premature audio cutoffs:
-
-1. **Microsecond-Precision Timing**:
-   - High-resolution timestamping using `performance.now()` for ultra-precise measurements
-   - Capture of exact start and end times for each audio chunk's lifecycle
-   - Precise comparison between expected and actual playback durations
-
-2. **Audio Element State Snapshots**:
-   - Full capture of audio element state at the moment of completion
-   - Tracking of AudioContext state, buffer details, and browser visibility
-   - Detection of browser conditions that might interrupt playback (tab switching)
-
-3. **Comprehensive Environment Analysis**:
-   - Recording of network conditions, memory usage, and browser state
-   - Full analysis of the audio buffer queue at completion time
-   - Detection of any concurrent processes that might interrupt audio
-
-4. **Stop Signal Correlation**:
-   - Precise matching of stop signal timing with chunk completion events
-   - Advanced correlation of server and client timing sequences
-   - Detailed analysis of gaps between stop signal receipt and chunk completion
-
-5. **Complete Event Sequence Storage**:
-   - Global `__prematureCutoffs` and `__audioFinalizationState` storage
-   - Complete sequential history of all audio chunks and their playback metrics
-   - Detailed analytics on cutoff patterns and frequency
-
-When audio cutoffs occur, this enhanced system captures a detailed snapshot of the exact state of all audio components, allowing precise diagnosis of whether the issue is related to:
-- Audio buffer problems
-- Timing issues between server stop signals and client playback
-- Browser audio stream interruptions
-- Tab or window visibility changes affecting audio playback
-- Memory or performance pressure causing incomplete playback
-
-The system's data is persisted to `localStorage` for analysis across sessions and detailed reporting.
-
-## Current Task and Debug Status
-
-### V12 Architecture Overview
-
-The V12 implementation replaces the direct WebRTC implementation with Agora's SDK while maintaining the same user experience. Key architectural components include:
-
-1. **Agora SDK Integration**:
-   - Implements Agora Voice SDK for real-time audio transmission
-   - Utilizes Agora's Conversational AI SDK for OpenAI integration
-   - Handles audio capture, transmission, and playback through Agora's network
-
-2. **Audio Service Adaptation**:
-   - Adapts the existing audio service to work with Agora's audio format
-   - Maintains the same singleton pattern outside React lifecycle
-   - Preserves audio playback queue management and error recovery
-
-3. **Function Calling System**:
-   - Maintains the same function registration pattern from V11
-   - Adapts function execution to work with Agora's message format
-   - Preserves both book and mental health function implementations
-
-4. **User Interface**:
-   - Keeps the BlueOrbVoiceUI visualization connected to Agora's audio metrics
-   - Maintains all existing UI states and transitions
-   - Preserves the debugging panel with Agora-specific diagnostics
-
-5. **Error Handling and Resilience**:
-   - Implements Agora-specific error detection and recovery
-   - Provides detailed logging for connection and audio issues
-   - Maintains consistent UI feedback for error states
-
-### Implementation Strategy
-
-The V12 implementation will be built using a phased approach:
-
-1. **Phase 1: Basic Agora Integration**
-   - Set up Agora project and obtain credentials
-   - Implement basic Agora client connection in a new hook
-   - Establish audio capture and transmission
-   - Create token generation API endpoint
-
-2. **Phase 2: Conversational AI Integration**
-   - Connect Agora with OpenAI for speech-to-text and text-to-speech
-   - Implement conversation management
-   - Add chat history display and UI indicators
-
-3. **Phase 3: Function Calling Implementation**
-   - Adapt function registration system to work with Agora
-   - Implement function calling through Agora's messaging system
-   - Connect to existing API endpoints for book and mental health data
-
-4. **Phase 4: Audio Visualization and UI Refinement**
-   - Connect BlueOrbVoiceUI to Agora's audio metrics
-   - Implement volume monitoring for visualization
-   - Refine UI transitions and feedback
-
-5. **Phase 5: Testing and Optimization**
-   - Implement comprehensive error handling
-   - Add detailed logging for debugging
-   - Optimize performance and reliability
-
-### Key Technical Components
-
-1. **use-agora-ai.ts Hook**:
-   - Manages Agora client lifecycle
-   - Handles audio capture and transmission
-   - Provides state and methods similar to use-webrtc.ts
-
-2. **audio-service-agora.ts**:
-   - Adapts audio playback to work with Agora's audio format
-   - Maintains queue management outside React lifecycle
-   - Provides diagnostics and error recovery
-
-3. **V12 API Routes**:
-   - Token generation for Agora authentication
-   - Session configuration with LLM settings
-   - Function execution endpoints
-
-4. **Agora Integration Patterns**:
-   - Proper handling of SSR issues with Next.js
-   - Dynamic imports for browser-only code
-   - Resilient connection management
-
-### Migration Benefits
-
-1. **Simplified Infrastructure**: Agora handles complex networking and media processing
-2. **Enhanced Reliability**: Built-in reconnection and network traversal
-3. **Improved Scalability**: Designed to handle many concurrent users
-4. **Reduced Complexity**: Fewer edge cases and failure modes to handle
-5. **Better Performance**: Optimized audio processing and transmission
-
-This implementation will maintain the same user experience as V11 while providing a more reliable and maintainable backend architecture based on Agora's specialized SDKs rather than direct WebRTC implementation.
-
-## V15 Memory System (Current Development)
-
-V15 is the current greenfield implementation with clean architecture based on V11 functionality. The memory system handles conversation analysis and user profile building.
-
-### Memory System Architecture
-
-**Conversation End Flow**:
-1. Session ends (user or AI initiated)
-2. Conversation marked as inactive
-3. Background processing triggered for memory extraction and profile updates
-
-### V15 Memory API Endpoints
-
-**Core APIs** (located in `/src/app/api/v15/`):
-
-1. **`/api/v15/process-user-memory`** - Orchestrator
-   - Coordinates the full user profile update process
-   - Finds unprocessed conversations
-   - Triggers analysis and profile update in sequence
-
-2. **`/api/v15/analyze-conversation`** - Stage 1: Extract Insights
-   - Uses OpenAI GPT-4 to analyze conversation transcripts
-   - Extracts personal details, health info, emotional patterns, triggers
-   - Stores analysis in `conversation_analyses` table
-
-3. **`/api/v15/update-user-profile`** - Stage 2: Merge Profile Data  
-   - Uses Claude AI to intelligently merge new analysis with existing profile
-   - Updates `user_profiles` table with enhanced user understanding
-
-**Supporting APIs**:
-- `/api/v15/create-conversation` - Creates new conversation records
-- `/api/v15/save-message` - Stores individual conversation messages
-- `/api/v15/get-messages` - Retrieves conversation history
-
-### Database Schema
-
-**Key Tables**:
-- `conversations` - Conversation metadata and status
-- `messages` - Individual conversation messages and transcripts
-- `conversation_analyses` - AI-extracted insights per conversation
-- `user_profiles` - Compiled user profile data
-- `processed_conversations` - Tracking table for analysis completion
-
-### Memory Processing Flow
-
-```
-Conversation End → process-user-memory → analyze-conversation → update-user-profile
-                                    ↓                      ↓
-                              Extract insights      Merge with profile
-```
-
-**IMPORTANT**: V15 is current development focus. All memory system work should use V15 APIs, not V11 versions. V11 files are reference only and should not be modified.
+## Key Reminders
+- V16 is a fresh start
+- Reference files are in `docs/` folder
+- Strict TypeScript compliance required
+- No coding until you specify the task and approve the plan
+- Use Supabase MCP for database operations
+- Follow logging rules in @docs/logging_method.md
+- No fallbacks - errors should be visible in beta
+- All AI prompts/functions from Supabase tables, not hardcoded
