@@ -114,8 +114,9 @@ export async function POST(request: NextRequest) {
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.3,
+      ]
+      // GPT-5 models only support default temperature (1.0)
+      // temperature: 0.3,  // Removed - not supported by GPT-5
     });
 
     const handoffContent = handoffResponse.choices[0]?.message?.content;

@@ -493,8 +493,9 @@ export async function POST(request: NextRequest) {
               messages: [
                 { role: 'system', content: extractionSystemPrompt },
                 { role: 'user', content: `${extractionUserPrompt}\n\nConversation:\n${conversationText}` }
-              ],
-              temperature: 0.3,
+              ]
+              // GPT-5 models only support default temperature (1.0)
+              // temperature: 0.3,  // Removed - not supported by GPT-5
             });
 
             const extractedText = extractionResponse.choices[0]?.message?.content;
@@ -749,8 +750,9 @@ export async function POST(request: NextRequest) {
               role: 'user', 
               content: `${mergeUserPrompt}\n\nExisting Profile:\n${JSON.stringify(existingProfile.profile_data, null, 2)}\n\nNew Memory Data:\n${JSON.stringify(memoryContent, null, 2)}` 
             }
-          ],
-          temperature: 0.3,
+          ]
+          // GPT-5 models only support default temperature (1.0)
+          // temperature: 0.3,  // Removed - not supported by GPT-5
         });
 
         const mergedMemoryText = mergeResponse.choices[0]?.message?.content;
