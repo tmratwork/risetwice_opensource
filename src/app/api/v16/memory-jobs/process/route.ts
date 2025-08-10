@@ -415,85 +415,226 @@ export async function POST(request: NextRequest) {
       const extractionSystemPrompt = await getPrompt('v16_what_ai_remembers_extraction_system');
       const extractionUserPrompt = await getPrompt('v16_what_ai_remembers_extraction_user');
 
-      // Process conversations
-      const conversationTexts = qualityConversations.map(conv => {
+      // Process conversations individually to avoid token limits
+      const extractedInsights: Record<string, unknown>[] = [];
+      let conversationsProcessedCount = 0;
+      let conversationsSkippedCount = 0;
+      let conversationsFailedCount = 0;
+      let totalTokensProcessed = 0;
+
+      logV16Memory(`🔄 Processing ${qualityConversations.length} conversations individually - Job ${jobId}`);
+
+      // Process each conversation separately
+      for (let i = 0; i < qualityConversations.length; i++) {
+        const conv = qualityConversations[i];
         const messages = (conv.messages as Array<{id: string, content: string, role: string, created_at: string}>) || [];
-        return messages
+        const conversationText = messages
           .map(msg => `${msg.role}: ${msg.content}`)
           .join('\n');
-      }).join('\n\n---\n\n');
+        
+        const messageCount = messages.length;
+        const estimatedTokens = Math.ceil(conversationText.length / 4); // Rough token estimate
+        
+        logV16Memory(`📝 Processing conversation ${i + 1}/${qualityConversations.length} - ID: ${conv.id}`, {
+          messageCount,
+          estimatedTokens,
+          conversationLength: conversationText.length
+        });
 
-      logV16Memory(`Calling OpenAI for memory extraction - Job ${jobId}`, {
-        qualityConversations: qualityConversations.length,
-        totalTextLength: conversationTexts.length
-      });
+        const processingStartTime = Date.now();
+        let analysisResult: Record<string, unknown>;
+        let processingStatus = 'processing';
+        let errorDetails = null;
+        let skipReason = null;
 
-      // Call OpenAI for extraction
-      const extractionResponse = await openai.chat.completions.create({
-        model: 'gpt-4',
-        messages: [
-          { role: 'system', content: extractionSystemPrompt },
-          { role: 'user', content: `${extractionUserPrompt}\n\nConversations:\n${conversationTexts}` }
-        ],
-        temperature: 0.3,
-      });
+        try {
+          // Skip if conversation is too short (less than 2 messages)
+          if (messageCount < 2) {
+            logV16Memory(`⏭️ Skipping conversation ${conv.id} - too short (${messageCount} messages)`);
+            analysisResult = {
+              skipped: true,
+              reason: 'too_short',
+              message_count: messageCount
+            };
+            processingStatus = 'skipped';
+            skipReason = 'too_short';
+            conversationsSkippedCount++;
+          }
+          // Skip if estimated tokens are too high (safety check)
+          else if (estimatedTokens > 6000) {
+            logV16Memory(`⏭️ Skipping conversation ${conv.id} - too long (${estimatedTokens} estimated tokens)`);
+            analysisResult = {
+              skipped: true,
+              reason: 'too_long',
+              estimated_tokens: estimatedTokens
+            };
+            processingStatus = 'skipped';
+            skipReason = 'too_long';
+            conversationsSkippedCount++;
+          }
+          else {
+            // Call OpenAI for individual conversation extraction
+            const extractionResponse = await openai.chat.completions.create({
+              model: 'gpt-4',
+              messages: [
+                { role: 'system', content: extractionSystemPrompt },
+                { role: 'user', content: `${extractionUserPrompt}\n\nConversation:\n${conversationText}` }
+              ],
+              temperature: 0.3,
+            });
 
-      const extractedMemoryText = extractionResponse.choices[0]?.message?.content;
-      
-      if (!extractedMemoryText) {
-        throw new Error('Failed to extract memory data from conversations');
-      }
+            const extractedText = extractionResponse.choices[0]?.message?.content;
+            
+            if (!extractedText) {
+              throw new Error('Empty response from OpenAI');
+            }
 
-      // Parse extracted memory
-      let memoryContent: Record<string, unknown>;
-      try {
-        let cleanedResponse = extractedMemoryText.trim();
-        if (cleanedResponse.includes('```json')) {
-          cleanedResponse = cleanedResponse
-            .replace(/```json\s*/g, '')
-            .replace(/```\s*$/g, '')
-            .trim();
+            // Parse extracted insights for this conversation
+            let cleanedResponse = extractedText.trim();
+            if (cleanedResponse.includes('```json')) {
+              cleanedResponse = cleanedResponse
+                .replace(/```json\s*/g, '')
+                .replace(/```\s*$/g, '')
+                .trim();
+            }
+            
+            const conversationInsights = JSON.parse(cleanedResponse);
+            
+            // Check if AI determined this conversation has insufficient quality
+            if (conversationInsights.skipped === true || conversationInsights.skip === true) {
+              logV16Memory(`⏭️ AI skipped conversation ${conv.id} - ${conversationInsights.reason || 'insufficient_quality'}`);
+              analysisResult = conversationInsights;
+              processingStatus = 'skipped';
+              skipReason = conversationInsights.reason || 'insufficient_quality';
+              conversationsSkippedCount++;
+            } else {
+              // Valid insights extracted
+              extractedInsights.push(conversationInsights);
+              analysisResult = conversationInsights;
+              processingStatus = 'completed';
+              conversationsProcessedCount++;
+              totalTokensProcessed += estimatedTokens;
+              logV16Memory(`✅ Successfully extracted insights from conversation ${conv.id}`);
+            }
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
+          logV16Memory(`❌ Failed to process conversation ${conv.id}:`, errorMessage);
+          
+          analysisResult = {
+            skipped: true,
+            reason: 'processing_error',
+            error: errorMessage
+          };
+          processingStatus = 'failed';
+          errorDetails = { error: errorMessage, step: 'extraction' };
+          conversationsFailedCount++;
         }
-        memoryContent = JSON.parse(cleanedResponse);
-      } catch (parseError) {
-        logV16Memory('Failed to parse AI response as JSON, using fallback', {
-          jobId,
-          parseError: parseError instanceof Error ? parseError.message : String(parseError)
-        });
-        memoryContent = { raw_memory: extractedMemoryText };
+
+        const processingDuration = Date.now() - processingStartTime;
+
+        // Save detailed analysis result to database
+        await supabase
+          .from('v16_conversation_analyses')
+          .upsert({
+            user_id: job.user_id,
+            conversation_id: conv.id,
+            analysis_result: analysisResult,
+            extracted_at: new Date().toISOString(),
+            message_count: messageCount,
+            total_tokens: estimatedTokens,
+            processing_status: processingStatus,
+            error_details: errorDetails,
+            extraction_metadata: {
+              model: 'gpt-4',
+              processing_duration_ms: processingDuration,
+              job_id: jobId
+            },
+            quality_score: processingStatus === 'completed' ? 8 : (processingStatus === 'skipped' ? 3 : 0),
+            skip_reason: skipReason,
+            processing_duration_ms: processingDuration
+          }, { 
+            onConflict: 'user_id,conversation_id'
+          });
+
+        // Update job progress
+        const progressPercentage = Math.round(((i + 1) / qualityConversations.length) * 100);
+        await supabase
+          .from('v16_memory_jobs')
+          .update({
+            processed_conversations: i + 1,
+            progress_percentage: progressPercentage,
+            processing_details: {
+              currentStep: `Processing conversation ${i + 1}/${qualityConversations.length}`,
+              conversationsExamined: i + 1,
+              conversationsProcessed: conversationsProcessedCount,
+              conversationsSkipped: conversationsSkippedCount,
+              conversationsFailed: conversationsFailedCount
+            },
+            conversations_skipped: conversationsSkippedCount,
+            conversations_failed: conversationsFailedCount,
+            total_tokens_processed: totalTokensProcessed
+          })
+          .eq('id', jobId);
+
+        logV16Memory(`📊 Progress: ${i + 1}/${qualityConversations.length} conversations examined, ${conversationsProcessedCount} processed, ${conversationsSkippedCount} skipped, ${conversationsFailedCount} failed`);
+        
+        // Small delay between conversations to prevent rate limiting
+        if (i < qualityConversations.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
       }
 
-      // Step 1: Save individual conversation analyses
-      const newAnalysisRecords = qualityConversations.map(conv => ({
-        user_id: job.user_id,
-        conversation_id: conv.id,
-        analysis_result: memoryContent,
-        extracted_at: new Date().toISOString()
-      }));
-
-      const { data: savedAnalyses, error: analysisError } = await supabase
-        .from('v16_conversation_analyses')
-        .insert(newAnalysisRecords)
-        .select();
-
-      if (analysisError) {
-        logV16Memory(`[v16_memory] ❌ FAILED to save conversation analyses:`, {
-          jobId,
-          userId: job.user_id,
-          error: analysisError,
-          conversationIds: qualityConversations.map(c => c.id)
-        });
-        throw new Error(`Failed to save conversation analyses: ${analysisError.message}`);
-      }
-
-      logV16Memory(`[v16_memory] ✅ SAVED CONVERSATION ANALYSES:`, {
-        jobId,
-        userId: job.user_id,
-        savedAnalyses: savedAnalyses?.length || 0,
-        conversationIds: qualityConversations.map(c => c.id)
+      logV16Memory(`✅ Individual processing complete - Job ${jobId}`, {
+        totalExamined: qualityConversations.length,
+        processed: conversationsProcessedCount,
+        skipped: conversationsSkippedCount,
+        failed: conversationsFailedCount,
+        extractedInsights: extractedInsights.length
       });
 
-      // Update progress: Merging with existing profile
+      // Combine all extracted insights into a single memory content object
+      let memoryContent: Record<string, unknown> = {};
+      
+      if (extractedInsights.length === 0) {
+        logV16Memory(`ℹ️ No valid insights extracted from any conversation - Job ${jobId}`);
+        memoryContent = {
+          message: 'No valid insights could be extracted from the processed conversations',
+          processing_summary: {
+            conversations_examined: qualityConversations.length,
+            conversations_processed: conversationsProcessedCount,
+            conversations_skipped: conversationsSkippedCount,
+            conversations_failed: conversationsFailedCount
+          }
+        };
+      } else {
+        // Merge insights from all processed conversations
+        logV16Memory(`🔄 Merging ${extractedInsights.length} conversation insights - Job ${jobId}`);
+        
+        // Simple merge strategy: combine arrays and deduplicate objects
+        for (const insight of extractedInsights) {
+          for (const [key, value] of Object.entries(insight)) {
+            if (Array.isArray(value)) {
+              if (!memoryContent[key]) memoryContent[key] = [];
+              (memoryContent[key] as unknown[]).push(...value);
+            } else if (typeof value === 'object' && value !== null) {
+              if (!memoryContent[key]) memoryContent[key] = {};
+              Object.assign(memoryContent[key] as Record<string, unknown>, value);
+            } else {
+              // For primitive values, take the last one
+              memoryContent[key] = value;
+            }
+          }
+        }
+      }
+
+      logV16Memory(`🔄 Memory content prepared - Job ${jobId}`, {
+        hasContent: Object.keys(memoryContent).length > 0,
+        contentKeys: Object.keys(memoryContent),
+        totalInsights: extractedInsights.length
+      });
+
+      // Update job progress: Ready to merge with existing profile  
       await supabase
         .from('v16_memory_jobs')
         .update({
@@ -682,25 +823,34 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      // Mark job as completed - each job processes one batch of unprocessed conversations
-      const currentProgressPercentage = Math.min(
-        Math.round(((job.processed_conversations + conversationIdsToProcess.length) / job.total_conversations) * 100),
-        100
-      );
+      // Mark job as completed with detailed individual processing statistics
+      const currentProgressPercentage = 100; // Individual processing always completes fully
+      const processingEndTime = new Date().toISOString();
       
       await supabase
         .from('v16_memory_jobs')
         .update({
           status: 'completed',
           progress_percentage: currentProgressPercentage,
-          completed_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          completed_at: processingEndTime,
+          updated_at: processingEndTime,
+          processing_end_time: processingEndTime,
+          conversations_skipped: conversationsSkippedCount,
+          conversations_failed: conversationsFailedCount,
+          average_quality_score: conversationsProcessedCount > 0 ? 8.0 : 0,
+          total_tokens_processed: totalTokensProcessed,
           processing_details: {
-            conversationsExamined: conversationIdsToProcess.length,
-            qualityConversationsProcessed: qualityConversations.length,
+            conversationsExamined: qualityConversations.length,
+            conversationsProcessed: conversationsProcessedCount,
+            conversationsSkipped: conversationsSkippedCount,
+            conversationsFailed: conversationsFailedCount,
+            qualityConversationsProcessed: conversationsProcessedCount,
             profileId: savedProfile.id,
             profileVersion: savedProfile.version,
-            profileUpdated: true
+            profileUpdated: conversationsProcessedCount > 0,
+            individualProcessing: true,
+            processingMethod: 'individual_conversations',
+            totalTokensProcessed: totalTokensProcessed
           }
         })
         .eq('id', jobId);
