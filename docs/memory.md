@@ -2340,3 +2340,145 @@ Prompt Injection: Enhanced AI Instructions
 **Result**: V16 memory processing now generates AI summaries that get injected into future conversations, providing users with personalized support based on their complete conversation history.
 
 **Status**: **FULLY IMPLEMENTED** - V16 memory system now bridges to prompt injection system as of July 2025. Users receive personalized AI interactions based on V16 memory processing.
+
+## V16 Token Limit Fix & Individual Processing (August 2025)
+
+### Problem Identified
+
+**Root Cause Analysis (August 10, 2025):**
+- **Token Limit Failures**: Jobs failing with "8192 tokens exceeded" errors (16,879 tokens)
+- **Batch Processing Issue**: System was sending ALL quality conversations to OpenAI in single API call
+- **Profile Update Failures**: `last_analyzed_timestamp` stuck at July 6th despite new conversations
+- **Missing Conversation Tracking**: No records in `v16_conversation_analyses` for failed users
+- **Counter Sync Issues**: `user_profiles.conversation_count/message_count` showing 0 despite actual data
+
+### Example Failure Case
+
+**User `BTSdlTzcQmRa8tyuBuvaOMZyD5y1`:**
+- **Actual Data**: 11 conversations, 377 messages
+- **Profile Counters**: 0 conversations, 0 messages  
+- **Error Pattern**: 16,879 tokens (9 conversations × ~1,800 tokens each + prompts)
+- **Result**: Zero records in `v16_conversation_analyses`, no profile updates
+
+### Solution Implemented
+
+**Individual Conversation Processing (August 10, 2025):**
+
+#### **1. Architecture Change**
+```javascript
+// BEFORE: Batch processing (token limit failures)
+const conversationTexts = conversations.map(...).join('\n\n---\n\n');
+const response = await openai.chat.completions.create({
+  content: `${prompt}\n\nConversations:\n${conversationTexts}` // 16,879 tokens!
+});
+
+// AFTER: Individual processing (token safe)
+for (const conversation of conversations) {
+  const conversationText = conversation.messages.map(...).join('\n');
+  const response = await openai.chat.completions.create({
+    content: `${prompt}\n\nConversation:\n${conversationText}` // ~1,800 tokens
+  });
+}
+```
+
+#### **2. Enhanced Database Tracking**
+
+**New Columns Added:**
+
+**`v16_conversation_analyses` (per-conversation details):**
+- `message_count`: Number of messages in conversation
+- `total_tokens`: Estimated token count 
+- `processing_status`: 'pending', 'processing', 'completed', 'failed', 'skipped'
+- `error_details`: JSON with specific error information
+- `extraction_metadata`: Processing details (model, duration, job_id)
+- `quality_score`: 1-10 score for conversation quality
+- `skip_reason`: Why conversation was skipped (too_short, too_long, insufficient_quality)
+- `processing_duration_ms`: Time taken to process conversation
+
+**`v16_memory_jobs` (job-level statistics):**
+- `conversations_skipped`: Count of skipped conversations
+- `conversations_failed`: Count of failed conversations  
+- `average_quality_score`: Average quality of processed conversations
+- `total_tokens_processed`: Total tokens across all conversations
+- `processing_start_time`/`processing_end_time`: Actual processing timestamps
+
+**New Table `v16_processing_logs`:**
+- Detailed debugging logs for troubleshooting
+- Links to specific jobs and conversations
+- Structured error tracking
+
+#### **3. Processing Flow Changes**
+
+**Individual Processing Algorithm:**
+1. **Pre-flight Checks**: Skip conversations < 2 messages or > 6,000 estimated tokens
+2. **Individual Extraction**: Process each conversation separately with OpenAI
+3. **Real-time Tracking**: Save results immediately to `v16_conversation_analyses`
+4. **Error Isolation**: Failed conversations don't crash entire job
+5. **Progress Updates**: Update job progress after each conversation
+6. **Insight Combination**: Merge successful extractions into unified memory
+7. **Profile Update**: Update user profile with successful extractions only
+
+#### **4. Safety Features**
+
+**Token Management:**
+- 6,000 token safety limit per conversation (below 8,192 API limit)
+- Rough token estimation: `text.length / 4`
+- Skip conversations that are too long instead of failing
+
+**Error Handling:**
+- Individual conversation failures logged but don't stop job
+- Detailed error information saved to database
+- Partial success: some conversations process even if others fail
+
+**Rate Limiting:**
+- 500ms delay between conversation processing calls
+- Prevents OpenAI API rate limiting during cron jobs
+
+### Results Expected
+
+**For Previously Failed Users:**
+- Token limit errors eliminated
+- Individual conversations process successfully  
+- `v16_conversation_analyses` populated with detailed results
+- `user_profiles.last_analyzed_timestamp` finally updates
+- Profile counters increment correctly
+
+**Enhanced Diagnostics:**
+```sql
+-- See per-conversation processing results
+SELECT conversation_id, processing_status, error_details, skip_reason 
+FROM v16_conversation_analyses 
+WHERE user_id = 'BTSdlTzcQmRa8tyuBuvaOMZyD5y1';
+
+-- See job-level statistics  
+SELECT conversations_skipped, conversations_failed, total_tokens_processed
+FROM v16_memory_jobs 
+WHERE user_id = 'BTSdlTzcQmRa8tyuBuvaOMZyD5y1'
+ORDER BY created_at DESC;
+```
+
+**Cron Job Behavior:**
+- Process conversations individually at 2:00 AM UTC
+- No more 16,879 token batch failures
+- Graceful handling of long conversations
+- Detailed logging for troubleshooting
+
+### Files Modified
+
+**Core Processing Logic:**
+- `/src/app/api/v16/memory-jobs/process/route.ts` - Complete rewrite for individual processing
+
+**Database Schema:**
+- `/v16_memory_schema_updates.sql` - Schema enhancements for tracking
+
+### Testing Instructions for August 11, 2025
+
+**Verification Checklist After 2:00 AM Cron:**
+
+1. **Check job creation**: `SELECT * FROM v16_memory_jobs WHERE created_at >= '2025-08-11 02:00:00'`
+2. **Verify individual processing**: Look for `processing_status` values in `v16_conversation_analyses`
+3. **Confirm no token errors**: Check `error_message` doesn't contain "8192 tokens exceeded"
+4. **Validate profile updates**: Check `last_analyzed_timestamp` updates for processed users
+5. **Review processing statistics**: Examine `conversations_skipped/failed` counts
+
+**Status**: **IMPLEMENTED** - Individual conversation processing deployed August 10, 2025. Awaiting cron job verification.
