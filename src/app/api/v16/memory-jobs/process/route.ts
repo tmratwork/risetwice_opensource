@@ -448,6 +448,7 @@ export async function POST(request: NextRequest) {
         let processingStatus = 'processing';
         let errorDetails = null;
         let skipReason = null;
+        let modelUsed = 'gpt-5-mini'; // Default model - GPT-5-mini with 272K token limit
 
         try {
           // Skip if conversation is too short (less than 2 messages)
@@ -463,7 +464,10 @@ export async function POST(request: NextRequest) {
             conversationsSkippedCount++;
           }
           // Skip if estimated tokens are too high (safety check)
-          else if (estimatedTokens > 6000) {
+          // Account for prompt overhead (~2000 tokens for system + user prompts)
+          // GPT-5-mini has 272K input token limit
+          // GPT-5 has 272K input token limit as well
+          else if (estimatedTokens > 250000) {
             logV16Memory(`⏭️ Skipping conversation ${conv.id} - too long (${estimatedTokens} estimated tokens)`);
             analysisResult = {
               skipped: true,
@@ -475,9 +479,17 @@ export async function POST(request: NextRequest) {
             conversationsSkippedCount++;
           }
           else {
+            // Determine which model to use based on conversation size
+            // GPT-5-mini: 272K input tokens, fast and cost-effective ($1.25/million input)
+            // GPT-5: Full flagship model for complex conversations
+            // Use gpt-5-mini by default as it has massive 272K token limit and is cost-effective
+            modelUsed = estimatedTokens > 50000 ? 'gpt-5' : 'gpt-5-mini';
+            
+            logV16Memory(`🤖 Using model ${modelUsed} for conversation ${conv.id} with ${estimatedTokens} estimated tokens`);
+            
             // Call OpenAI for individual conversation extraction
             const extractionResponse = await openai.chat.completions.create({
-              model: 'gpt-4',
+              model: modelUsed,
               messages: [
                 { role: 'system', content: extractionSystemPrompt },
                 { role: 'user', content: `${extractionUserPrompt}\n\nConversation:\n${conversationText}` }
@@ -523,13 +535,32 @@ export async function POST(request: NextRequest) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
           logV16Memory(`❌ Failed to process conversation ${conv.id}:`, errorMessage);
           
+          // Check if it's a token limit error
+          const isTokenLimitError = errorMessage.includes('maximum context length') || 
+                                   errorMessage.includes('token') && errorMessage.includes('limit');
+          
+          if (isTokenLimitError) {
+            logV16Memory(`⚠️ Token limit exceeded for conversation ${conv.id} despite using model ${modelUsed}`, {
+              estimatedTokens,
+              modelUsed,
+              errorMessage
+            });
+          }
+          
           analysisResult = {
             skipped: true,
-            reason: 'processing_error',
-            error: errorMessage
+            reason: isTokenLimitError ? 'token_limit_exceeded' : 'processing_error',
+            error: errorMessage,
+            model_used: modelUsed,
+            estimated_tokens: estimatedTokens
           };
           processingStatus = 'failed';
-          errorDetails = { error: errorMessage, step: 'extraction' };
+          errorDetails = { 
+            error: errorMessage, 
+            step: 'extraction',
+            model_used: modelUsed,
+            is_token_limit_error: isTokenLimitError
+          };
           conversationsFailedCount++;
         }
 
@@ -559,7 +590,7 @@ export async function POST(request: NextRequest) {
             .from('v16_conversation_analyses')
             .update({
               extraction_metadata: {
-                model: 'gpt-4',
+                model: 'skipped_duplicate',
                 processing_duration_ms: processingDuration,
                 job_id: jobId,
                 duplicate_processing_attempt: true,
@@ -581,9 +612,10 @@ export async function POST(request: NextRequest) {
               processing_status: processingStatus,
               error_details: errorDetails,
               extraction_metadata: {
-                model: 'gpt-4',
+                model: modelUsed,
                 processing_duration_ms: processingDuration,
-                job_id: jobId
+                job_id: jobId,
+                estimated_tokens: estimatedTokens
               },
               quality_score: processingStatus === 'completed' ? 8 : (processingStatus === 'skipped' ? 3 : 0),
               skip_reason: skipReason,
@@ -710,7 +742,7 @@ export async function POST(request: NextRequest) {
         const mergeUserPrompt = await getPrompt('v16_what_ai_remembers_profile_merge_user');
 
         const mergeResponse = await openai.chat.completions.create({
-          model: 'gpt-4',
+          model: 'gpt-5-mini',
           messages: [
             { role: 'system', content: mergeSystemPrompt },
             { 
@@ -923,7 +955,7 @@ export async function POST(request: NextRequest) {
       });
 
       logV16MemoryServer({
-        level: hasWarnings ? 'WARNING' : 'INFO',
+        level: hasWarnings ? 'WARN' : 'INFO',
         category: 'BACKGROUND_PROCESSING',
         operation: 'job-processing-completed',
         data: {
