@@ -255,9 +255,17 @@ function AuthButtons() {
                 <div className="relative" ref={dropdownRef}>
                     <div
                         onClick={() => setShowDropdown(!showDropdown)}
-                        className="flex items-center bg-sage-300 dark:bg-white bg-opacity-10 dark:bg-opacity-10 rounded-full px-4 py-2 cursor-pointer transition-all hover:bg-opacity-20"
+                        className="flex items-center gap-1 bg-sage-300 dark:bg-white bg-opacity-10 dark:bg-opacity-10 rounded-full px-4 py-2 cursor-pointer transition-all hover:bg-opacity-20"
                     >
                         <span className="text-sm text-sage-500 dark:text-gray-200">{user.email}</span>
+                        <svg 
+                            className={`w-4 h-4 text-sage-500 dark:text-gray-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                        >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
                     </div>
 
                     {showDropdown && (
