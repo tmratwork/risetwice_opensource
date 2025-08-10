@@ -2,13 +2,14 @@
 
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, Apple, Settings, Fingerprint, User, Languages } from 'lucide-react';
+import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/theme-context';
 import Link from 'next/link';
 import SmartSendDialog from './SmartSendDialog';
 import DisplayNameDialog from './DisplayNameDialog';
+import ContributorsModal from './ContributorsModal';
 import { 
   SUPPORTED_LANGUAGES, 
   getStoredLanguagePreference, 
@@ -118,6 +119,7 @@ function AuthButtons() {
     const [showDropdown, setShowDropdown] = useState(false);
     const [showSmartSendDialog, setShowSmartSendDialog] = useState(false);
     const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
+    const [showContributorsModal, setShowContributorsModal] = useState(false);
     const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState('en');
 
@@ -165,6 +167,12 @@ function AuthButtons() {
     const handleDisplayNameClick = () => {
         setShowDisplayNameDialog(true);
         setShowDropdown(false); // Close dropdown when opening dialog
+    };
+
+    // Handle Contributors modal
+    const handleContributorsClick = () => {
+        setShowContributorsModal(true);
+        setShowDropdown(false); // Close dropdown when opening modal
     };
 
     // Handle language selection
@@ -299,6 +307,13 @@ function AuthButtons() {
                                     <Settings className="w-5 h-5 mr-2" />
                                     Smart Sending
                                 </button>
+                                <button
+                                    onClick={handleContributorsClick}
+                                    className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                                >
+                                    <Trophy className="w-5 h-5 mr-2" />
+                                    Wall of Contributors
+                                </button>
                                 <div className="relative">
                                     <button
                                         onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
@@ -362,6 +377,12 @@ function AuthButtons() {
                 <DisplayNameDialog
                     isOpen={showDisplayNameDialog}
                     onClose={() => setShowDisplayNameDialog(false)}
+                />
+
+                {/* Contributors Modal */}
+                <ContributorsModal
+                    isOpen={showContributorsModal}
+                    onClose={() => setShowContributorsModal(false)}
                 />
             </>);
     }
