@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Github, ExternalLink } from 'lucide-react';
+import { X, Github } from 'lucide-react';
 
 interface Contributor {
   username: string;
