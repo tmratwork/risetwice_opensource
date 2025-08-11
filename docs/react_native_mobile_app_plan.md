@@ -45,6 +45,8 @@ Create a React Native mobile application focused exclusively on the chatbotV16 f
 ### Core Framework
 - **React Native**: Cross-platform mobile development
 - **TypeScript**: Type safety and development experience
+- **TypeScript Configuration**: Isolated mobile config to prevent build conflicts
+- **Type Safety**: Cross-platform compatible type definitions
 - **React Navigation**: Screen navigation and routing
 
 ### State Management & Data
@@ -115,6 +117,42 @@ mobile/
 ├── android/
 ├── ios/
 └── package.json
+```
+
+## TypeScript Configuration
+
+### Cross-Platform Type Safety
+- **Separate `tsconfig.json`** for mobile project in `/mobile` folder
+- **Web app excludes mobile folder**: `"exclude": ["node_modules", "mobile"]` in root tsconfig
+- **Handle FormData type differences** between web and mobile environments
+- **Use `ReturnType<typeof setTimeout>`** for cross-platform timeout compatibility
+- **Isolated dependency management** prevents type conflicts between platforms
+
+### Mobile-Specific TypeScript Setup
+```json
+// mobile/tsconfig.json
+{
+  "extends": "expo/tsconfig.base",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    },
+    "strict": true
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts"],
+  "exclude": ["node_modules"]
+}
+```
+
+### Root TypeScript Configuration
+```json
+// Root tsconfig.json (for Next.js web app)
+{
+  "compilerOptions": { /* ... */ },
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
+  "exclude": ["node_modules", "mobile"]  // ← Excludes mobile folder
+}
 ```
 
 ## Key Components to Extract from Web App
