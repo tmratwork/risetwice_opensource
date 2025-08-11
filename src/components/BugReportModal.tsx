@@ -390,13 +390,12 @@ export default function BugReportModal({ onClose, messageId, feedbackType }: Bug
           </div>
 
           <div className="bug-report-form-group">
-            <label htmlFor="bug-message">Additional details (optional):</label>
+            <label htmlFor="bug-message">Additional details:</label>
             <textarea
               id="bug-message"
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               placeholder="eg. The audio cut out..."
-              required
               rows={5}
             />
           </div>
