@@ -5,7 +5,10 @@ import {
     GoogleAuthProvider,
     OAuthProvider,
     signInWithPopup,
-    signOut as firebaseSignOut
+    signOut as firebaseSignOut,
+    RecaptchaVerifier,
+    signInWithPhoneNumber,
+    ConfirmationResult
 } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 
@@ -15,6 +18,9 @@ type AuthContextType = {
     firebaseAvailable: boolean;
     signInWithGoogle: () => Promise<void>;
     signInWithApple: () => Promise<void>;
+    signInWithPhone: (phoneNumber: string) => Promise<ConfirmationResult | undefined>;
+    verifyPhoneCode: (confirmationResult: ConfirmationResult, code: string) => Promise<void>;
+    setupRecaptcha: (elementId: string) => void;
     signOut: () => Promise<void>;
 };
 
@@ -26,6 +32,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
     const [firebaseAvailable, setFirebaseAvailable] = useState(true);
+    const [recaptchaVerifier, setRecaptchaVerifier] = useState<RecaptchaVerifier | null>(null);
 
     useEffect(() => {
         // V15 Firebase resilience: Handle Firebase service unavailability
@@ -86,6 +93,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [firebaseAvailable]);
 
+    const setupRecaptcha = useCallback((elementId: string) => {
+        if (!firebaseAvailable) {
+            console.warn('[AUTH] Firebase unavailable - cannot setup recaptcha');
+            return;
+        }
+
+        try {
+            const verifier = new RecaptchaVerifier(auth, elementId, {
+                size: 'invisible',
+                callback: () => {
+                    // reCAPTCHA solved, allow signInWithPhoneNumber
+                }
+            });
+            setRecaptchaVerifier(verifier);
+        } catch (error) {
+            console.error('Error setting up recaptcha:', error);
+        }
+    }, [firebaseAvailable]);
+
+    const signInWithPhone = useCallback(async (phoneNumber: string) => {
+        if (!firebaseAvailable) {
+            console.warn('[AUTH] Firebase unavailable - cannot sign in with phone');
+            return undefined;
+        }
+
+        if (!recaptchaVerifier) {
+            console.error('[AUTH] Recaptcha not initialized');
+            return undefined;
+        }
+
+        try {
+            const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+            return confirmationResult;
+        } catch (error) {
+            console.error('Error signing in with phone:', error);
+            // Reset recaptcha on error
+            recaptchaVerifier.clear();
+            setRecaptchaVerifier(null);
+            return undefined;
+        }
+    }, [firebaseAvailable, recaptchaVerifier]);
+
+    const verifyPhoneCode = useCallback(async (confirmationResult: ConfirmationResult, code: string) => {
+        if (!firebaseAvailable) {
+            console.warn('[AUTH] Firebase unavailable - cannot verify phone code');
+            return;
+        }
+
+        try {
+            await confirmationResult.confirm(code);
+        } catch (error) {
+            console.error('Error verifying phone code:', error);
+            throw error;
+        }
+    }, [firebaseAvailable]);
+
     const signOut = useCallback(async () => {
         if (!firebaseAvailable) {
             console.warn('[AUTH] Firebase unavailable - cannot sign out');
@@ -105,8 +168,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         firebaseAvailable,
         signInWithGoogle,
         signInWithApple,
+        signInWithPhone,
+        verifyPhoneCode,
+        setupRecaptcha,
         signOut
-    }), [user, loading, firebaseAvailable, signInWithGoogle, signInWithApple, signOut]);
+    }), [user, loading, firebaseAvailable, signInWithGoogle, signInWithApple, signInWithPhone, verifyPhoneCode, setupRecaptcha, signOut]);
 
     return (
         <AuthContext.Provider value={contextValue}>
