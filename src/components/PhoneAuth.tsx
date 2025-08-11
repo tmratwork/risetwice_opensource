@@ -5,6 +5,7 @@ import { Phone, ArrowLeft, ChevronDown } from 'lucide-react';
 
 interface PhoneAuthProps {
     onBack?: () => void;
+    onSignedIn?: () => void;
 }
 
 interface CountryCode {
@@ -36,7 +37,7 @@ const ALL_COUNTRIES: CountryCode[] = [
     { name: 'South Korea', code: '+82', flag: '🇰🇷' },
 ];
 
-export default function PhoneAuth({ onBack }: PhoneAuthProps) {
+export default function PhoneAuth({ onBack, onSignedIn }: PhoneAuthProps) {
     const { signInWithPhone, verifyPhoneCode, setupRecaptcha } = useAuth();
     const [selectedCountry, setSelectedCountry] = useState<CountryCode>(SUPPORTED_COUNTRIES[0]);
     const [phoneNumber, setPhoneNumber] = useState('');
@@ -161,10 +162,13 @@ export default function PhoneAuth({ onBack }: PhoneAuthProps) {
         try {
             await verifyPhoneCode(confirmationResult, verificationCode);
             // User will be automatically signed in after successful verification
+            // Add a small delay to ensure auth state has time to update
+            setTimeout(() => {
+                onSignedIn?.();
+            }, 100);
         } catch (err) {
             setError('Invalid verification code. Please try again.');
             console.error('Verification error:', err);
-        } finally {
             setLoading(false);
         }
     };

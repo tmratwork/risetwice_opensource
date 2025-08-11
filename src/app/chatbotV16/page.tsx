@@ -11,6 +11,7 @@ import { useSupabaseFunctions } from '@/hooksV16/use-supabase-functions';
 import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
 // V16-specific components (reusing V15 components)
 import { AudioOrbV15 } from './components/AudioOrbV15';
+import { SignInDialog } from './components/SignInDialog';
 // Use V11's voice and tool choice defaults
 import { DEFAULT_VOICE, DEFAULT_TOOL_CHOICE } from '../chatbotV11/prompts';
 // V16 greeting logging
@@ -1726,6 +1727,8 @@ export default function ChatBotV16Page() {
   const setResourceContext = useWebRTCStore(state => state.setResourceContext);
   const setResourceContextAutoStarted = useWebRTCStore(state => state.setResourceContextAutoStarted);
   const setResourceGreeting = useWebRTCStore(state => state.setResourceGreeting);
+  // Sign-in dialog state
+  const [isSignInDialogOpen, setIsSignInDialogOpen] = useState(false);
 
   // Use ref to track if API call is in progress (doesn't trigger re-renders)
   const isCheckingRef = useRef(false);
@@ -2232,6 +2235,17 @@ export default function ChatBotV16Page() {
       connect();
     }
   }, [shouldResume, resumableConversation, historyResumeId, user?.uid, handleResumeConversation, connect, setPreparing]);
+
+  // Handler for Let's Talk button that shows sign-in dialog for non-authenticated users
+  const handleLetsTalkClick = useCallback(() => {
+    if (!user) {
+      // User is not signed in - show sign-in dialog
+      setIsSignInDialogOpen(true);
+    } else {
+      // User is signed in - proceed with normal flow
+      handleLetsTalk();
+    }
+  }, [user, handleLetsTalk]);
 
   // console.log('[resume] 🎯 handleLetsTalk DEPENDENCY CHECK:', {
   // timestamp: performance.now(),
@@ -3607,15 +3621,33 @@ Time: ${new Date().toLocaleString()}`);
   //   });
 
   return (
-    <ChatBotV16Component
-      user={stableUser}
-      triagePrompt={triagePrompt}
-      resumableConversation={stableResumableConversation}
-      onLetsTalk={handleLetsTalk}
-      shouldResume={shouldResume}
-      setShouldResume={setShouldResume}
-      isCheckingResume={isCheckingResume}
-      loadFunctionsForAI={loadFunctionsForAI}
-    />
+    <div>
+      <ChatBotV16Component
+        user={stableUser}
+        triagePrompt={triagePrompt}
+        resumableConversation={stableResumableConversation}
+        onLetsTalk={handleLetsTalkClick}
+        shouldResume={shouldResume}
+        setShouldResume={setShouldResume}
+        isCheckingResume={isCheckingResume}
+        loadFunctionsForAI={loadFunctionsForAI}
+      />
+
+      {/* Sign In Dialog for non-authenticated users */}
+      <SignInDialog
+        isOpen={isSignInDialogOpen}
+        onClose={() => setIsSignInDialogOpen(false)}
+        onSignedIn={() => {
+          setIsSignInDialogOpen(false);
+          // After signing in, proceed with Let's Talk
+          handleLetsTalk();
+        }}
+        onContinueWithoutSignIn={() => {
+          setIsSignInDialogOpen(false);
+          // Continue with chat as anonymous user
+          handleLetsTalk();
+        }}
+      />
+    </div>
   );
 }

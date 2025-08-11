@@ -286,7 +286,9 @@ function AuthButtons() {
                         <div className="absolute right-0 mt-2 w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-50">
                             <div className="py-1">
                                 <div className="px-4 py-2 text-sm text-sage-600 dark:text-gray-300 border-b border-sage-300 dark:border-gray-600">
-                                    {user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}
+                                    <div className="truncate" title={user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}>
+                                        {user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}
+                                    </div>
                                 </div>
                                 <button
                                     onClick={toggleTheme}

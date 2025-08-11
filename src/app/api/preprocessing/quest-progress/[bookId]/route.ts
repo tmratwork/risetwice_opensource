@@ -14,7 +14,7 @@ interface ProgressData {
 // Extend global NodeJS namespace to include our custom properties
 declare global {
   // Using var is required for global declarations, despite the linting rule
-  // eslint-disable-next-line no-var
+   
   var questProgressStore: Map<string, ProgressData>;
 }
 
