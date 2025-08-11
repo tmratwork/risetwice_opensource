@@ -634,7 +634,7 @@ export default function PreprocessingPage() {
         console.log(`[Client][Quest-${requestId}] ⏳ Generation in progress (may take several minutes)`);
       }, 15000); // Only show after 15 seconds of waiting
 
-      let pollProgressInterval: NodeJS.Timeout | null = null;
+      let pollProgressInterval: ReturnType<typeof setInterval> | null = null;
       let lastLoggedPercentage = 0;
 
       try {

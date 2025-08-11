@@ -671,7 +671,7 @@ export default function MentalHealthV15Page() {
 
   // Setup polling effect
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     if (jobId && analyzing) {
       intervalId = setInterval(() => {
         pollJobStatus(jobId);
@@ -874,7 +874,7 @@ export default function MentalHealthV15Page() {
 
   // Setup profile polling effect
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
     if (profileJobId && profileLoading) {
       intervalId = setInterval(() => {
         pollProfileJobStatus(profileJobId);

@@ -30,7 +30,7 @@ export const config = {
  */
 async function parseFormData(req: NextRequest): Promise<{ buffer: Buffer; mimeType: string }> {
   try {
-    const formData = await req.formData();
+    const formData = await req.formData() as unknown as FormData;
     const audioFile = formData.get('file');
 
     if (!audioFile || !(audioFile instanceof Blob)) {

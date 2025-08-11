@@ -103,7 +103,7 @@ export default function V16MemoryPage() {
 
   // Job polling state
   const [currentJobId, setCurrentJobId] = useState<string | null>(null);
-  const [jobPollingInterval, setJobPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [jobPollingInterval, setJobPollingInterval] = useState<ReturnType<typeof setInterval> | null>(null);
 
   // Generate "What AI Remembers" data using asynchronous job queue
   const generateMemoryData = async () => {
@@ -180,7 +180,7 @@ export default function V16MemoryPage() {
     }
 
     // Store interval reference locally to avoid closure issues
-    let localInterval: NodeJS.Timeout | null = null;
+    let localInterval: ReturnType<typeof setInterval> | null = null;
 
     const pollJob = async () => {
       try {

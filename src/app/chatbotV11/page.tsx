@@ -17,6 +17,9 @@ import { initConversationTracker } from './conversation-tracker';
 import MapResourcesDisplay from './MapResourcesDisplay';
 import FuturesPathwaysCards from './components/FuturesPathwaysCards';
 
+// Module-level variable to track manual end timeout
+let manualEndTimeoutId: number | null = null;
+
 // Custom event interface for message saving events
 interface MessageSaveEvent extends CustomEvent {
   detail: {
@@ -981,11 +984,10 @@ export default function ChatbotV11Page() {
       toast.success("AI is ending the session...");
 
       // Clear the manual timeout if it exists (when user clicked end and AI responded)
-      const windowWithTimeout = window as Window & { manualEndTimeout?: NodeJS.Timeout };
-      if (windowWithTimeout.manualEndTimeout) {
+      if (manualEndTimeoutId) {
         console.log('Clearing manual end timeout since AI is handling the session end');
-        clearTimeout(windowWithTimeout.manualEndTimeout);
-        windowWithTimeout.manualEndTimeout = undefined;
+        clearTimeout(manualEndTimeoutId);
+        manualEndTimeoutId = null;
       }
 
       // Use enhanced safe disconnect if audio stream is available
@@ -1301,7 +1303,7 @@ Begin with a warm, encouraging greeting that acknowledges their specific choice 
 
       // Second approach: Add a manual timeout for direct safe disconnection
       // This provides a fallback if the AI doesn't trigger the end_session function
-      const endTimeout = setTimeout(async () => {
+      const endTimeout: number = setTimeout(async () => {
         console.log("🔚 Manual timeout - using safe disconnect");
 
         if (audioStream) {
@@ -1333,7 +1335,7 @@ Begin with a warm, encouraging greeting that acknowledges their specific choice 
       }, 15000); // 15-second timeout
 
       // Track this timeout so we can cancel it if AI responds faster
-      (window as Window & { manualEndTimeout?: NodeJS.Timeout }).manualEndTimeout = endTimeout;
+      manualEndTimeoutId = endTimeout;
     }
   };
 

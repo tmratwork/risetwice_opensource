@@ -178,7 +178,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const clearMessageBuffer = useWebRTCStore(state => state.clearMessageBuffer);
 
   // Smart Send timer ref (doesn't serialize well in Zustand)
-  const smartSendTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const smartSendTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Register functions from hooks - this should be stable but let's track it
   const renderCount = useRef(0);

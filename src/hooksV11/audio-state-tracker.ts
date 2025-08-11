@@ -194,8 +194,8 @@ export function createAudioCompletionPromise(
     });
     
     // Variables for checking completion
-    let completionCheckInterval: NodeJS.Timeout | null = null;
-    let safetyTimeout: NodeJS.Timeout | null = null;
+    let completionCheckInterval: ReturnType<typeof setInterval> | null = null;
+    let safetyTimeout: ReturnType<typeof setInterval> | null = null;
     let completionConfirmed = false;
     
     // Safety timeout to ensure we don't hang indefinitely

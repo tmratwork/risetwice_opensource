@@ -12,9 +12,9 @@ let originalFetch: typeof fetch;
 if (typeof window !== 'undefined') {
   originalFetch = window.fetch;
 
-  window.fetch = async function(...args) {
+  window.fetch = async function(input: RequestInfo | URL, init?: RequestInit) {
     // Get the request URL to check if it's a message save request
-    const url = args[0]?.toString() || '';
+    const url = input?.toString() || '';
     const isSaveMessageRequest = url.includes('/api/v11/save-message');
     
     if (isSaveMessageRequest) {
@@ -22,7 +22,7 @@ if (typeof window !== 'undefined') {
     }
     
     // Call the original fetch
-    const response = await originalFetch.apply(this, args);
+    const response = await originalFetch(input, init);
     
     // Only process save-message responses
     if (isSaveMessageRequest) {
