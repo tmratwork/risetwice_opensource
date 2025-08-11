@@ -18,7 +18,7 @@ import MapResourcesDisplay from './MapResourcesDisplay';
 import FuturesPathwaysCards from './components/FuturesPathwaysCards';
 
 // Module-level variable to track manual end timeout
-let manualEndTimeoutId: number | null = null;
+let manualEndTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
 // Custom event interface for message saving events
 interface MessageSaveEvent extends CustomEvent {
@@ -1303,7 +1303,7 @@ Begin with a warm, encouraging greeting that acknowledges their specific choice 
 
       // Second approach: Add a manual timeout for direct safe disconnection
       // This provides a fallback if the AI doesn't trigger the end_session function
-      const endTimeout: number = setTimeout(async () => {
+      const endTimeout: ReturnType<typeof setTimeout> = setTimeout(async () => {
         console.log("🔚 Manual timeout - using safe disconnect");
 
         if (audioStream) {
