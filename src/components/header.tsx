@@ -2,7 +2,7 @@
 
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy } from 'lucide-react';
+import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/theme-context';
@@ -255,9 +255,9 @@ function AuthButtons() {
                 <div className="relative" ref={dropdownRef}>
                     <div
                         onClick={() => setShowDropdown(!showDropdown)}
-                        className="flex items-center gap-1 bg-sage-300 dark:bg-white bg-opacity-10 dark:bg-opacity-10 rounded-full px-4 py-2 cursor-pointer transition-all hover:bg-opacity-20"
+                        className="flex items-center gap-1 bg-sage-300 dark:bg-white bg-opacity-10 dark:bg-opacity-10 rounded-full px-3 py-2 cursor-pointer transition-all hover:bg-opacity-20"
                     >
-                        <span className="text-sm text-sage-500 dark:text-gray-200">{user.email}</span>
+                        <Settings className="w-5 h-5 text-sage-500 dark:text-gray-200" />
                         <svg 
                             className={`w-4 h-4 text-sage-500 dark:text-gray-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
                             fill="none" 
@@ -271,6 +271,9 @@ function AuthButtons() {
                     {showDropdown && (
                         <div className="absolute right-0 mt-2 w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-50">
                             <div className="py-1">
+                                <div className="px-4 py-2 text-sm text-sage-600 dark:text-gray-300 border-b border-sage-300 dark:border-gray-600">
+                                    {user.email}
+                                </div>
                                 <button
                                     onClick={toggleTheme}
                                     className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
@@ -312,7 +315,7 @@ function AuthButtons() {
                                     onClick={handleSmartSendClick}
                                     className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
                                 >
-                                    <Settings className="w-5 h-5 mr-2" />
+                                    <Send className="w-5 h-5 mr-2" />
                                     Smart Sending
                                 </button>
                                 <button
