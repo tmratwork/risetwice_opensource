@@ -15,6 +15,8 @@ export default function CircleCard({
   const isMember = !!userMembership;
   const isAdmin = userMembership?.role === 'admin';
   const isModerator = userMembership?.role === 'moderator' || isAdmin;
+  const isCreator = circle.created_by === currentUserId;
+  const isPendingApproval = !circle.is_approved;
 
   const handleJoinLeave = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -91,6 +93,11 @@ export default function CircleCard({
               </h3>
               {circle.requires_approval && (
                 <Lock className="w-4 h-4 text-gray-500 dark:text-gray-400" />
+              )}
+              {isPendingApproval && isCreator && (
+                <span className="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-300 text-xs rounded-full">
+                  Pending Approval
+                </span>
               )}
             </div>
             <p className="text-sm text-gray-500 dark:text-gray-400">

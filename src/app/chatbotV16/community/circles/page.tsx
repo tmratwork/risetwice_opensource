@@ -321,6 +321,9 @@ export default function CirclesPage() {
       ]);
 
       setShowCreateForm(false);
+      
+      // Show success message with approval notice
+      alert('Circle created successfully! Your circle has been submitted for review and will be visible to others once approved by an admin.');
     } catch (error) {
       console.error('Error creating circle:', error);
       setError(error instanceof Error ? error.message : 'Failed to create circle');

@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
       rules: body.rules || [],
       is_private: body.is_private || false,
       requires_approval: body.requires_approval || false,
+      is_approved: false, // Requires admin approval before going live
       created_by: userId,
       member_count: 1, // Creator is first member
       post_count: 0,

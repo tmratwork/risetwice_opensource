@@ -25,6 +25,7 @@ export interface Circle {
   post_count: number;
   is_private: boolean;
   requires_approval: boolean;
+  is_approved: boolean;
   created_by: string;
   created_at: string;
   updated_at: string;

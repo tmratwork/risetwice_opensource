@@ -573,6 +573,19 @@ The complete circle join request system is now fully functional and ready for pr
 
 This fix ensures users can easily create content when viewing empty communities or circles, improving engagement and reducing confusion about non-functional UI elements.
 
+### circle approval system
+
+  1. New circles are created with is_approved = false
+  2. Public users only see approved circles (is_approved = true)
+  3. Creators can see their own pending circles with "Pending Approval" badge
+  4. Success message informs users about the approval process
+  5. Database function properly filters circles based on approval status
+
+  You can now test the system:
+  - Create a new circle → it will show "Pending Approval" to the creator but be invisible to others
+  - Admin can set is_approved = true on any circle to make it publicly visible
+  - The approval workflow is working as designed!
+
 ## To delete a test circle and all its related data, run these SQL queries in Supabase:
 
   -- Replace 'your_circle_id' with the actual circle ID you want to delete
