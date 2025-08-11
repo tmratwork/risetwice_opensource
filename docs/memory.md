@@ -2482,3 +2482,8 @@ ORDER BY created_at DESC;
 5. **Review processing statistics**: Examine `conversations_skipped/failed` counts
 
 **Status**: **IMPLEMENTED** - Individual conversation processing deployed August 10, 2025. Awaiting cron job verification.
+
+## can trigger cron job with this curl command:
+
+  curl -X GET http://localhost:3000/api/v16/scheduled-memory-processing \
+    -H "User-Agent: vercel-cron"
