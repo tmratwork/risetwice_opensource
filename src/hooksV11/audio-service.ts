@@ -59,8 +59,8 @@ class AudioService {
   private currentMessageId: string | null = null;
 
   // Timers and safeguards
-  private audioCompletionTimer: NodeJS.Timeout | null = null;
-  private timeoutSafetyTimer: NodeJS.Timeout | null = null;
+  private audioCompletionTimer: ReturnType<typeof setInterval> | null = null;
+  private timeoutSafetyTimer: ReturnType<typeof setInterval> | null = null;
   private lastBufferTime: number = 0;
   private audioFinalizationInProgress: boolean = false;
 

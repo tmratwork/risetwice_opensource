@@ -68,5 +68,5 @@ interface Window {
   __lastMessageId?: string;
   __currentResponseText?: string;
   __audioBufferCount?: number;
-  manualEndTimeout?: NodeJS.Timeout;
+  manualEndTimeout?: ReturnType<typeof setTimeout>;
 }

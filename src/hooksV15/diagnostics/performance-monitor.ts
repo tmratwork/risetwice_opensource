@@ -16,7 +16,7 @@ import type { PerformanceMetrics } from '../types';
 export class PerformanceMonitor {
   private static instance: PerformanceMonitor;
   private metrics: PerformanceMetrics;
-  private monitoringInterval: NodeJS.Timeout | null = null;
+  private monitoringInterval: ReturnType<typeof setInterval> | null = null;
   private isMonitoring = false;
 
   private constructor() {

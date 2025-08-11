@@ -827,7 +827,7 @@ export function useWebRTC(): UseWebRTCReturn {
   const audioContextForPlaybackRef = useRef<AudioContext | null>(null);
   // New refs for enhanced audio tracking (WebAI suggestion #1)
   const pendingChunksRef = useRef<Set<string>>(new Set());
-  const audioCompletionTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioCompletionTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const receivedStopSignalRef = useRef(false);
   const devicePerformanceMetricsRef = useRef({
     averagePlaybackTime: 0,

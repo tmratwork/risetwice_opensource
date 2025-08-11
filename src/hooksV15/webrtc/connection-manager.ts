@@ -568,7 +568,7 @@ export class ConnectionManager {
    */
   private async waitForSessionUpdateConfirmation(): Promise<boolean> {
     return new Promise((resolve) => {
-      const timeoutId: NodeJS.Timeout = setTimeout(() => {
+      const timeoutId: ReturnType<typeof setTimeout> = setTimeout(() => {
         console.warn('[CONNECTION-MANAGER] Session update confirmation timeout');
         resolve(false);
       }, 10000);

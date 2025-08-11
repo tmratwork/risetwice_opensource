@@ -9,7 +9,7 @@ const supabase = createClient(
 // POST /api/v16/community/audio/upload - Upload audio file to Supabase storage
 export async function POST(request: NextRequest) {
   try {
-    const formData = await request.formData();
+    const formData = await request.formData() as unknown as FormData;
     const file = formData.get('audio') as File;
     const userId = formData.get('userId') as string;
 

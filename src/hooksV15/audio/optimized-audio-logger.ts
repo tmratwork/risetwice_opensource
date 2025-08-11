@@ -63,7 +63,7 @@ export class OptimizedAudioLogger {
   private readonly isPerformanceAPIAvailable: boolean;
   private performanceMarkCounter = 0;
 
-  private batchTimer: NodeJS.Timeout | null = null;
+  private batchTimer: ReturnType<typeof setInterval> | null = null;
 
   private constructor() {
     this.sessionId = `v15-session-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
@@ -298,7 +298,7 @@ export class OptimizedAudioLogger {
     this.flushToPersistence();
   }
 
-  private pendingStorageWrite: NodeJS.Timeout | null = null;
+  private pendingStorageWrite: ReturnType<typeof setInterval> | null = null;
 
   // React 18+ Performance Measurement Methods
 

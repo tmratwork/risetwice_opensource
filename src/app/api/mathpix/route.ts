@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
   try {
     console.log("Mathpix API route: Processing request");
     
-    const formData = await req.formData();
+    const formData = await req.formData() as unknown as FormData;
     const file = formData.get('file') as File;
     
     if (!file) {
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     const mathpixFormData = new FormData();
     
     // Create a Blob from the buffer
-    const blob = new Blob([buffer], { type: file.type });
+    const blob = new Blob([buffer.buffer as ArrayBuffer], { type: file.type });
     
     // Add file to form data (preferred over base64 encoding)
     mathpixFormData.append('file', blob, file.name);

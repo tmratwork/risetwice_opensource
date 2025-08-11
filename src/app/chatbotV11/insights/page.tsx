@@ -246,7 +246,7 @@ export default function InsightsPage() {
 
   // Setup profile polling effect
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     // Only setup polling if we have a profileJobId and are loading
     if (profileJobId && profileLoading) {
@@ -988,7 +988,7 @@ export default function InsightsPage() {
 
   // Setup polling effect
   useEffect(() => {
-    let intervalId: NodeJS.Timeout | null = null;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     // Only setup polling if we have a jobId and are analyzing
     if (jobId && analyzing) {

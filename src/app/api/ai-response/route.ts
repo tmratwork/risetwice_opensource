@@ -136,11 +136,13 @@ export async function POST(req: NextRequest) {
 // Handle image analysis requests
 async function handleImageAnalysis(req: NextRequest, requestId: string) {
   try {
-    // Parse form data
-    const formData = await req.formData();
-    const imageFile = formData.get('image') as File;
-    const systemPrompt = formData.get('systemPrompt') as string; // Get the system prompt
-    const userPrompt = formData.get('userPrompt') as string; // Get the user prompt
+    // Parse form data - double assertion to resolve Node.js vs Web API FormData type conflict
+    const formData = await req.formData() as unknown as FormData;
+    const imageFile = formData.get('image') as File | null;
+    const systemPromptValue = formData.get('systemPrompt');
+    const userPromptValue = formData.get('userPrompt');
+    const systemPrompt = systemPromptValue ? String(systemPromptValue) : undefined;
+    const userPrompt = userPromptValue ? String(userPromptValue) : undefined;
 
     console.log(`[Request ${requestId}] Image analysis request with prompts: ${systemPrompt ? 'system provided' : 'system not provided'}, ${userPrompt ? 'user provided' : 'user not provided'}`);
 
