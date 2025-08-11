@@ -99,18 +99,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
+        // Check if element exists before initializing
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.warn('[AUTH] Recaptcha container element not found:', elementId);
+            return;
+        }
+
+        // Don't recreate if we already have a valid verifier
+        if (recaptchaVerifier) {
+            console.log('[AUTH] Recaptcha already initialized');
+            return;
+        }
+
         try {
             const verifier = new RecaptchaVerifier(auth, elementId, {
                 size: 'invisible',
                 callback: () => {
                     // reCAPTCHA solved, allow signInWithPhoneNumber
+                    console.log('[AUTH] Recaptcha verification successful');
+                },
+                'error-callback': (error: Error) => {
+                    console.error('[AUTH] Recaptcha error:', error);
+                    setRecaptchaVerifier(null);
                 }
             });
             setRecaptchaVerifier(verifier);
+            console.log('[AUTH] Recaptcha initialized successfully');
         } catch (error) {
             console.error('Error setting up recaptcha:', error);
         }
-    }, [firebaseAvailable]);
+    }, [firebaseAvailable, recaptchaVerifier]);
 
     const signInWithPhone = useCallback(async (phoneNumber: string) => {
         if (!firebaseAvailable) {
@@ -124,14 +143,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
+            console.log('[AUTH] Attempting to sign in with phone:', phoneNumber);
             const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+            console.log('[AUTH] SMS sent successfully');
             return confirmationResult;
         } catch (error) {
             console.error('Error signing in with phone:', error);
-            // Reset recaptcha on error
-            recaptchaVerifier.clear();
-            setRecaptchaVerifier(null);
-            return undefined;
+            // Don't clear the verifier here - it causes the internal error
+            // Only reset if it's a specific recaptcha error
+            const authError = error as { code?: string };
+            if (authError?.code === 'auth/recaptcha-not-verified') {
+                try {
+                    recaptchaVerifier.clear();
+                    setRecaptchaVerifier(null);
+                } catch (clearError) {
+                    console.error('Error clearing recaptcha:', clearError);
+                }
+            }
+            throw error; // Re-throw the error so the UI can handle it
         }
     }, [firebaseAvailable, recaptchaVerifier]);
 

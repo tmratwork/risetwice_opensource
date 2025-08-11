@@ -2,7 +2,7 @@
 
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send } from 'lucide-react';
+import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send, Phone } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/theme-context';
@@ -10,6 +10,7 @@ import Link from 'next/link';
 import SmartSendDialog from './SmartSendDialog';
 import DisplayNameDialog from './DisplayNameDialog';
 import ContributorsModal from './ContributorsModal';
+import PhoneAuth from './PhoneAuth';
 import { 
   SUPPORTED_LANGUAGES, 
   getStoredLanguagePreference, 
@@ -120,8 +121,21 @@ function AuthButtons() {
     const [showSmartSendDialog, setShowSmartSendDialog] = useState(false);
     const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
     const [showContributorsModal, setShowContributorsModal] = useState(false);
+    const [showPhoneAuth, setShowPhoneAuth] = useState(false);
     const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState('en');
+    
+    // Helper function to format phone number for display
+    const formatPhoneNumber = (phoneNumber: string | null) => {
+        if (!phoneNumber) return null;
+        // Remove country code and format as (XXX) XXX-XXXX for US/Canada numbers
+        const cleaned = phoneNumber.replace(/\D/g, '');
+        if (cleaned.length === 11 && cleaned.startsWith('1')) {
+            const number = cleaned.substring(1);
+            return `(${number.substring(0, 3)}) ${number.substring(3, 6)}-${number.substring(6)}`;
+        }
+        return phoneNumber;
+    };
 
     // Create a ref for the dropdown container
     const dropdownRef = useRef<HTMLDivElement>(null);
@@ -272,7 +286,7 @@ function AuthButtons() {
                         <div className="absolute right-0 mt-2 w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-50">
                             <div className="py-1">
                                 <div className="px-4 py-2 text-sm text-sage-600 dark:text-gray-300 border-b border-sage-300 dark:border-gray-600">
-                                    {user.email}
+                                    {user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}
                                 </div>
                                 <button
                                     onClick={toggleTheme}
@@ -398,6 +412,15 @@ function AuthButtons() {
             </>);
     }
 
+    // Show phone auth component if requested
+    if (showPhoneAuth) {
+        return (
+            <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex items-center justify-center">
+                <PhoneAuth onBack={() => setShowPhoneAuth(false)} />
+            </div>
+        );
+    }
+
     return (
         <div className="flex items-center gap-2">
             <button
@@ -409,10 +432,17 @@ function AuthButtons() {
             </button>
             <button
                 onClick={signInWithApple}
-                className="p-2 rounded-lg bg-sage-100 dark:bg-white text-sage-500 dark:text-black hover:bg-sage-200 dark:hover:bg-gray-100"
+                className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
                 aria-label="Sign in with Apple"
             >
                 <Apple className="w-5 h-5" />
+            </button>
+            <button
+                onClick={() => setShowPhoneAuth(true)}
+                className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
+                aria-label="Sign in with Phone"
+            >
+                <Phone className="w-5 h-5" />
             </button>
         </div>
     );

@@ -1,41 +1,120 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { ConfirmationResult } from 'firebase/auth';
-import { Phone, ArrowLeft } from 'lucide-react';
+import { Phone, ArrowLeft, ChevronDown } from 'lucide-react';
 
 interface PhoneAuthProps {
     onBack?: () => void;
 }
 
+interface CountryCode {
+    name: string;
+    code: string;
+    flag: string;
+}
+
+const SUPPORTED_COUNTRIES: CountryCode[] = [
+    { name: 'United States', code: '+1', flag: '🇺🇸' },
+    { name: 'Canada', code: '+1', flag: '🇨🇦' },
+];
+
+const ALL_COUNTRIES: CountryCode[] = [
+    { name: 'United States', code: '+1', flag: '🇺🇸' },
+    { name: 'Canada', code: '+1', flag: '🇨🇦' },
+    { name: 'United Kingdom', code: '+44', flag: '🇬🇧' },
+    { name: 'Australia', code: '+61', flag: '🇦🇺' },
+    { name: 'Germany', code: '+49', flag: '🇩🇪' },
+    { name: 'France', code: '+33', flag: '🇫🇷' },
+    { name: 'India', code: '+91', flag: '🇮🇳' },
+    { name: 'Japan', code: '+81', flag: '🇯🇵' },
+    { name: 'China', code: '+86', flag: '🇨🇳' },
+    { name: 'Brazil', code: '+55', flag: '🇧🇷' },
+    { name: 'Mexico', code: '+52', flag: '🇲🇽' },
+    { name: 'Spain', code: '+34', flag: '🇪🇸' },
+    { name: 'Italy', code: '+39', flag: '🇮🇹' },
+    { name: 'Netherlands', code: '+31', flag: '🇳🇱' },
+    { name: 'South Korea', code: '+82', flag: '🇰🇷' },
+];
+
 export default function PhoneAuth({ onBack }: PhoneAuthProps) {
     const { signInWithPhone, verifyPhoneCode, setupRecaptcha } = useAuth();
+    const [selectedCountry, setSelectedCountry] = useState<CountryCode>(SUPPORTED_COUNTRIES[0]);
     const [phoneNumber, setPhoneNumber] = useState('');
     const [verificationCode, setVerificationCode] = useState('');
     const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [codeSent, setCodeSent] = useState(false);
+    const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
     useEffect(() => {
-        // Setup invisible recaptcha on component mount
-        setupRecaptcha('recaptcha-container');
+        // Setup invisible recaptcha on component mount with a small delay to ensure DOM is ready
+        const timer = setTimeout(() => {
+            setupRecaptcha('recaptcha-container');
+        }, 100);
+        
+        return () => clearTimeout(timer);
     }, [setupRecaptcha]);
+
+    useEffect(() => {
+        // Close dropdown when clicking outside
+        const handleClickOutside = (e: MouseEvent) => {
+            if (showCountryDropdown) {
+                const target = e.target as HTMLElement;
+                if (!target.closest('[data-country-dropdown]')) {
+                    setShowCountryDropdown(false);
+                }
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [showCountryDropdown]);
+
+    const isCountrySupported = (country: CountryCode) => {
+        return SUPPORTED_COUNTRIES.some(c => c.name === country.name);
+    };
+
+    const handleCountrySelect = (country: CountryCode) => {
+        setSelectedCountry(country);
+        setShowCountryDropdown(false);
+        
+        // Clear any existing error when selecting a new country
+        if (isCountrySupported(country)) {
+            setError('');
+        } else {
+            setError(`Phone verification is currently only available in the United States and Canada. We apologize for the inconvenience.`);
+        }
+    };
 
     const handleSendCode = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        
+        // Check if country is supported
+        if (!isCountrySupported(selectedCountry)) {
+            setError('Phone verification is currently only available in the United States and Canada.');
+            return;
+        }
+
         setLoading(true);
 
-        // Basic phone number validation
-        const phoneRegex = /^\+?[1-9]\d{1,14}$/;
-        if (!phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
-            setError('Please enter a valid phone number with country code (e.g., +1234567890)');
+        // Clean the phone number - remove all non-digits
+        const cleanedNumber = phoneNumber.replace(/\D/g, '');
+        
+        // Basic phone number validation (10 digits for US/Canada)
+        if (cleanedNumber.length !== 10) {
+            setError('Please enter a valid 10-digit phone number');
             setLoading(false);
             return;
         }
 
+        // Combine country code with phone number
+        const fullPhoneNumber = `${selectedCountry.code}${cleanedNumber}`;
+        console.log('[PhoneAuth] Sending verification to:', fullPhoneNumber);
+
         try {
-            const result = await signInWithPhone(phoneNumber);
+            const result = await signInWithPhone(fullPhoneNumber);
             if (result) {
                 setConfirmationResult(result);
                 setCodeSent(true);
@@ -43,8 +122,20 @@ export default function PhoneAuth({ onBack }: PhoneAuthProps) {
                 setError('Failed to send verification code. Please try again.');
             }
         } catch (err) {
-            setError('Error sending verification code. Please check your phone number.');
-            console.error('Phone auth error:', err);
+            // Handle specific Firebase errors
+            const error = err as { code?: string; message?: string };
+            if (error?.code === 'auth/invalid-phone-number') {
+                setError('Invalid phone number format. Please check and try again.');
+            } else if (error?.code === 'auth/missing-phone-number') {
+                setError('Phone number is required.');
+            } else if (error?.code === 'auth/quota-exceeded') {
+                setError('Too many requests. Please try again later.');
+            } else if (error?.code === 'auth/user-disabled') {
+                setError('This phone number has been disabled.');
+            } else {
+                setError('Error sending verification code. Please try again.');
+            }
+            console.error('Phone auth error:', error);
         } finally {
             setLoading(false);
         }
@@ -85,6 +176,14 @@ export default function PhoneAuth({ onBack }: PhoneAuthProps) {
         setError('');
         setPhoneNumber('');
     };
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            // Don't try to clear recaptcha on unmount to avoid errors
+            setConfirmationResult(null);
+        };
+    }, []);
 
     return (
         <div style={{
@@ -157,34 +256,135 @@ export default function PhoneAuth({ onBack }: PhoneAuthProps) {
                         }}>
                             Phone Number
                         </label>
-                        <input
-                            type="tel"
-                            value={phoneNumber}
-                            onChange={(e) => setPhoneNumber(e.target.value)}
-                            placeholder="+1234567890"
-                            required
-                            disabled={loading}
-                            style={{
-                                padding: '12px 16px',
-                                border: '1px solid #d1d5db',
-                                borderRadius: '8px',
-                                fontSize: '16px',
-                                outline: 'none',
-                                transition: 'border-color 0.2s',
-                                backgroundColor: loading ? '#f9fafb' : '#ffffff'
-                            }}
-                            onFocus={(e) => {
-                                e.target.style.borderColor = '#3b82f6';
-                            }}
-                            onBlur={(e) => {
-                                e.target.style.borderColor = '#d1d5db';
-                            }}
-                        />
+                        <div style={{
+                            display: 'flex',
+                            gap: '8px'
+                        }}>
+                            {/* Country Code Dropdown */}
+                            <div style={{ position: 'relative' }} data-country-dropdown>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCountryDropdown(!showCountryDropdown)}
+                                    disabled={loading}
+                                    style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '4px',
+                                        padding: '12px',
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '8px',
+                                        fontSize: '16px',
+                                        backgroundColor: loading ? '#f9fafb' : '#ffffff',
+                                        cursor: loading ? 'not-allowed' : 'pointer',
+                                        minWidth: '100px'
+                                    }}
+                                >
+                                    <span>{selectedCountry.flag}</span>
+                                    <span>{selectedCountry.code}</span>
+                                    <ChevronDown size={16} />
+                                </button>
+                                
+                                {showCountryDropdown && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        marginTop: '4px',
+                                        backgroundColor: '#ffffff',
+                                        border: '1px solid #d1d5db',
+                                        borderRadius: '8px',
+                                        boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                                        zIndex: 100,
+                                        minWidth: '200px',
+                                        maxHeight: '300px',
+                                        overflowY: 'auto'
+                                    }}>
+                                        {ALL_COUNTRIES.map((country) => (
+                                            <button
+                                                key={country.name}
+                                                type="button"
+                                                onClick={() => handleCountrySelect(country)}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '8px',
+                                                    width: '100%',
+                                                    padding: '10px 12px',
+                                                    border: 'none',
+                                                    backgroundColor: 'transparent',
+                                                    cursor: 'pointer',
+                                                    fontSize: '14px',
+                                                    textAlign: 'left',
+                                                    color: isCountrySupported(country) ? '#1f2937' : '#9ca3af'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.backgroundColor = '#f3f4f6';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.backgroundColor = 'transparent';
+                                                }}
+                                            >
+                                                <span>{country.flag}</span>
+                                                <span>{country.name}</span>
+                                                <span style={{ marginLeft: 'auto', color: '#6b7280' }}>
+                                                    {country.code}
+                                                </span>
+                                                {!isCountrySupported(country) && (
+                                                    <span style={{
+                                                        fontSize: '10px',
+                                                        color: '#ef4444',
+                                                        marginLeft: '4px'
+                                                    }}>
+                                                        Not available
+                                                    </span>
+                                                )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Phone Number Input */}
+                            <input
+                                type="tel"
+                                value={phoneNumber}
+                                onChange={(e) => {
+                                    // Allow numbers, spaces, dashes, and parentheses for formatting
+                                    const value = e.target.value;
+                                    // Only allow valid phone number characters
+                                    if (/^[\d\s\-()]*$/.test(value)) {
+                                        setPhoneNumber(value);
+                                    }
+                                }}
+                                placeholder="(555) 123-4567"
+                                required
+                                disabled={loading || !isCountrySupported(selectedCountry)}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px 16px',
+                                    border: '1px solid #d1d5db',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s',
+                                    backgroundColor: loading || !isCountrySupported(selectedCountry) ? '#f9fafb' : '#ffffff',
+                                    cursor: !isCountrySupported(selectedCountry) ? 'not-allowed' : 'text'
+                                }}
+                                onFocus={(e) => {
+                                    if (isCountrySupported(selectedCountry)) {
+                                        e.target.style.borderColor = '#3b82f6';
+                                    }
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = '#d1d5db';
+                                }}
+                            />
+                        </div>
                         <span style={{
                             fontSize: '12px',
                             color: '#6b7280'
                         }}>
-                            Include country code (e.g., +1 for USA)
+                            Enter your 10-digit phone number
                         </span>
                     </div>
 
@@ -203,16 +403,16 @@ export default function PhoneAuth({ onBack }: PhoneAuthProps) {
 
                     <button
                         type="submit"
-                        disabled={loading || !phoneNumber}
+                        disabled={loading || !phoneNumber || !isCountrySupported(selectedCountry)}
                         style={{
                             padding: '12px 24px',
                             border: 'none',
                             borderRadius: '8px',
-                            backgroundColor: loading || !phoneNumber ? '#e5e7eb' : '#3b82f6',
+                            backgroundColor: loading || !phoneNumber || !isCountrySupported(selectedCountry) ? '#e5e7eb' : '#3b82f6',
                             color: '#ffffff',
                             fontSize: '16px',
                             fontWeight: '500',
-                            cursor: loading || !phoneNumber ? 'not-allowed' : 'pointer',
+                            cursor: loading || !phoneNumber || !isCountrySupported(selectedCountry) ? 'not-allowed' : 'pointer',
                             transition: 'background-color 0.2s'
                         }}
                     >
@@ -234,7 +434,7 @@ export default function PhoneAuth({ onBack }: PhoneAuthProps) {
                         fontSize: '14px',
                         color: '#1e40af'
                     }}>
-                        Verification code sent to {phoneNumber}
+                        Verification code sent to {selectedCountry.code} {phoneNumber}
                     </div>
 
                     <div style={{
