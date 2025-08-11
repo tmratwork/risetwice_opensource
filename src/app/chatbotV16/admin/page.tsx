@@ -239,6 +239,12 @@ export default function V16AdminPage() {
 
   const otherFunctions = [
     {
+      id: 'circle-approval',
+      name: 'Circle Approval',
+      description: 'Review and approve pending community circles created by users',
+      href: '/chatbotV16/admin/circle-approval'
+    },
+    {
       id: 'greetings',
       name: 'Greeting Management',
       description: 'Manage multilingual greeting prompts for triage, resources, and crisis scenarios (57+ languages)',
