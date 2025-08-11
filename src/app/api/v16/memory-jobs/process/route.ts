@@ -420,7 +420,9 @@ export async function POST(request: NextRequest) {
       let conversationsProcessedCount = 0;
       let conversationsSkippedCount = 0;
       let conversationsFailedCount = 0;
+      let conversationsDuplicateCount = 0;
       let totalTokensProcessed = 0;
+      const duplicateConversationIds: string[] = [];
 
       logV16Memory(`🔄 Processing ${qualityConversations.length} conversations individually - Job ${jobId}`);
 
@@ -446,6 +448,7 @@ export async function POST(request: NextRequest) {
         let processingStatus = 'processing';
         let errorDetails = null;
         let skipReason = null;
+        let modelUsed = 'gpt-5-mini'; // Default model - GPT-5-mini with 272K token limit
 
         try {
           // Skip if conversation is too short (less than 2 messages)
@@ -461,7 +464,10 @@ export async function POST(request: NextRequest) {
             conversationsSkippedCount++;
           }
           // Skip if estimated tokens are too high (safety check)
-          else if (estimatedTokens > 6000) {
+          // Account for prompt overhead (~2000 tokens for system + user prompts)
+          // GPT-5-mini has 272K input token limit
+          // GPT-5 has 272K input token limit as well
+          else if (estimatedTokens > 250000) {
             logV16Memory(`⏭️ Skipping conversation ${conv.id} - too long (${estimatedTokens} estimated tokens)`);
             analysisResult = {
               skipped: true,
@@ -473,14 +479,23 @@ export async function POST(request: NextRequest) {
             conversationsSkippedCount++;
           }
           else {
+            // Determine which model to use based on conversation size
+            // GPT-5-mini: 272K input tokens, fast and cost-effective ($1.25/million input)
+            // GPT-5: Full flagship model for complex conversations
+            // Use gpt-5-mini by default as it has massive 272K token limit and is cost-effective
+            modelUsed = estimatedTokens > 50000 ? 'gpt-5' : 'gpt-5-mini';
+            
+            logV16Memory(`🤖 Using model ${modelUsed} for conversation ${conv.id} with ${estimatedTokens} estimated tokens`);
+            
             // Call OpenAI for individual conversation extraction
             const extractionResponse = await openai.chat.completions.create({
-              model: 'gpt-4',
+              model: modelUsed,
               messages: [
                 { role: 'system', content: extractionSystemPrompt },
                 { role: 'user', content: `${extractionUserPrompt}\n\nConversation:\n${conversationText}` }
-              ],
-              temperature: 0.3,
+              ]
+              // GPT-5 models only support default temperature (1.0)
+              // temperature: 0.3,  // Removed - not supported by GPT-5
             });
 
             const extractedText = extractionResponse.choices[0]?.message?.content;
@@ -521,43 +536,104 @@ export async function POST(request: NextRequest) {
           const errorMessage = error instanceof Error ? error.message : 'Unknown extraction error';
           logV16Memory(`❌ Failed to process conversation ${conv.id}:`, errorMessage);
           
+          // Check if it's a token limit error
+          const isTokenLimitError = errorMessage.includes('maximum context length') || 
+                                   errorMessage.includes('token') && errorMessage.includes('limit');
+          
+          if (isTokenLimitError) {
+            logV16Memory(`⚠️ Token limit exceeded for conversation ${conv.id} despite using model ${modelUsed}`, {
+              estimatedTokens,
+              modelUsed,
+              errorMessage
+            });
+          }
+          
           analysisResult = {
             skipped: true,
-            reason: 'processing_error',
-            error: errorMessage
+            reason: isTokenLimitError ? 'token_limit_exceeded' : 'processing_error',
+            error: errorMessage,
+            model_used: modelUsed,
+            estimated_tokens: estimatedTokens
           };
           processingStatus = 'failed';
-          errorDetails = { error: errorMessage, step: 'extraction' };
+          errorDetails = { 
+            error: errorMessage, 
+            step: 'extraction',
+            model_used: modelUsed,
+            is_token_limit_error: isTokenLimitError
+          };
           conversationsFailedCount++;
         }
 
         const processingDuration = Date.now() - processingStartTime;
 
         // Save detailed analysis result to database
-        await supabase
+        // First check if conversation already exists
+        const { data: existingAnalysis } = await supabase
           .from('v16_conversation_analyses')
-          .upsert({
-            user_id: job.user_id,
-            conversation_id: conv.id,
-            analysis_result: analysisResult,
-            extracted_at: new Date().toISOString(),
-            message_count: messageCount,
-            total_tokens: estimatedTokens,
-            processing_status: processingStatus,
-            error_details: errorDetails,
-            extraction_metadata: {
-              model: 'gpt-4',
-              processing_duration_ms: processingDuration,
-              job_id: jobId
-            },
-            quality_score: processingStatus === 'completed' ? 8 : (processingStatus === 'skipped' ? 3 : 0),
-            skip_reason: skipReason,
-            processing_duration_ms: processingDuration
-          }, { 
-            onConflict: 'user_id,conversation_id'
+          .select('id, analysis_result')
+          .eq('conversation_id', conv.id)
+          .single();
+
+        if (existingAnalysis) {
+          // Conversation already analyzed - track as duplicate
+          conversationsDuplicateCount++;
+          duplicateConversationIds.push(conv.id);
+          
+          logV16Memory(`⚠️ Conversation ${conv.id} already analyzed - skipping duplicate processing`, {
+            existingAnalysisId: existingAnalysis.id,
+            conversationIndex: i + 1,
+            totalConversations: qualityConversations.length
           });
 
-        // Update job progress
+          // Update the existing record with duplicate processing metadata
+          await supabase
+            .from('v16_conversation_analyses')
+            .update({
+              extraction_metadata: {
+                model: 'skipped_duplicate',
+                processing_duration_ms: processingDuration,
+                job_id: jobId,
+                duplicate_processing_attempt: true,
+                duplicate_attempt_at: new Date().toISOString()
+              }
+            })
+            .eq('id', existingAnalysis.id);
+        } else {
+          // New conversation - save analysis
+          const { error: saveError } = await supabase
+            .from('v16_conversation_analyses')
+            .insert({
+              user_id: job.user_id,
+              conversation_id: conv.id,
+              analysis_result: analysisResult,
+              extracted_at: new Date().toISOString(),
+              message_count: messageCount,
+              total_tokens: estimatedTokens,
+              processing_status: processingStatus,
+              error_details: errorDetails,
+              extraction_metadata: {
+                model: modelUsed,
+                processing_duration_ms: processingDuration,
+                job_id: jobId,
+                estimated_tokens: estimatedTokens
+              },
+              quality_score: processingStatus === 'completed' ? 8 : (processingStatus === 'skipped' ? 3 : 0),
+              skip_reason: skipReason,
+              processing_duration_ms: processingDuration
+            });
+
+          if (saveError) {
+            logV16Memory(`❌ Failed to save conversation analysis for ${conv.id}:`, {
+              error: saveError.message,
+              conversationId: conv.id
+            });
+            // Track as failed but continue processing other conversations
+            conversationsFailedCount++;
+          }
+        }
+
+        // Update job progress with duplicate tracking
         const progressPercentage = Math.round(((i + 1) / qualityConversations.length) * 100);
         await supabase
           .from('v16_memory_jobs')
@@ -569,7 +645,9 @@ export async function POST(request: NextRequest) {
               conversationsExamined: i + 1,
               conversationsProcessed: conversationsProcessedCount,
               conversationsSkipped: conversationsSkippedCount,
-              conversationsFailed: conversationsFailedCount
+              conversationsFailed: conversationsFailedCount,
+              conversationsDuplicate: conversationsDuplicateCount,
+              duplicateConversationIds: duplicateConversationIds
             },
             conversations_skipped: conversationsSkippedCount,
             conversations_failed: conversationsFailedCount,
@@ -577,7 +655,7 @@ export async function POST(request: NextRequest) {
           })
           .eq('id', jobId);
 
-        logV16Memory(`📊 Progress: ${i + 1}/${qualityConversations.length} conversations examined, ${conversationsProcessedCount} processed, ${conversationsSkippedCount} skipped, ${conversationsFailedCount} failed`);
+        logV16Memory(`📊 Progress: ${i + 1}/${qualityConversations.length} conversations examined, ${conversationsProcessedCount} processed, ${conversationsSkippedCount} skipped, ${conversationsDuplicateCount} duplicate, ${conversationsFailedCount} failed`);
         
         // Small delay between conversations to prevent rate limiting
         if (i < qualityConversations.length - 1) {
@@ -589,8 +667,10 @@ export async function POST(request: NextRequest) {
         totalExamined: qualityConversations.length,
         processed: conversationsProcessedCount,
         skipped: conversationsSkippedCount,
+        duplicate: conversationsDuplicateCount,
         failed: conversationsFailedCount,
-        extractedInsights: extractedInsights.length
+        extractedInsights: extractedInsights.length,
+        duplicateConversationIds: duplicateConversationIds
       });
 
       // Combine all extracted insights into a single memory content object
@@ -663,15 +743,16 @@ export async function POST(request: NextRequest) {
         const mergeUserPrompt = await getPrompt('v16_what_ai_remembers_profile_merge_user');
 
         const mergeResponse = await openai.chat.completions.create({
-          model: 'gpt-4',
+          model: 'gpt-5-mini',
           messages: [
             { role: 'system', content: mergeSystemPrompt },
             { 
               role: 'user', 
               content: `${mergeUserPrompt}\n\nExisting Profile:\n${JSON.stringify(existingProfile.profile_data, null, 2)}\n\nNew Memory Data:\n${JSON.stringify(memoryContent, null, 2)}` 
             }
-          ],
-          temperature: 0.3,
+          ]
+          // GPT-5 models only support default temperature (1.0)
+          // temperature: 0.3,  // Removed - not supported by GPT-5
         });
 
         const mergedMemoryText = mergeResponse.choices[0]?.message?.content;
@@ -827,6 +908,12 @@ export async function POST(request: NextRequest) {
       const currentProgressPercentage = 100; // Individual processing always completes fully
       const processingEndTime = new Date().toISOString();
       
+      // Determine if there were issues that should be visible
+      const hasWarnings = conversationsDuplicateCount > 0 || conversationsFailedCount > 0;
+      const warningMessage = hasWarnings ? 
+        `Completed with warnings: ${conversationsDuplicateCount} duplicates, ${conversationsFailedCount} failed` : 
+        null;
+      
       await supabase
         .from('v16_memory_jobs')
         .update({
@@ -839,18 +926,22 @@ export async function POST(request: NextRequest) {
           conversations_failed: conversationsFailedCount,
           average_quality_score: conversationsProcessedCount > 0 ? 8.0 : 0,
           total_tokens_processed: totalTokensProcessed,
+          error_message: warningMessage, // Store warnings in error_message field for visibility
           processing_details: {
             conversationsExamined: qualityConversations.length,
             conversationsProcessed: conversationsProcessedCount,
             conversationsSkipped: conversationsSkippedCount,
+            conversationsDuplicate: conversationsDuplicateCount,
             conversationsFailed: conversationsFailedCount,
+            duplicateConversationIds: duplicateConversationIds,
             qualityConversationsProcessed: conversationsProcessedCount,
             profileId: savedProfile.id,
             profileVersion: savedProfile.version,
             profileUpdated: conversationsProcessedCount > 0,
             individualProcessing: true,
             processingMethod: 'individual_conversations',
-            totalTokensProcessed: totalTokensProcessed
+            totalTokensProcessed: totalTokensProcessed,
+            hasWarnings: hasWarnings
           }
         })
         .eq('id', jobId);
@@ -858,22 +949,30 @@ export async function POST(request: NextRequest) {
       logV16Memory(`✅ Job ${jobId} completed successfully`, {
         conversationsExamined: conversationIdsToProcess.length,
         qualityConversationsFound: qualityConversations.length,
+        conversationsDuplicate: conversationsDuplicateCount,
         profileId: savedProfile.id,
-        profileVersion: savedProfile.version
+        profileVersion: savedProfile.version,
+        hasWarnings: hasWarnings,
+        warningMessage: warningMessage
       });
 
       logV16MemoryServer({
-        level: 'INFO',
+        level: hasWarnings ? 'WARN' : 'INFO',
         category: 'BACKGROUND_PROCESSING',
         operation: 'job-processing-completed',
         data: {
           jobId,
           userId: job.user_id,
           conversationsProcessed: qualityConversations.length,
+          conversationsDuplicate: conversationsDuplicateCount,
+          conversationsFailed: conversationsFailedCount,
+          duplicateConversationIds: duplicateConversationIds,
           profileId: savedProfile.id,
           profileVersion: savedProfile.version,
           isComplete: true,
-          progressPercentage: currentProgressPercentage
+          progressPercentage: currentProgressPercentage,
+          hasWarnings: hasWarnings,
+          warningMessage: warningMessage
         }
       });
 

@@ -110,12 +110,13 @@ export async function POST(request: NextRequest) {
 
     // Generate the warm handoff using OpenAI
     const handoffResponse = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-5-mini',
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.3,
+      ]
+      // GPT-5 models only support default temperature (1.0)
+      // temperature: 0.3,  // Removed - not supported by GPT-5
     });
 
     const handoffContent = handoffResponse.choices[0]?.message?.content;
