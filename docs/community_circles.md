@@ -572,3 +572,35 @@ The complete circle join request system is now fully functional and ready for pr
 - ✅ Preserves all existing functionality while adding missing interaction
 
 This fix ensures users can easily create content when viewing empty communities or circles, improving engagement and reducing confusion about non-functional UI elements.
+
+## To delete a test circle and all its related data, run these SQL queries in Supabase:
+
+  -- Replace 'your_circle_id' with the actual circle ID you want to delete
+
+  -- First, delete all memberships for the circle
+  DELETE FROM circle_memberships
+  WHERE circle_id = '0ff8c8ee-2d47-4301-832f-3a2b19b988c7';
+
+  -- Delete any join requests (if table exists)
+  DELETE FROM circle_join_requests
+  WHERE circle_id = '0ff8c8ee-2d47-4301-832f-3a2b19b988c7';
+
+  -- Delete all posts in the circle
+  DELETE FROM community_posts
+  WHERE circle_id = '0ff8c8ee-2d47-4301-832f-3a2b19b988c7';
+
+  -- Finally, delete the circle itself
+  DELETE FROM circles
+  WHERE id = '0ff8c8ee-2d47-4301-832f-3a2b19b988c7';
+
+  Or if you want to delete all test circles by name pattern:
+
+  -- Delete circles with specific names (be careful!)
+  DELETE FROM circle_memberships
+  WHERE circle_id IN (SELECT id FROM circles WHERE name LIKE 'test%');
+
+  DELETE FROM community_posts
+  WHERE circle_id IN (SELECT id FROM circles WHERE name LIKE 'test%');
+
+  DELETE FROM circles
+  WHERE name LIKE 'test%';
