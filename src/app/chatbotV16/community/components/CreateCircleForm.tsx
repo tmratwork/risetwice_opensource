@@ -11,6 +11,7 @@ export default function CreateCircleForm({ onSubmit, loading }: CreateCircleForm
     description: '',
     rules: [],
     is_private: true, // Default to private since public option is temporarily disabled
+    requires_approval: true, // Private circles require approval by default
   });
 
   const [newRule, setNewRule] = useState('');
@@ -215,13 +216,19 @@ export default function CreateCircleForm({ onSubmit, loading }: CreateCircleForm
                 ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
                 : 'border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
-              onClick={() => handleInputChange('is_private', true)}
+              onClick={() => {
+                handleInputChange('is_private', true);
+                handleInputChange('requires_approval', true);
+              }}
             >
               <input
                 type="radio"
                 name="privacy"
                 checked={formData.is_private}
-                onChange={() => handleInputChange('is_private', true)}
+                onChange={() => {
+                  handleInputChange('is_private', true);
+                  handleInputChange('requires_approval', true);
+                }}
                 className="mt-1"
                 disabled={loading}
               />
@@ -231,7 +238,7 @@ export default function CreateCircleForm({ onSubmit, loading }: CreateCircleForm
                   <span className="font-medium text-gray-900 dark:text-white">Private</span>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  Only members can view posts. Requires invitation to join.
+                  Only members can view posts. Requires application to join.
                 </p>
               </div>
             </div>
