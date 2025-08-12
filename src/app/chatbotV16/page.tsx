@@ -1229,7 +1229,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   // Expose debugging function to global scope for manual testing
   useEffect(() => {
     if (process.env.NEXT_PUBLIC_ENABLE_LAYOUT_DEBUG_LOGS === 'true') {
-      (window as any).debugLayoutHeights = debugLayoutHeights;
+      (window as Window & { debugLayoutHeights?: () => void }).debugLayoutHeights = debugLayoutHeights;
       console.log('[layout_debug] 🛠️ Debug function exposed to window.debugLayoutHeights()');
     }
   }, []);
