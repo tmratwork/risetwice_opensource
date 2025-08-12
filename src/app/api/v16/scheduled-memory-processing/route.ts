@@ -48,6 +48,12 @@ interface ProcessingResult {
  */
 async function createMemoryJobDirect(userId: string, supabase: SupabaseClient): Promise<{ success: boolean; jobId?: string; error?: string }> {
   try {
+    // PRIVACY: Skip anonymous users - they chose not to be remembered
+    if (userId.startsWith('anonymous-')) {
+      console.log(`[v16-scheduled-memory] Skipping anonymous user: ${userId} (privacy protection)`);
+      return { success: true, jobId: undefined }; // Return success but no job created
+    }
+
     console.log(`[v16-scheduled-memory] Creating job for user: ${userId}`);
 
     // Get conversation statistics for progress tracking (past 7 days only)
@@ -204,10 +210,16 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Get unique user IDs
+    // Get unique user IDs and filter out anonymous users
     const humanIds = activeUsers.map((u: { human_id: string }) => u.human_id);
-    const uniqueUserIds: string[] = [...new Set(humanIds)];
-    console.log(`[v16-scheduled-memory] Found ${uniqueUserIds.length} unique users with conversations in past 7 days`);
+    const allUserIds: string[] = [...new Set(humanIds)];
+    
+    // PRIVACY: Filter out anonymous users (they chose not to be remembered)
+    const uniqueUserIds = allUserIds.filter(userId => !userId.startsWith('anonymous-'));
+    const anonymousCount = allUserIds.length - uniqueUserIds.length;
+    
+    console.log(`[v16-scheduled-memory] Found ${allUserIds.length} total users (${uniqueUserIds.length} registered, ${anonymousCount} anonymous) in past 7 days`);
+    console.log(`[v16-scheduled-memory] Processing only registered users - anonymous users excluded for privacy`);
 
     const results: ProcessingResult[] = [];
     let jobsCreated = 0;

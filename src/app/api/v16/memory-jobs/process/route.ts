@@ -303,20 +303,8 @@ export async function POST(request: NextRequest) {
         qualityConversationIds: qualityConversations.map(c => c.id)
       });
 
-      const progressPercentage = Math.min(
-        Math.round(((job.processed_conversations + conversationIdsToProcess.length) / job.total_conversations) * 100),
-        100
-      );
-
-      // Update progress
-      await supabase
-        .from('v16_memory_jobs')
-        .update({
-          processed_conversations: job.processed_conversations + conversationIdsToProcess.length,
-          progress_percentage: progressPercentage,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', jobId);
+      // Note: Progress will be updated during individual conversation processing
+      // Removed pre-emptive counter update to fix double-counting bug
 
       if (qualityConversations.length === 0) {
         logV16Memory(`Job ${jobId} batch completed - no quality conversations, but saving examined conversation IDs to prevent re-processing`);
@@ -634,11 +622,13 @@ export async function POST(request: NextRequest) {
         }
 
         // Update job progress with duplicate tracking
-        const progressPercentage = Math.round(((i + 1) / qualityConversations.length) * 100);
+        // Fixed: Use cumulative count (job.processed_conversations + current progress)
+        const cumulativeProcessed = job.processed_conversations + i + 1;
+        const progressPercentage = Math.round((cumulativeProcessed / job.total_conversations) * 100);
         await supabase
           .from('v16_memory_jobs')
           .update({
-            processed_conversations: i + 1,
+            processed_conversations: cumulativeProcessed,
             progress_percentage: progressPercentage,
             processing_details: {
               currentStep: `Processing conversation ${i + 1}/${qualityConversations.length}`,
