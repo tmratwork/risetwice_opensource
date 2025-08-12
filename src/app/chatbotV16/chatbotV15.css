@@ -23,11 +23,18 @@
 
 /* Main Content Row */
 .main-content-row {
-  overflow: auto; /* Allow scrolling for pages with many cards */
+  height: 100%;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  flex: 1 1 auto; /* Let grid row height flow down flex chain */
-  min-height: 0; /* Critical: allow shrinking so inheritance works */
+}
+
+/* Wrapper for ChatBotV16Component + SignInDialog - must expand to fill available space */
+.chatbot-v16-wrapper {
+  flex: 1; /* CRITICAL: Fill available space in main-content-row */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 /* Footer Row */
@@ -50,7 +57,7 @@
   width: 100%; /* Take full width */
   margin: 0; /* Remove auto margin centering */
   padding: 8px 12px; /* Slightly more padding for better spacing */
-  flex: 1 1 auto; /* Grow to fill, shrink if needed */
+  flex: 1; /* Fill available space in flex parent */
   display: flex;
   flex-direction: column;
   position: relative;
@@ -278,9 +285,9 @@ html.dark body {
   pointer-events: auto !important; /* Re-enable clicks for checkbox container */
 }
 
-/* Adjust conversation container to accommodate button overlay */
+/* Button overlay is positioned absolutely, so no padding needed */
 .conversation-container-with-overlay {
-  padding-top: 120px; /* More space for better positioned button */
+  /* padding-top removed - absolute positioned overlay doesn't need accommodation */
 }
 
 @media (max-width: 768px) {
@@ -302,11 +309,15 @@ html.dark body {
   }
 
   .conversation-container-with-overlay {
-    padding-top: 100px; /* Adjusted for mobile button position */
+    /* padding-top removed - absolute positioned overlay doesn't need accommodation */
   }
 
   .main-container {
     padding: 6px 8px; /* Slightly less padding on mobile */
+  }
+
+  .visualization-container {
+    padding: 8px 0; /* Reduced padding on mobile */
   }
 }
 
@@ -415,12 +426,11 @@ html.dark body {
   border-radius: 8px;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  overflow: hidden;
-  margin-bottom: 10px;
+  overflow: hidden; /* Prevent content from spilling out */
+  margin-bottom: 0; /* Remove bottom margin */
   margin-top: 4px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   min-height: 0; /* Allow flex shrinking */
-  height: 100%; /* CRITICAL: Force it to fill parent height */
 }
 
 .conversation-history {
@@ -755,6 +765,9 @@ html.dark body {
   justify-content: center;
   align-items: center;
   width: 100%;
+  padding: 10px 0; /* Reduced padding */
+  flex-shrink: 0; /* Don't shrink the orb container */
+  margin-top: auto; /* Push to bottom of flex container */
 }
 
 /* V15 Blue Orb specific styles */
@@ -776,7 +789,7 @@ html.dark body {
   transform: scale(0.98);
 }
 
-/* Remove top margin since orb is now at bottom */
+/* Restore needed margin to prevent header overlap */
 .conversation-container {
   margin-top: 20px !important;
 }

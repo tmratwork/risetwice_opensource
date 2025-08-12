@@ -1158,6 +1158,82 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     setFeedbackType(null);
   }, []);
 
+  // Layout debugging function
+  const debugLayoutHeights = () => {
+    if (process.env.NEXT_PUBLIC_ENABLE_LAYOUT_DEBUG_LOGS === 'true') {
+      const mainContentRow = document.querySelector('.main-content-row');
+      const mainContainer = document.querySelector('.main-container');
+      const conversationContainer = document.querySelector('.conversation-container');
+
+      console.log('[layout_debug] 🔍 LAYOUT HEIGHT ANALYSIS:');
+      
+      if (mainContentRow) {
+        console.log('[layout_debug] main-content-row: offsetHeight = ' + (mainContentRow as HTMLElement).offsetHeight + 'px');
+        console.log('[layout_debug] main-content-row: computedHeight = ' + window.getComputedStyle(mainContentRow).height);
+        console.log('[layout_debug] main-content-row: display = ' + window.getComputedStyle(mainContentRow).display + ' (MUST be "flex" for children flex props to work)');
+        console.log('[layout_debug] main-content-row: flexDirection = ' + window.getComputedStyle(mainContentRow).flexDirection);
+        
+        console.log('[layout_debug] 👶 CHILDREN OF main-content-row:');
+        const children = Array.from(mainContentRow.children);
+        children.forEach((child, index) => {
+          const element = child as HTMLElement;
+          console.log('[layout_debug] Child #' + index + ': ' + element.tagName + ' class="' + element.className + '" height=' + element.offsetHeight + 'px');
+          console.log('[layout_debug] Child #' + index + ': flex=' + window.getComputedStyle(element).flex + ' flexGrow=' + window.getComputedStyle(element).flexGrow);
+        });
+        
+        const totalChildrenHeight = children.reduce((sum, child) => sum + (child as HTMLElement).offsetHeight, 0);
+        console.log('[layout_debug] Total children height: ' + totalChildrenHeight + 'px');
+        console.log('[layout_debug] Missing space: ' + ((mainContentRow as HTMLElement).offsetHeight - totalChildrenHeight) + 'px (could be margins/padding)');
+      } else {
+        console.log('[layout_debug] main-content-row: NOT FOUND');
+      }
+
+      if (mainContainer) {
+        console.log('[layout_debug] main-container: offsetHeight = ' + (mainContainer as HTMLElement).offsetHeight + 'px');
+        console.log('[layout_debug] main-container: computedHeight = ' + window.getComputedStyle(mainContainer).height);
+        console.log('[layout_debug] main-container: flex = ' + window.getComputedStyle(mainContainer).flex);
+        console.log('[layout_debug] main-container: flexGrow = ' + window.getComputedStyle(mainContainer).flexGrow);
+      } else {
+        console.log('[layout_debug] main-container: NOT FOUND');
+      }
+
+      if (conversationContainer) {
+        console.log('[layout_debug] conversation-container: offsetHeight = ' + (conversationContainer as HTMLElement).offsetHeight + 'px');
+        console.log('[layout_debug] conversation-container: computedHeight = ' + window.getComputedStyle(conversationContainer).height);
+        console.log('[layout_debug] conversation-container: flex = ' + window.getComputedStyle(conversationContainer).flex);
+        console.log('[layout_debug] conversation-container: paddingTop = ' + window.getComputedStyle(conversationContainer).paddingTop);
+        console.log('[layout_debug] conversation-container: marginTop = ' + window.getComputedStyle(conversationContainer).marginTop);
+        console.log('[layout_debug] conversation-container: classes = ' + Array.from(conversationContainer.classList).join(' '));
+      } else {
+        console.log('[layout_debug] conversation-container: NOT FOUND');
+      }
+
+      console.log('[layout_debug] 🎯 CSS CHANGES VERIFICATION:');
+      console.log('[layout_debug] isConnected = ' + isConnected);
+      
+      if (conversationContainer?.classList.contains('conversation-container-with-overlay')) {
+        console.log('[layout_debug] HAS conversation-container-with-overlay class');
+        console.log('[layout_debug] paddingTop with overlay = ' + window.getComputedStyle(conversationContainer).paddingTop + ' (should be 0px if fix worked)');
+      } else {
+        console.log('[layout_debug] NO conversation-container-with-overlay class');
+      }
+    }
+  };
+
+  // Run debugging after component mounts and on state changes
+  useEffect(() => {
+    // Add small delay to ensure DOM is fully rendered
+    setTimeout(debugLayoutHeights, 100);
+  }, [isConnected]); // Re-run when connection state changes
+
+  // Expose debugging function to global scope for manual testing
+  useEffect(() => {
+    if (process.env.NEXT_PUBLIC_ENABLE_LAYOUT_DEBUG_LOGS === 'true') {
+      (window as any).debugLayoutHeights = debugLayoutHeights;
+      console.log('[layout_debug] 🛠️ Debug function exposed to window.debugLayoutHeights()');
+    }
+  }, []);
+
   return (
     <div
       className="main-container"
@@ -3621,7 +3697,7 @@ Time: ${new Date().toLocaleString()}`);
   //   });
 
   return (
-    <div>
+    <div className="chatbot-v16-wrapper">
       <ChatBotV16Component
         user={stableUser}
         triagePrompt={triagePrompt}
