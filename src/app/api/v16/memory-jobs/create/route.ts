@@ -30,6 +30,59 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 });
     }
 
+    // PRIVACY: Handle anonymous users gracefully - mark their conversations as skipped
+    if (userId.startsWith('anonymous-')) {
+      logV16Memory(`Handling anonymous user: ${userId} - will mark conversations as skipped for privacy`);
+      logV16MemoryServer({
+        level: 'INFO',
+        category: 'PRIVACY',
+        operation: 'anonymous-user-handled-gracefully',
+        userId,
+        data: { reason: 'Anonymous users opted out of memory storage' }
+      });
+      
+      // Get all conversations for this anonymous user
+      const { data: conversations } = await supabase
+        .from('conversations')
+        .select('id')
+        .eq('human_id', userId);
+      
+      if (conversations && conversations.length > 0) {
+        // Mark all anonymous user conversations as skipped in v16_conversation_analyses
+        const skippedRecords = conversations.map(conv => ({
+          user_id: userId,
+          conversation_id: conv.id,
+          analysis_result: { skipped: true, reason: 'anonymous_user' },
+          extracted_at: new Date().toISOString(),
+          processing_status: 'skipped',
+          skip_reason: 'anonymous_user'
+        }));
+        
+        // Insert or update to mark as processed (but skipped)
+        await supabase
+          .from('v16_conversation_analyses')
+          .upsert(skippedRecords, {
+            onConflict: 'conversation_id',
+            ignoreDuplicates: false
+          });
+        
+        logV16Memory(`Marked ${conversations.length} conversations as skipped for anonymous user: ${userId}`);
+      }
+      
+      // Return success with no job created (similar to when no unprocessed conversations exist)
+      return NextResponse.json({
+        success: true,
+        job: {
+          id: null,
+          status: 'skipped',
+          totalConversations: 0,
+          processedConversations: 0,
+          progressPercentage: 100,
+          message: 'Anonymous user - conversations marked as skipped for privacy'
+        }
+      });
+    }
+
     logV16Memory(`Creating memory processing job for user: ${userId}`);
     logV16MemoryServer({
       level: 'INFO',
