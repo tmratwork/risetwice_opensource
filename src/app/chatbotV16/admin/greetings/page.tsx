@@ -36,7 +36,6 @@ export default function GreetingsAdmin() {
   const [selectedType, setSelectedType] = useState<string>('triage');
   const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
   const [editingGreeting, setEditingGreeting] = useState<Greeting | null>(null);
-  const [newGreetingContent, setNewGreetingContent] = useState<string>('');
   const [mainMessage, setMainMessage] = useState<string>('');
   const [languageRequirement, setLanguageRequirement] = useState<string>('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
@@ -104,7 +103,6 @@ export default function GreetingsAdmin() {
 
   const handleEdit = (greeting: Greeting) => {
     setEditingGreeting(greeting);
-    setNewGreetingContent(greeting.greeting_content);
     // Try to split existing greeting into parts (basic heuristic)
     const content = greeting.greeting_content;
     const parts = content.split('. It is a requirement that you speak in ');
@@ -121,7 +119,6 @@ export default function GreetingsAdmin() {
 
   const handleCreate = () => {
     setEditingGreeting(null);
-    setNewGreetingContent('');
     // Set default values for new greeting
     setMainMessage('Hello! I am here to help you find and access the support resources you need. What type of assistance are you looking for today?');
     setLanguageRequirement('It is a requirement that you speak in English.');
@@ -131,14 +128,12 @@ export default function GreetingsAdmin() {
   const handleSave = async () => {
     // Combine main message and language requirement
     const combinedContent = mainMessage.trim() + (languageRequirement.trim() ? ' ' + languageRequirement.trim() : '');
-    
+
     if (!combinedContent.trim()) {
       setError('Main message cannot be empty');
       return;
     }
-    
-    // Update the newGreetingContent to reflect the combined content
-    setNewGreetingContent(combinedContent);
+
 
     try {
       setSaving(true);
@@ -171,7 +166,6 @@ export default function GreetingsAdmin() {
       // Reload greetings and reset form
       await loadGreetings();
       setEditingGreeting(null);
-      setNewGreetingContent('');
       setMainMessage('');
       setLanguageRequirement('');
       setIsCreatingNew(false);
@@ -504,7 +498,7 @@ export default function GreetingsAdmin() {
                   placeholder="It is a requirement that you speak in English."
                 />
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
-                  When auto-translating, "English" will be smartly replaced with the target language name.
+                  When auto-translating, &quot;English&quot; will be smartly replaced with the target language name.
                 </p>
               </div>
 
@@ -528,7 +522,6 @@ export default function GreetingsAdmin() {
                 <button
                   onClick={() => {
                     setEditingGreeting(null);
-                    setNewGreetingContent('');
                     setMainMessage('');
                     setLanguageRequirement('');
                     setIsCreatingNew(false);
