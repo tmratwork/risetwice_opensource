@@ -570,9 +570,9 @@ html.dark body {
 
 /* New send button with clean styling */
 .send-button-new {
-  background-color: var(--button-primary);
-  color: white;
-  border: none;
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: 50%;
   width: 48px;
   height: 48px;
@@ -589,7 +589,8 @@ html.dark body {
 }
 
 .send-button-new:hover:not(:disabled) {
-  background-color: var(--button-hover);
+  background-color: var(--bg-primary);
+  border-color: var(--button-primary);
   transform: scale(1.05);
 }
 
