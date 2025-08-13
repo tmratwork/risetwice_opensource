@@ -1,3 +1,5 @@
+docs/layout.md
+
 # CSS Grid + Flexbox Layout Lessons Learned
 
 ## Overview

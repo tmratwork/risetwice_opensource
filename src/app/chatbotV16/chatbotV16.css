@@ -1,0 +1,373 @@
+/* chatbotV16.css - Clean V16-specific styles */
+
+/* V16 Layout Root - CSS Grid three-row layout */
+.v16-layout-root {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-height: 100vh; /* Use min-height instead of height to allow scrolling */
+  /* REMOVED overflow: hidden - this was preventing scrolling */
+}
+
+/* Header Row */
+.header-row {
+  /* Auto height based on content */
+  z-index: 50; /* Ensure header stays above content */
+}
+
+/* Main Content Row */
+.main-content-row {
+  min-height: 0; /* Allow flex children to shrink */
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto; /* Allow vertical scrolling when content overflows */
+}
+
+/* Footer Row */
+.footer-row {
+  /* Auto height based on content */
+  z-index: 50; /* Ensure footer stays above content */
+}
+
+/* Chat-specific wrapper - only used on chat pages */
+.chatbot-v16-wrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%; /* Fill available space in chat interface */
+}
+
+/* Chat interface container - only for chat pages */
+.chatbot-v16-wrapper .main-container {
+  width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden; /* Only hide overflow in chat interface */
+  min-height: 0;
+}
+
+/* General main container for non-chat pages */
+.main-container {
+  width: 100%;
+  padding: 8px 12px;
+}
+
+/* Light/Dark theme variables */
+:root {
+  --bg-primary: #e7ece9;
+  --bg-secondary: #c1d7ca;
+  --border-color: #9dbbac;
+  --text-primary: #3b503c;
+  --text-secondary: #3b503c;
+  --button-primary: #9dbbac;
+  --button-hover: #3b503c;
+  --button-danger: #dc2626;
+  --button-danger-hover: #b91c1c;
+  --message-user: #9dbbac;
+  --message-assistant: #fdfefd;
+  --message-system: #e7ece9;
+  --comment-background: #fdfefd;
+  --warning-background: #3b503c;
+}
+
+:root.dark,
+html.dark {
+  --bg-primary: #131314;
+  --bg-secondary: #1e1e1f;
+  --border-color: #2a2a2a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --button-primary: #9dbbac;
+  --button-hover: #3b503c;
+  --button-danger: #dc2626;
+  --button-danger-hover: #b91c1c;
+  --message-user: #2563eb;
+  --message-assistant: #222222;
+  --comment-background: #222222;
+  --message-system: #333333;
+  --warning-background: #3b503c;
+}
+
+/* Dark mode background colors */
+.dark .main-container,
+.dark .conversation-container,
+.dark body,
+html.dark body {
+  background-color: #131314 !important;
+}
+
+.dark .conversation-container {
+  background-color: #1e1e1f !important;
+}
+
+/* Control buttons */
+.control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  cursor: pointer;
+}
+
+.control-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.control-button.connecting {
+  opacity: 0.9 !important;
+  background-color: #3b82f6;
+  color: white !important;
+  cursor: wait;
+}
+
+.control-button.preparing {
+  opacity: 0.9 !important;
+  background-color: var(--button-primary);
+  color: white !important;
+  cursor: wait;
+}
+
+.control-button.primary {
+  background-color: var(--button-primary) !important;
+  color: white !important;
+  border-radius: 9999px !important;
+}
+
+.control-button.primary:hover:not(:disabled) {
+  background-color: var(--button-hover) !important;
+}
+
+.control-button.large-button {
+  font-size: 1.2rem !important;
+  padding: 0.75rem 2.5rem !important;
+  font-weight: 600 !important;
+  min-width: 140px !important;
+  background-color: var(--button-primary) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+  border-radius: 9999px !important;
+  color: white !important;
+}
+
+.control-button.large-button:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+  background-color: var(--button-hover) !important;
+}
+
+/* Conversation container for chat interface */
+.conversation-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
+  margin-bottom: 0;
+  margin-top: 4px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-height: 0;
+}
+
+.conversation-history {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px;
+  padding-bottom: 240px;
+  scroll-behavior: smooth;
+}
+
+/* Message styles */
+.message {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  max-width: 85%;
+  position: relative;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-size: 1rem;
+  display: block;
+  clear: both;
+  animation: messageFadeIn 0.3s ease-in-out;
+  word-wrap: break-word;
+}
+
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  float: right;
+  background-color: var(--message-user);
+  color: var(--text-primary);
+  border-bottom-right-radius: 4px;
+}
+
+.message.assistant {
+  float: left;
+  background-color: var(--message-assistant);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+
+.message.system {
+  margin-left: auto;
+  margin-right: auto;
+  float: none;
+  background-color: var(--message-system);
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  max-width: 70%;
+  text-align: center;
+}
+
+/* Input container */
+.input-container {
+  display: flex;
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+.text-input {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  margin-left: 12px;
+  margin-right: 12px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) inset;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--button-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* Visualization container */
+.visualization-container {
+  pointer-events: none;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0;
+  flex-shrink: 0;
+  margin-top: auto;
+}
+
+.visualization-container .flex {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  pointer-events: auto;
+}
+
+.visualization-container .flex:hover {
+  opacity: 0.95;
+}
+
+.visualization-container .flex:active {
+  transform: scale(0.98);
+}
+
+/* Status indicator */
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.status-indicator.connecting {
+  background-color: #ca8a04;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator.connected {
+  background-color: #22c55e;
+}
+
+.status-indicator.disconnected {
+  background-color: #dc2626;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Mobile footer navigation */
+.mobile-footer-nav {
+  display: flex;
+}
+
+/* Hide navigation icons in header on chat pages */
+.nav-icons {
+  display: none;
+}
+
+/* Spinner animation */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-container {
+    padding: 6px 8px;
+  }
+
+  .visualization-container {
+    padding: 8px 0;
+  }
+}

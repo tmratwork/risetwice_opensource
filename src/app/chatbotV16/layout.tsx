@@ -8,8 +8,8 @@ import { ClientHeader } from '@/components/client-header';
 import { MobileFooterNavV15 } from './components/MobileFooterNavV15';
 import SearchProgressToast from './components/SearchProgressToast';
 // V16 uses simple console logging instead of V15 audioLogger
-// Import V16 CSS styles
-import './chatbotV15.css';
+// Import V16 CSS styles (independent of V11/V15)
+import './chatbotV16.css';
 
 // V15 Anonymous support: Update userId in localStorage with Firebase resilience
 function AuthUserIdSync() {
@@ -103,11 +103,11 @@ export default function ChatBotV16Layout({
   return (
     <AuthProvider>
       <ThemeProvider>
-        <div className="v11-layout-root">
+        <div className="v16-layout-root">
           <AuthUserIdSync />
           <AudioMonitoringInit />
 
-          {/* Header Row - Reuse V11 header */}
+          {/* Header Row */}
           <div className="header-row">
             <ClientHeader />
           </div>
@@ -117,7 +117,7 @@ export default function ChatBotV16Layout({
             {children}
           </div>
 
-          {/* Footer Row - Reuse V11 footer but update paths */}
+          {/* Footer Row */}
           <div className="footer-row">
             <MobileFooterNavWithDebug />
           </div>
