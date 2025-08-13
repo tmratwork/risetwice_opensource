@@ -4,8 +4,8 @@
 .v16-layout-root {
   display: grid;
   grid-template-rows: auto 1fr auto;
-  min-height: 100vh; /* Use min-height instead of height to allow scrolling */
-  /* REMOVED overflow: hidden - this was preventing scrolling */
+  height: 100vh; /* Fixed viewport height for proper grid layout */
+  overflow: hidden; /* Prevent root from scrolling - scrolling happens in main-content-row */
 }
 
 /* Header Row */
@@ -16,10 +16,12 @@
 
 /* Main Content Row */
 .main-content-row {
-  min-height: 0; /* Allow flex children to shrink */
+  height: 100%;
+  min-height: 0; /* Critical: allow shrinking so flex children work properly */
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Allow vertical scrolling when content overflows */
+  overflow-y: auto; /* Allow vertical scrolling for content pages like resources */
+  overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* Footer Row */
@@ -30,30 +32,24 @@
 
 /* Chat-specific wrapper - only used on chat pages */
 .chatbot-v16-wrapper {
-  flex: 1;
+  flex: 1; /* Fill available space in main-content-row */
   display: flex;
   flex-direction: column;
-  min-height: 0;
-  height: 100%; /* Fill available space in chat interface */
+  min-height: 0; /* Allow shrinking */
+  overflow: hidden; /* Prevent scrolling in chat interface */
 }
 
-/* Chat interface container - only for chat pages */
-.chatbot-v16-wrapper .main-container {
+/* Main container */
+.main-container {
   width: 100%;
   margin: 0;
   padding: 8px 12px;
-  flex: 1;
+  flex: 1; /* Fill available space in flex parent */
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden; /* Only hide overflow in chat interface */
-  min-height: 0;
-}
-
-/* General main container for non-chat pages */
-.main-container {
-  width: 100%;
-  padding: 8px 12px;
+  overflow: hidden; /* Prevent overflow beyond grid row */
+  min-height: 0; /* Critical: allow shrinking so inheritance works */
 }
 
 /* Light/Dark theme variables */
@@ -169,15 +165,15 @@ html.dark body {
 .conversation-container {
   display: flex;
   flex-direction: column;
-  flex: 1;
+  flex: 1; /* Fill available space in main container */
   border-radius: 8px;
   background-color: var(--bg-secondary);
   border: 1px solid var(--border-color);
-  overflow: hidden;
-  margin-bottom: 0;
-  margin-top: 4px;
+  overflow: hidden; /* Prevent content from spilling out */
+  margin-bottom: 0; /* Remove bottom margin */
+  margin-top: 20px !important; /* Prevent header overlap */
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  min-height: 0;
+  min-height: 0; /* Allow flex shrinking */
 }
 
 .conversation-history {
@@ -276,14 +272,20 @@ html.dark body {
 
 /* Visualization container */
 .visualization-container {
-  pointer-events: none;
+  pointer-events: none; /* Allow clicks to pass through container */
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
-  padding: 10px 0;
-  flex-shrink: 0;
-  margin-top: auto;
+  padding: 10px 0; /* Reduced padding */
+  flex-shrink: 0; /* Don't shrink the orb container */
+  margin-top: auto; /* Push to bottom of flex container */
+}
+
+/* V15 Blue Orb specific styles */
+.blue-orb-v15 {
+  display: inline-flex;
+  flex-shrink: 0; /* Prevent flex container from shrinking */
 }
 
 .visualization-container .flex {
@@ -361,6 +363,59 @@ html.dark body {
   }
 }
 
+/* Start button overlay - positioned above chatbox */
+.start-button-overlay {
+  position: absolute;
+  top: 20%; /* Position button higher up in the main area */
+  left: 0;
+  right: 0;
+  z-index: 100; /* Higher than chatbox */
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none; /* Allow clicks through container */
+}
+
+.start-button-overlay .control-button {
+  pointer-events: auto; /* Re-enable clicks for button */
+}
+
+.start-button-overlay input[type="checkbox"],
+.start-button-overlay label {
+  pointer-events: auto !important; /* Re-enable clicks for checkbox and label */
+}
+
+.start-button-overlay .flex.items-center {
+  pointer-events: auto !important; /* Re-enable clicks for checkbox container */
+}
+
+/* Control triple layout for buttons */
+.control-triple {
+  display: flex !important;
+  width: 100% !important;
+  max-width: 500px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+.control-left {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.control-center {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+}
+
+.control-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .main-container {
@@ -369,5 +424,10 @@ html.dark body {
 
   .visualization-container {
     padding: 8px 0;
+  }
+  
+  .start-button-overlay {
+    padding: 12px;
+    top: 15%; /* Slightly higher on mobile for better proportion */
   }
 }
