@@ -308,5 +308,66 @@ console.log('[v16_auto_scroll] Auto-scroll check', {
 });
 ```
 
+### Critical Bug: Infinite Loop and Timing Issues (SOLVED)
+
+The initial implementation had serious issues:
+
+**Problem 1: Infinite Loop**
+```javascript
+// ❌ BROKEN: Caused infinite loops
+useEffect(() => {
+  // scroll logic
+}, [conversation]); // Triggers on every conversation change, including scroll animations
+```
+
+**Problem 2: Smooth Scroll Timing**  
+```javascript
+// ❌ BROKEN: Smooth scroll is asynchronous
+scrollContainer.scrollTo({
+  top: scrollContainer.scrollHeight,
+  behavior: 'smooth'  // Takes ~300ms, but next message arrives in 100ms
+});
+```
+
+**Problem 3: Proximity Check Failure**
+When messages arrive quickly during AI responses:
+1. Message 4: `scrollHeight: 624`, `currentScrollTop: 0` → ✅ Scrolls
+2. Message 5: `scrollHeight: 732`, `currentScrollTop: 3.85px` (partial scroll) → Distance: `108px > 100px` → ❌ Stops scrolling forever
+
+**Final Solution: Always Scroll + Direct Assignment**
+```javascript
+// ✅ FIXED: No loops, immediate scroll, no proximity check needed
+useEffect(() => {
+  if (conversationHistoryRef.current && conversation.length > 0) {
+    const scrollContainer = conversationHistoryRef.current;
+    
+    // Triple RAF to ensure all rendering and layout is complete
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          // Always scroll to bottom on new messages
+          scrollContainer.scrollTop = scrollContainer.scrollHeight; // Immediate, synchronous
+        });
+      });
+    });
+  }
+}, [conversation.length]); // Only triggers when length changes, not content
+```
+
+**Key Fixes:**
+1. **Dependency Change**: `[conversation]` → `[conversation.length]` prevents infinite loops
+2. **Direct Assignment**: `scrollTop = scrollHeight` instead of `scrollTo()` for synchronous scrolling  
+3. **Triple RAF**: Ensures DOM is fully updated before measuring/scrolling
+4. **No Proximity Check**: Always scroll to bottom for new messages - simpler and more reliable
+5. **Increased Bottom Padding**: `padding-bottom: 120px` so longer messages have breathing room
+
+**Bottom Padding Issue (SOLVED)**
+The auto-scroll was working perfectly, but longer messages were getting cut off because there wasn't enough space between the message and the input area.
+
+**Wrong Fix**: Reducing padding made it worse
+**Correct Fix**: Increased `padding-bottom` from `80px` → `120px` in `.conversation-history` 
+
+This ensures when auto-scroll reaches the bottom, longer messages have enough breathing room to be fully visible above the input area.
+
 ### Result
-Users now automatically see new AI responses during long conversations without manual scrolling, while preserving the ability to scroll up to read previous messages without interruption.
+Users now automatically see new AI responses during long conversations without manual scrolling, infinite loops, or cut-off messages. The solution is simple, reliable, and handles rapid message sequences during AI responses.
