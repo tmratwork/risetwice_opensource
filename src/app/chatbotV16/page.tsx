@@ -483,11 +483,41 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
   // Auto-scroll to bottom when conversation changes
   useEffect(() => {
-    if (conversationHistoryRef.current) {
+    if (conversationHistoryRef.current && conversation.length > 0) {
       const scrollContainer = conversationHistoryRef.current;
-      scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      
+      // Use requestAnimationFrame to ensure DOM has updated before scrolling
+      requestAnimationFrame(() => {
+        // Triple RAF to ensure all rendering and layout is complete
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Always scroll to bottom on new messages - no proximity check needed
+            if (process.env.NEXT_PUBLIC_ENABLE_V16_AUTO_SCROLL_LOGS === 'true') {
+              const currentScrollTop = scrollContainer.scrollTop;
+              const maxScrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+              const distanceFromBottom = maxScrollTop - currentScrollTop;
+              
+              console.log('[v16_auto_scroll] Auto-scroll triggered', {
+                currentScrollTop,
+                scrollHeight: scrollContainer.scrollHeight,
+                clientHeight: scrollContainer.clientHeight,
+                maxScrollTop,
+                distanceFromBottom,
+                conversationLength: conversation.length
+              });
+            }
+            
+            // Always scroll to bottom for new messages
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            
+            if (process.env.NEXT_PUBLIC_ENABLE_V16_AUTO_SCROLL_LOGS === 'true') {
+              console.log('[v16_auto_scroll] ✅ SCROLLED to bottom');
+            }
+          });
+        });
+      });
     }
-  }, [conversation]);
+  }, [conversation.length]);
 
   // Update triage session when resumable conversation changes (for resume flow)
   // Only run this during initial load, not after handoffs

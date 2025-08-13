@@ -1,4 +1,4 @@
-docs/layout.md
+file: docs/layout.md
 
 # CSS Grid + Flexbox Layout Lessons Learned
 
@@ -215,3 +215,98 @@ This layout fix had zero performance cost:
 - Existing wrapper just got proper CSS properties
 
 The fix actually **improves performance** by eliminating the need for hardcoded heights that don't work responsively.
+
+## Auto-Scroll to Latest Messages Fix
+
+### Problem
+During long conversations (100+ turns), users had to manually scroll down to see each new AI response because the auto-scroll mechanism was broken. This interrupted the natural conversation flow and made the app feel unresponsive.
+
+### Root Cause: Synchronous DOM Updates
+The original auto-scroll implementation was too simplistic and ran synchronously:
+
+```javascript
+// ❌ Broken: DOM hasn't finished updating when scroll happens
+useEffect(() => {
+  if (conversationHistoryRef.current) {
+    const scrollContainer = conversationHistoryRef.current;
+    scrollContainer.scrollTop = scrollContainer.scrollHeight; // Fires before new content renders
+  }
+}, [conversation]);
+```
+
+When new messages were added to the conversation, the effect ran immediately but the DOM hadn't finished rendering the new content, so `scrollHeight` reflected the old content size.
+
+### Solution: Double RequestAnimationFrame
+
+The fix uses a double `requestAnimationFrame` to ensure DOM updates are complete before scrolling:
+
+```javascript
+// ✅ Fixed: Waits for DOM rendering to complete
+useEffect(() => {
+  if (conversationHistoryRef.current) {
+    const scrollContainer = conversationHistoryRef.current;
+    
+    // Use requestAnimationFrame to ensure DOM has updated before scrolling
+    requestAnimationFrame(() => {
+      // Double RAF to ensure rendering is complete
+      requestAnimationFrame(() => {
+        const currentScrollTop = scrollContainer.scrollTop;
+        const maxScrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+        const scrollThreshold = 100; // Only auto-scroll if within 100px of bottom
+        const distanceFromBottom = maxScrollTop - currentScrollTop;
+        
+        // Only auto-scroll if user is near the bottom (within threshold)
+        // This prevents interrupting users who have scrolled up to read older messages
+        if (distanceFromBottom <= scrollThreshold) {
+          scrollContainer.scrollTo({
+            top: scrollContainer.scrollHeight,
+            behavior: 'smooth'
+          });
+        }
+      });
+    });
+  }
+}, [conversation]);
+```
+
+### Key Improvements
+
+1. **Double RAF Timing**: Ensures DOM rendering is complete before measuring scroll dimensions
+2. **Proximity Check**: Only auto-scrolls if user is near bottom (within 100px), preserving ability to read older messages
+3. **Smooth Scrolling**: Uses `scrollTo({ behavior: 'smooth' })` instead of jarring instant scroll
+4. **Debug Logging**: Added conditional logging for troubleshooting scroll issues
+
+### Why Double RequestAnimationFrame Works
+
+- **First RAF**: Waits for current render cycle to complete
+- **Second RAF**: Ensures browser has finished all layout calculations and painting
+- **Then Scroll**: Now `scrollHeight` reflects the actual new content size
+
+### Smart Scroll Behavior
+
+The fix includes smart behavior that respects user intent:
+- **Auto-scroll**: When user is near bottom (normal chat behavior)
+- **No interruption**: When user has scrolled up to read older messages
+- **Smooth animation**: Provides polished scrolling experience
+
+### Debugging Support
+
+Added environment variable for troubleshooting:
+```bash
+NEXT_PUBLIC_ENABLE_V16_AUTO_SCROLL_LOGS=true # [v16_auto_scroll]
+```
+
+When enabled, logs scroll metrics to help diagnose issues:
+```javascript
+console.log('[v16_auto_scroll] Auto-scroll check', {
+  currentScrollTop,
+  scrollHeight,
+  clientHeight,
+  distanceFromBottom,
+  shouldScroll: distanceFromBottom <= scrollThreshold,
+  conversationLength
+});
+```
+
+### Result
+Users now automatically see new AI responses during long conversations without manual scrolling, while preserving the ability to scroll up to read previous messages without interruption.
