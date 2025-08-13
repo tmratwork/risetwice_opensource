@@ -37,6 +37,8 @@ export default function GreetingsAdmin() {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('en');
   const [editingGreeting, setEditingGreeting] = useState<Greeting | null>(null);
   const [newGreetingContent, setNewGreetingContent] = useState<string>('');
+  const [mainMessage, setMainMessage] = useState<string>('');
+  const [languageRequirement, setLanguageRequirement] = useState<string>('');
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [saving, setSaving] = useState(false);
   const [translating, setTranslating] = useState(false);
@@ -103,20 +105,40 @@ export default function GreetingsAdmin() {
   const handleEdit = (greeting: Greeting) => {
     setEditingGreeting(greeting);
     setNewGreetingContent(greeting.greeting_content);
+    // Try to split existing greeting into parts (basic heuristic)
+    const content = greeting.greeting_content;
+    const parts = content.split('. It is a requirement that you speak in ');
+    if (parts.length === 2) {
+      setMainMessage(parts[0] + '.');
+      setLanguageRequirement('It is a requirement that you speak in ' + parts[1]);
+    } else {
+      // Fallback: put everything in main message
+      setMainMessage(content);
+      setLanguageRequirement('');
+    }
     setIsCreatingNew(false);
   };
 
   const handleCreate = () => {
     setEditingGreeting(null);
     setNewGreetingContent('');
+    // Set default values for new greeting
+    setMainMessage('Hello! I am here to help you find and access the support resources you need. What type of assistance are you looking for today?');
+    setLanguageRequirement('It is a requirement that you speak in English.');
     setIsCreatingNew(true);
   };
 
   const handleSave = async () => {
-    if (!newGreetingContent.trim()) {
-      setError('Greeting content cannot be empty');
+    // Combine main message and language requirement
+    const combinedContent = mainMessage.trim() + (languageRequirement.trim() ? ' ' + languageRequirement.trim() : '');
+    
+    if (!combinedContent.trim()) {
+      setError('Main message cannot be empty');
       return;
     }
+    
+    // Update the newGreetingContent to reflect the combined content
+    setNewGreetingContent(combinedContent);
 
     try {
       setSaving(true);
@@ -136,7 +158,7 @@ export default function GreetingsAdmin() {
         body: JSON.stringify({
           greeting_type: selectedType,
           language_code: selectedLanguage,
-          greeting_content: newGreetingContent.trim(),
+          greeting_content: combinedContent.trim(),
           is_active: true
         }),
       });
@@ -150,6 +172,8 @@ export default function GreetingsAdmin() {
       await loadGreetings();
       setEditingGreeting(null);
       setNewGreetingContent('');
+      setMainMessage('');
+      setLanguageRequirement('');
       setIsCreatingNew(false);
 
     } catch (err) {
@@ -223,7 +247,9 @@ export default function GreetingsAdmin() {
         body: JSON.stringify({
           greeting_type: selectedType,
           source_language: 'en',
-          overwrite_existing: overwriteExisting
+          overwrite_existing: overwriteExisting,
+          main_message: mainMessage || 'Hello! I am here to help you find and access the support resources you need. What type of assistance are you looking for today?',
+          language_requirement: languageRequirement || 'It is a requirement that you speak in English.'
         }),
       });
 
@@ -457,20 +483,44 @@ export default function GreetingsAdmin() {
 
               <div className="mb-4">
                 <label className="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
-                  Greeting Content ({selectedType} - {currentLanguage?.nativeName})
+                  Main Greeting Message ({selectedType} - {currentLanguage?.nativeName})
                 </label>
                 <textarea
-                  value={newGreetingContent}
-                  onChange={(e) => setNewGreetingContent(e.target.value)}
-                  className="w-full h-32 p-3 border border-blue-300 dark:border-blue-600 rounded bg-white dark:bg-gray-700 text-sage-500 dark:text-gray-200"
-                  placeholder="Enter the greeting content that users will see when starting a conversation..."
+                  value={mainMessage}
+                  onChange={(e) => setMainMessage(e.target.value)}
+                  className="w-full h-24 p-3 border border-blue-300 dark:border-blue-600 rounded bg-white dark:bg-gray-700 text-sage-500 dark:text-gray-200"
+                  placeholder="Hello! I am here to help you find and access the support resources you need. What type of assistance are you looking for today?"
                 />
+              </div>
+
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
+                  Language Requirement Message (Optional)
+                </label>
+                <textarea
+                  value={languageRequirement}
+                  onChange={(e) => setLanguageRequirement(e.target.value)}
+                  className="w-full h-16 p-3 border border-blue-300 dark:border-blue-600 rounded bg-white dark:bg-gray-700 text-sage-500 dark:text-gray-200"
+                  placeholder="It is a requirement that you speak in English."
+                />
+                <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                  When auto-translating, "English" will be smartly replaced with the target language name.
+                </p>
+              </div>
+
+              <div className="mb-4 p-3 bg-blue-100 dark:bg-blue-900/40 rounded border">
+                <label className="block text-sm font-medium text-blue-700 dark:text-blue-300 mb-2">
+                  Combined Preview:
+                </label>
+                <div className="text-sm text-blue-800 dark:text-blue-200 whitespace-pre-wrap">
+                  {mainMessage.trim()}{languageRequirement.trim() ? ' ' + languageRequirement.trim() : ''}
+                </div>
               </div>
 
               <div className="flex gap-2">
                 <button
                   onClick={handleSave}
-                  disabled={saving || !newGreetingContent.trim()}
+                  disabled={saving || !mainMessage.trim()}
                   className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   {saving ? 'Saving...' : (editingGreeting ? 'Update' : 'Create')}
@@ -479,6 +529,8 @@ export default function GreetingsAdmin() {
                   onClick={() => {
                     setEditingGreeting(null);
                     setNewGreetingContent('');
+                    setMainMessage('');
+                    setLanguageRequirement('');
                     setIsCreatingNew(false);
                     setError(null);
                   }}

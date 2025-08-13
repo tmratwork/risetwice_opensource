@@ -20,12 +20,20 @@ interface TranslationRequest {
   greeting_type: string;
   source_language?: string;
   overwrite_existing?: boolean;
+  main_message?: string;
+  language_requirement?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json() as TranslationRequest;
-    const { greeting_type, source_language = 'en', overwrite_existing = false } = body;
+    const { 
+      greeting_type, 
+      source_language = 'en', 
+      overwrite_existing = false,
+      main_message,
+      language_requirement 
+    } = body;
 
     console.log('[greeting_translate] Starting translation request:', {
       greeting_type,
@@ -42,25 +50,49 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch source greeting (English by default)
-    const { data: sourceGreeting, error: sourceError } = await supabaseAdmin
-      .from('greeting_resources')
-      .select('*')
-      .eq('greeting_type', greeting_type)
-      .eq('language_code', source_language)
-      .eq('is_active', true)
-      .single();
+    // Use provided main_message and language_requirement, or fetch from database as fallback
+    let sourceMainMessage = main_message;
+    let sourceLanguageRequirement = language_requirement;
+    
+    if (!sourceMainMessage || !sourceLanguageRequirement) {
+      // Fallback: Fetch existing source greeting from database
+      const { data: sourceGreeting, error: sourceError } = await supabaseAdmin
+        .from('greeting_resources')
+        .select('*')
+        .eq('greeting_type', greeting_type)
+        .eq('language_code', source_language)
+        .eq('is_active', true)
+        .single();
 
-    if (sourceError || !sourceGreeting) {
-      console.error('[greeting_translate] Source greeting not found:', sourceError);
-      return NextResponse.json(
-        {
-          error: `Source greeting not found for type '${greeting_type}' in language '${source_language}'. Please create the source greeting first.`,
-          suggestion: `Go to /chatbotV16/admin/greetings and create a greeting for ${greeting_type} in ${source_language}`
-        },
-        { status: 404 }
-      );
+      if (sourceError || !sourceGreeting) {
+        console.error('[greeting_translate] Source greeting not found and no manual parts provided:', sourceError);
+        return NextResponse.json(
+          {
+            error: `Source greeting not found for type '${greeting_type}' in language '${source_language}' and no manual message parts provided. Please create the source greeting first or provide main_message and language_requirement.`,
+            suggestion: `Go to /chatbotV16/admin/greetings and create a greeting for ${greeting_type} in ${source_language}`
+          },
+          { status: 404 }
+        );
+      }
+      
+      // Try to split existing greeting into parts (basic heuristic)
+      const content = sourceGreeting.greeting_content;
+      const parts = content.split('. It is a requirement that you speak in ');
+      if (parts.length === 2) {
+        sourceMainMessage = parts[0] + '.';
+        sourceLanguageRequirement = 'It is a requirement that you speak in ' + parts[1];
+      } else {
+        // Fallback: use entire content as main message
+        sourceMainMessage = content;
+        sourceLanguageRequirement = '';
+      }
     }
+
+    console.log('[greeting_translate] Using source parts:', {
+      sourceMainMessage: sourceMainMessage?.substring(0, 100) + '...',
+      sourceLanguageRequirement: sourceLanguageRequirement?.substring(0, 50) + '...',
+      partsProvided: !!(main_message && language_requirement)
+    });
 
     // Get languages to translate to (exclude source language)
     const targetLanguages = SUPPORTED_LANGUAGES.filter(lang => lang.code !== source_language);
@@ -124,8 +156,13 @@ export async function POST(request: NextRequest) {
 
       const batchPromises = batch.map(async (language) => {
         try {
-          // Create specialized prompt for mental health greeting translation
-          const systemPrompt = `You are a professional translator specializing in mental health and wellness communications. Your task is to translate greetings for a mental health support application.
+          // TWO-PART TRANSLATION APPROACH
+          let translatedMainMessage = '';
+          let translatedLanguageRequirement = '';
+          
+          // PART 1: Translate main greeting message
+          if (sourceMainMessage) {
+            const mainSystemPrompt = `You are a professional translator specializing in mental health and wellness communications. Your task is to translate greeting messages for a mental health support application.
 
 IMPORTANT GUIDELINES:
 - Maintain the warm, supportive, and professional tone of the original
@@ -138,39 +175,77 @@ IMPORTANT GUIDELINES:
 
 The greeting is used when users first interact with mental health support AI, so it should be welcoming and reduce barriers to seeking help.`;
 
-          const userPrompt = `Translate the following mental health support greeting from English to ${language.name} (${language.nativeName}):
+            const mainUserPrompt = `Translate the following mental health support greeting message from English to ${language.name} (${language.nativeName}):
 
-"${sourceGreeting.greeting_content}"
+"${sourceMainMessage}"
 
 Provide only the translation, no explanations or additional text.`;
 
-          const completion = await openai.chat.completions.create({
-            model: 'gpt-4o',
-            messages: [
-              { role: 'system', content: systemPrompt },
-              { role: 'user', content: userPrompt }
-            ],
-            temperature: 0.3, // Lower temperature for more consistent translations
-            max_tokens: 500,
-          });
+            const mainCompletion = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [
+                { role: 'system', content: mainSystemPrompt },
+                { role: 'user', content: mainUserPrompt }
+              ],
+              temperature: 0.3,
+              max_tokens: 400,
+            });
 
-          const translation = completion.choices[0]?.message?.content?.trim();
-
-          if (!translation) {
-            throw new Error('Empty translation received from OpenAI');
+            translatedMainMessage = mainCompletion.choices[0]?.message?.content?.trim() || '';
+            
+            if (!translatedMainMessage) {
+              throw new Error('Empty main message translation received from OpenAI');
+            }
           }
+          
+          // PART 2: Translate language requirement with smart replacement
+          if (sourceLanguageRequirement) {
+            const reqSystemPrompt = `You are a professional translator specializing in language requirement statements for multilingual applications.
 
-          console.log(`[greeting_translate] Successfully translated to ${language.name}:`, {
+IMPORTANT GUIDELINES:
+- Translate the sentence structure naturally
+- The word "English" should be replaced with the target language name in the target language
+- Maintain formal but friendly tone
+- Ensure grammatical correctness in the target language
+- Keep the meaning clear: this is a requirement/instruction for which language to use`;
+
+            // Replace "English" with target language in the source before translation
+            const adaptedRequirement = sourceLanguageRequirement.replace(/English/g, language.nativeName);
+            
+            const reqUserPrompt = `Translate the following language requirement statement from English to ${language.name} (${language.nativeName}), but note that "English" has already been replaced with "${language.nativeName}":
+
+"${adaptedRequirement}"
+
+Provide only the translation, no explanations or additional text. Make sure it's grammatically correct and natural in ${language.nativeName}.`;
+
+            const reqCompletion = await openai.chat.completions.create({
+              model: 'gpt-4o',
+              messages: [
+                { role: 'system', content: reqSystemPrompt },
+                { role: 'user', content: reqUserPrompt }
+              ],
+              temperature: 0.3,
+              max_tokens: 200,
+            });
+
+            translatedLanguageRequirement = reqCompletion.choices[0]?.message?.content?.trim() || '';
+          }
+          
+          // Combine both parts
+          const finalTranslation = translatedMainMessage + (translatedLanguageRequirement ? ' ' + translatedLanguageRequirement : '');
+
+          console.log(`[greeting_translate] Two-part translation completed for ${language.name}:`, {
             language_code: language.code,
-            original_length: sourceGreeting.greeting_content.length,
-            translation_length: translation.length,
-            preview: translation.substring(0, 100) + '...'
+            main_message_length: translatedMainMessage.length,
+            language_req_length: translatedLanguageRequirement.length,
+            combined_length: finalTranslation.length,
+            preview: finalTranslation.substring(0, 100) + '...'
           });
 
           return {
             language_code: language.code,
             language_name: language.name,
-            translation,
+            translation: finalTranslation,
             success: true
           } as TranslationResult;
 
