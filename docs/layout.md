@@ -2,6 +2,90 @@ file: docs/layout.md
 
 # CSS Grid + Flexbox Layout Lessons Learned
 
+## V16 Production Scrolling Crisis (2025-01-13)
+
+### The Crisis
+All pages in production couldn't scroll. The entire app was broken in production while working fine in development.
+
+### Root Cause: CSS Import Side Effects
+V16 was importing `chatbotV15.css` which contained:
+```css
+.v11-layout-root {
+  overflow: hidden;
+  height: 100dvh;
+}
+```
+
+This created a **global CSS pollution problem** where:
+- Development: CSS modules loaded on-demand with better isolation
+- Production: All CSS bundled together, V15's `overflow: hidden` affected ALL pages globally
+
+### The Wrong Fix That Made Things Worse
+First attempt removed critical layout constraints:
+```css
+/* WRONG - This broke the layout */
+.v16-layout-root {
+  min-height: 100vh; /* Changed from height - BAD */
+  /* Removed overflow: hidden - BAD */
+}
+```
+
+Result: Footer wasn't fixed, chat interface didn't fill viewport, everything was broken.
+
+### The Correct Solution: V16-Specific CSS
+Created independent `chatbotV16.css` with proper constraints:
+
+```css
+/* CORRECT - Maintains layout while allowing scrolling */
+.v16-layout-root {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh; /* Fixed height for grid */
+  overflow: hidden; /* Prevent root scrolling */
+}
+
+.main-content-row {
+  overflow-y: auto; /* Scrolling happens HERE, not at root */
+  overflow-x: hidden;
+}
+```
+
+### Key Lessons
+
+1. **CSS Imports Are Global in Production**
+   - Next.js bundles all CSS together in production
+   - Class names from one version can affect the entire app
+   - Never share CSS files between different layout systems
+
+2. **Version Independence is Critical**
+   - Each major version should have its own CSS
+   - Don't import V11/V15 CSS into V16
+   - Clean separation prevents cascading failures
+
+3. **The Scrolling Solution Pattern**
+   ```
+   Root (grid container) → overflow: hidden, height: 100vh
+   └── Main Content Row → overflow-y: auto (scrolling happens here)
+       └── Page Content → Can be any height
+   ```
+
+4. **Different Pages Need Different Constraints**
+   - Chat pages: Need fixed layout, no page scrolling
+   - Resource pages: Need scrolling content with fixed footer
+   - Solution: Scrolling in main-content-row handles both cases
+
+### Testing Checklist for Layout Changes
+- [ ] Test in production build locally (`npm run build && npm run start`)
+- [ ] Verify chat pages don't scroll (fixed layout)
+- [ ] Verify resource pages DO scroll with fixed footer
+- [ ] Check no horizontal scrollbars appear
+- [ ] Test on mobile viewport sizes
+- [ ] Ensure footer stays at bottom of viewport
+
+---
+
+# Original Layout Debugging (Earlier Issue)
+
 ## Overview
 
 This document captures critical lessons learned while debugging a layout issue where the chatbot interface only used ~30% of screen height with massive empty space below.
