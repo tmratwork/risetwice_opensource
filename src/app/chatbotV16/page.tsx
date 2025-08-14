@@ -1601,7 +1601,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               aria-label={`${msg.role === 'user' ? 'Your message' : 'AI assistant response'} at ${new Date(msg.timestamp).toLocaleTimeString()}`}
             >
               {msg.role === 'assistant' && (msg.specialist || triageSession.currentSpecialist) && (
-                <div className="text-xs font-medium text-blue-400 mb-1 uppercase tracking-wide" role="heading" aria-level="3">
+                <div className="text-xs font-medium text-blue-400 mb-1 uppercase tracking-wide" role="heading" aria-level={3}>
                   <span className="sr-only">Response from </span>
                   {/* Displays specialist name + "AI" - currently shows "R2 AI" (was "TRIAGE AI") */}
                   {msg.specialist || triageSession.currentSpecialist} AI
