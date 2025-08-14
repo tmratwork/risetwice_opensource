@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/auth-context';
 import { Apple, Phone } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import PhoneAuth from '@/components/PhoneAuth';
 
 interface SignInDialogProps {
@@ -16,6 +16,10 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
   const { signInWithGoogle, signInWithApple } = useAuth();
   const [showPhoneAuth, setShowPhoneAuth] = useState(false);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  
+  // Focus management refs
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const lastFocusedElement = useRef<HTMLElement | null>(null);
 
   const handleGoogleSignIn = async () => {
     try {
@@ -58,6 +62,37 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
     onClose();
   };
 
+  // Focus management and keyboard handling
+  useEffect(() => {
+    if (isOpen) {
+      // Save currently focused element
+      lastFocusedElement.current = document.activeElement as HTMLElement;
+      
+      // Focus the dialog
+      setTimeout(() => {
+        dialogRef.current?.focus();
+      }, 100);
+      
+      // Handle Escape key
+      const handleEscape = (e: KeyboardEvent) => {
+        if (e.key === 'Escape') {
+          onClose();
+        }
+      };
+      
+      document.addEventListener('keydown', handleEscape);
+      
+      return () => {
+        document.removeEventListener('keydown', handleEscape);
+        
+        // Restore focus when dialog closes
+        if (lastFocusedElement.current) {
+          lastFocusedElement.current.focus();
+        }
+      };
+    }
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (
@@ -65,10 +100,16 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
       className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
       style={{ zIndex: 9999 }}
       onClick={handleContinueWithoutSignIn}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="signin-dialog-title"
+      aria-describedby="signin-dialog-description"
     >
       <div 
+        ref={dialogRef}
         className="bg-white dark:bg-[#1a1a1b] border border-gray-200 dark:border-gray-700 rounded-lg max-w-lg w-full"
         onClick={(e) => e.stopPropagation()}
+        tabIndex={-1}
       >
         <div className="p-6">
           {showPhoneAuth ? (
@@ -76,8 +117,9 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
               <button
                 onClick={handlePhoneAuthBack}
                 className="mb-4 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                aria-label="Go back to sign in options"
               >
-                ← Back to sign in options
+                <span aria-hidden="true">←</span> Back to sign in options
               </button>
               <PhoneAuth 
                 onBack={handlePhoneAuthBack} 
@@ -93,27 +135,33 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
           ) : (
             <>
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 dark:text-white mb-3">
+                <h2 id="signin-dialog-title" className="text-2xl font-bold text-gray-800 dark:text-white mb-3">
                   Sign in to get the full experience
                 </h2>
+                <div id="signin-dialog-description" className="sr-only">
+                  Modal dialog for signing in to RiseTwice. Choose from Google, Apple, Phone, or continue without signing in. Press Escape to close.
+                </div>
                 <div className="text-gray-600 dark:text-gray-300 space-y-3 text-left">
                   <div className="space-y-2 text-sm">
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
-                      <span>Continue previous conversations where you left off</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
-                      <span>Get personalized support based on your conversation history</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-green-600 dark:text-green-400 font-bold">✓</span>
-                      <span>Access your conversation history, insights & bookmarks</span>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <span className="text-orange-500 dark:text-orange-400 font-bold">⚠</span>
+                    <h3 className="sr-only">Benefits of signing in:</h3>
+                    <ul className="space-y-2" role="list">
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 dark:text-green-400 font-bold" aria-hidden="true">✓</span>
+                        <span>Continue previous conversations where you left off</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 dark:text-green-400 font-bold" aria-hidden="true">✓</span>
+                        <span>Get personalized support based on your conversation history</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-green-600 dark:text-green-400 font-bold" aria-hidden="true">✓</span>
+                        <span>Access your conversation history, insights & bookmarks</span>
+                      </li>
+                    </ul>
+                    <div className="flex items-start gap-2 mt-3 p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg" role="note" aria-label="Important notice">
+                      <span className="text-orange-500 dark:text-orange-400 font-bold" aria-hidden="true">⚠</span>
                       <span className="text-gray-700 dark:text-gray-400">
-                        Without signing in, RiseTwice won&apos;t remember our previous conversations and can&apos;t provide personalized context.
+                        <strong>Note:</strong> Without signing in, RiseTwice won&apos;t remember our previous conversations and can&apos;t provide personalized context.
                       </span>
                     </div>
                   </div>
@@ -125,8 +173,9 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
                   onClick={handleGoogleSignIn}
                   disabled={isSigningIn}
                   className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={isSigningIn ? 'Signing in with Google...' : 'Sign in with Google account'}
                 >
-                  <span className="font-semibold text-lg">G</span>
+                  <span className="font-semibold text-lg" aria-hidden="true">G</span>
                   <span>Continue with Google</span>
                 </button>
 
@@ -134,23 +183,25 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
                   onClick={handleAppleSignIn}
                   disabled={isSigningIn}
                   className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-lg bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label={isSigningIn ? 'Signing in with Apple...' : 'Sign in with Apple ID'}
                 >
-                  <Apple size={20} />
+                  <Apple size={20} aria-hidden="true" />
                   <span>Continue with Apple</span>
                 </button>
 
-                <div className="flex items-center gap-3">
-                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+                <div className="flex items-center gap-3" role="separator" aria-label="Or choose alternative sign in method">
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" aria-hidden="true"></div>
                   <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">OR</span>
-                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600"></div>
+                  <div className="flex-1 h-px bg-gray-300 dark:bg-gray-600" aria-hidden="true"></div>
                 </div>
 
                 <button
                   onClick={handlePhoneClick}
                   disabled={isSigningIn}
                   className="w-full flex items-center justify-center gap-3 px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Sign in with phone number"
                 >
-                  <Phone size={20} />
+                  <Phone size={20} aria-hidden="true" />
                   <span>Continue with Phone</span>
                 </button>
               </div>
@@ -160,10 +211,11 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
                   onClick={handleContinueWithoutSignIn}
                   className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors font-medium"
                   disabled={isSigningIn}
+                  aria-describedby="continue-without-signin-note"
                 >
                   Continue without signing in
                 </button>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                <p id="continue-without-signin-note" className="text-xs text-gray-500 dark:text-gray-400 mt-2">
                   You can always sign in later to save your conversation history
                 </p>
               </div>
