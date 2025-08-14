@@ -1,3 +1,5 @@
+file: docs/accessibility.md
+
 # RiseTwice Accessibility Guidelines
 
 ## Core Accessibility Principles
@@ -203,3 +205,90 @@ If any accessibility change causes issues for sighted users:
 4. **Additional testing** before re-deployment
 
 **Remember: Accessibility is about addition, not subtraction. If it changes the sighted user experience, we're doing it wrong.**
+
+## Audio Interface Accessibility Requirements
+
+### **Critical: Microphone Status Announcements**
+
+The chatbot uses voice interaction, making microphone accessibility critical for blind users.
+
+#### **The Problem:**
+- **Sighted users:** See visual mic icon on blue orb → understand it's clickable mic control
+- **Blind users:** Hear AI response → try to speak → nothing happens (mic muted by default)
+- **Missing:** No announcement about mic status or how to unmute
+
+#### **Required Implementation:**
+
+##### **Connection Status Live Region:**
+```tsx
+<div aria-live="polite" aria-atomic="true" className="sr-only">
+  {connectionState === 'connected' && !isPreparing && 
+    'Connected to RiseTwice AI. Your microphone is muted - click the microphone control in the center of the screen to unmute and start talking.'}
+</div>
+```
+
+##### **Microphone Control Labeling:**
+```tsx
+<div 
+  className="visualization-container" 
+  role="button" 
+  aria-label="Microphone control - click to mute or unmute your microphone"
+  aria-describedby="mic-description"
+>
+  <AudioOrbV15 isFunctionExecuting={isFunctionExecuting} />
+  <div id="mic-description" className="sr-only">
+    Microphone control button located in the center of the screen. 
+    Click to toggle your microphone on or off. 
+    Visual indicator shows blue animation when AI is speaking.
+  </div>
+</div>
+```
+
+##### **Mute Status Changes:**
+```tsx
+// Add live region for mute status changes
+<div aria-live="polite" className="sr-only">
+  {isMuted ? 'Microphone muted' : 'Microphone unmuted - you can now speak'}
+</div>
+```
+
+### **Interface Description Rules:**
+
+#### **❌ Avoid Confusing Terms:**
+- "Audio visualization" - too vague
+- "Blue orb" - describes appearance, not function
+- "Click somewhere to unmute" - no location guidance
+
+#### **✅ Use Clear, Functional Descriptions:**
+- "Microphone control" - describes actual function
+- "Center of the screen" - clear location reference
+- "Click to mute or unmute your microphone" - explicit action
+
+#### **Location Description Guidelines:**
+
+**For the microphone control:**
+- **Primary:** "Center of the screen"
+- **Alternative:** "Center bottom area of the screen"
+- **Context:** "Microphone control button"
+
+**Why this works:**
+- Screen readers can navigate to center of interface
+- "Control" indicates it's interactive
+- "Microphone" is functionally accurate
+- Location is relative to screen, not other elements
+
+### **Testing Requirements:**
+
+#### **Screen Reader User Flow:**
+1. Click "Let's Talk" → Hear connection announcement with mic instructions
+2. Navigate to center → Find microphone control
+3. Click control → Hear mute status change
+4. Speak → Confirm AI responds to voice input
+5. Click again → Hear mute confirmation
+
+#### **Success Criteria:**
+- ✅ User knows mic is muted on connection
+- ✅ User knows where to find mic control
+- ✅ User knows how to toggle mic status
+- ✅ User receives confirmation of status changes
+- ✅ User can successfully use voice interaction

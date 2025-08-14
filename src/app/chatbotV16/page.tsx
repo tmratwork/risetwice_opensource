@@ -159,6 +159,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   // FIXED: Use memoized selectors for Zustand to prevent unnecessary re-renders
   const isConnected = useWebRTCStore(state => state.isConnected);
   const connectionState = useWebRTCStore(state => state.connectionState);
+  const isMuted = useWebRTCStore(state => state.isMuted);
   const isPreparing = useWebRTCStore(state => state.isPreparing);
   const conversation = useWebRTCStore(state => state.conversation);
   const userMessage = useWebRTCStore(state => state.userMessage);
@@ -1410,7 +1411,12 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {connectionState === 'connecting' && 'Connecting to RiseTwice AI...'}
         {isPreparing && 'Preparing your conversation...'}
-        {connectionState === 'connected' && !isPreparing && 'Connected to RiseTwice AI'}
+        {connectionState === 'connected' && !isPreparing && 'Connected to RiseTwice AI. Your microphone is muted - click the microphone control in the center of the screen to unmute and start talking.'}
+      </div>
+      
+      {/* Microphone status live region for screen readers */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {isConnected && (isMuted ? 'Microphone muted' : 'Microphone unmuted - you can now speak')}
       </div>
 
       {/* Start button overlay - positioned above chatbox with higher z-index - WITH DEBUGGING */}
@@ -1705,10 +1711,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       {/* Enhanced Audio visualizer with real-time volume data */}
       {
         isConnected && (
-          <div className="visualization-container" role="img" aria-label="AI voice visualization - shows when AI is speaking or thinking" aria-describedby="orb-description">
+          <div className="visualization-container" role="button" aria-label="Microphone control - click to mute or unmute your microphone" aria-describedby="mic-description">
             <AudioOrbV15 isFunctionExecuting={isFunctionExecuting} />
-            <div id="orb-description" className="sr-only">
-              Audio visualization that pulses and animates when the AI is speaking or processing. Click to mute or unmute audio output.
+            <div id="mic-description" className="sr-only">
+              Microphone control button located in the center of the screen. Click to toggle your microphone on or off. Visual indicator shows blue animation when AI is speaking.
             </div>
           </div>
         )
@@ -1766,7 +1772,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           feedbackType={feedbackType}
         />
       )}
-    </div >
+    </main >
   );
 }, (prevProps, nextProps) => {
   // FIXED: Custom comparison function for memo
@@ -3785,6 +3791,6 @@ Time: ${new Date().toLocaleString()}`);
           handleLetsTalk();
         }}
       />
-    </main>
+    </div>
   );
 }
