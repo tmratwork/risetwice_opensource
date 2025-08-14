@@ -1265,8 +1265,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   }, []);
 
   return (
-    <div
+    <main
       className="main-container"
+      role="main"
+      aria-labelledby="page-title"
       ref={(el) => {
         if (el) {
           // const computed = window.getComputedStyle(el);
@@ -1401,6 +1403,16 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       onClickCapture={(e) => console.log('[resume] ⬇️ Main container - click captured:', e.target)}
       onClick={(e) => console.log('[resume] ⬆️ Main container - click bubbled:', e.target)}
     >
+      {/* Screen reader page title */}
+      <h1 id="page-title" className="sr-only">RiseTwice AI Chat Interface</h1>
+      
+      {/* Connection status live region for screen readers */}
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {connectionState === 'connecting' && 'Connecting to RiseTwice AI...'}
+        {isPreparing && 'Preparing your conversation...'}
+        {connectionState === 'connected' && !isPreparing && 'Connected to RiseTwice AI'}
+      </div>
+
       {/* Start button overlay - positioned above chatbox with higher z-index - WITH DEBUGGING */}
       {
         !isConnected && (
@@ -1448,6 +1460,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             {/* Always show Let's Talk button - WITH DEBUGGING */}
             < button
               className={`control-button primary large-button ${connectionState === 'connecting' ? 'connecting' : ''} ${isPreparing ? 'preparing' : ''}`}
+              aria-label="Start a new conversation with RiseTwice AI assistant"
               ref={(el) => {
                 if (el) {
                   // const computed = window.getComputedStyle(el);
@@ -1523,6 +1536,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 <button
                   onClick={() => window.location.href = '/chatbotV16/history'}
                   className="text-sm underline mt-2 cursor-pointer pointer-events-auto"
+                  aria-label="View your conversation history - opens in new page"
                   style={{ color: '#3b503c', pointerEvents: 'auto' }}
                   onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#9dbbac'}
                   onMouseLeave={(e) => (e.target as HTMLElement).style.color = '#3b503c'}
@@ -1566,14 +1580,23 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
       {/* Conversation container - naturally fills available space */}
       <div className={`conversation-container ${!isConnected ? 'conversation-container-with-overlay' : ''}`} style={{ position: 'relative', zIndex: 1 }}>
-        <div className="conversation-history" ref={conversationHistoryRef}>
+        <div 
+          className="conversation-history" 
+          ref={conversationHistoryRef}
+          role="log"
+          aria-live="polite"
+          aria-label="Conversation with AI assistant"
+        >
           {conversation.map((msg) => (
             <div
               key={msg.id}
               className={`message ${msg.role} ${!msg.isFinal ? 'animate-pulse' : ''}`}
+              role="article"
+              aria-label={`${msg.role === 'user' ? 'Your message' : 'AI assistant response'} at ${new Date(msg.timestamp).toLocaleTimeString()}`}
             >
               {msg.role === 'assistant' && (msg.specialist || triageSession.currentSpecialist) && (
-                <div className="text-xs font-medium text-blue-400 mb-1 uppercase tracking-wide">
+                <div className="text-xs font-medium text-blue-400 mb-1 uppercase tracking-wide" role="heading" aria-level="3">
+                  <span className="sr-only">Response from </span>
                   {/* Displays specialist name + "AI" - currently shows "R2 AI" (was "TRIAGE AI") */}
                   {msg.specialist || triageSession.currentSpecialist} AI
                   {process.env.NEXT_PUBLIC_ENABLE_SPECIALIST_TRACKING_LOGS === 'true' && msg.isFinal && !((window as Window & { loggedMessages?: Set<string> }).loggedMessages)?.has(msg.id) && (() => {
@@ -1603,16 +1626,16 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                   <button
                     onClick={() => handleFeedbackClick(msg.id, 'thumbs_up')}
                     className="feedback-button thumbs-up p-1.5 rounded-full hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
-                    aria-label="Thumbs up"
+                    aria-label="Give positive feedback on this response"
                   >
-                    <ThumbsUp size={14} className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" />
+                    <ThumbsUp size={14} className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" aria-hidden="true" />
                   </button>
                   <button
                     onClick={() => handleFeedbackClick(msg.id, 'thumbs_down')}
                     className="feedback-button thumbs-down p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
-                    aria-label="Thumbs down"
+                    aria-label="Give negative feedback on this response"
                   >
-                    <ThumbsDown size={14} className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" />
+                    <ThumbsDown size={14} className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" aria-hidden="true" />
                   </button>
                 </div>
               )}
@@ -1638,13 +1661,13 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               aria-label={isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
             >
               {isAudioOutputMuted ? (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" />
                   <path d="M11 5L6 9H2v6h4l3 3V16" stroke="currentColor" strokeWidth="2" />
                   <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
                 </svg>
               ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                   <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="2"
                     fill="none" />
                   <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
@@ -1652,20 +1675,25 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 </svg>
               )}
             </button>
+            <label htmlFor="message-input" className="sr-only">
+              Type your message to RiseTwice AI
+            </label>
             <input
+              id="message-input"
               type="text"
               value={userMessage}
               onChange={(e) => handleInputChange(e.target.value)}
               placeholder="Type your message..."
               className="text-input"
+              aria-label="Type your message to RiseTwice AI"
             />
             <button
               type="submit"
               className="send-button-new"
               disabled={!userMessage.trim()}
-              aria-label="Send message"
+              aria-label="Send message to RiseTwice AI"
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M6 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
@@ -1677,8 +1705,11 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       {/* Enhanced Audio visualizer with real-time volume data */}
       {
         isConnected && (
-          <div className="visualization-container">
+          <div className="visualization-container" role="img" aria-label="AI voice visualization - shows when AI is speaking or thinking" aria-describedby="orb-description">
             <AudioOrbV15 isFunctionExecuting={isFunctionExecuting} />
+            <div id="orb-description" className="sr-only">
+              Audio visualization that pulses and animates when the AI is speaking or processing. Click to mute or unmute audio output.
+            </div>
           </div>
         )
       }
@@ -3754,6 +3785,6 @@ Time: ${new Date().toLocaleString()}`);
           handleLetsTalk();
         }}
       />
-    </div>
+    </main>
   );
 }
