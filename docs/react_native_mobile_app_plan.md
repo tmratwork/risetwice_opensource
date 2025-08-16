@@ -1,9 +1,12 @@
-docs/react_native_mobile_app_plan.md
+file: docs/react_native_mobile_app_plan.md
 
 # React Native Mobile App Plan for RiseTwice ChatbotV16
 
 ## Overview
 Create a React Native mobile application focused exclusively on the chatbotV16 functionality (`http://localhost:3000/chatbotV16`), excluding community and resources features to create a streamlined mobile experience.
+
+## Core Rule
+all react native mobile should happen inside the 'mobile' folder and not effect the nextjs web app in any way.
 
 ## Core Features to Include
 
