@@ -142,10 +142,17 @@ interface FormattedResults {
   requestId?: string;
 }
 
+// Type for handling both successful parsing and raw responses
+interface FormatResult {
+  resources: Resource[];
+  rawResponse?: string;
+  parseError?: boolean;
+}
+
 /**
  * Second Claude API call to format raw search results into clean JSON
  */
-async function formatSearchResultsWithClaude(rawContent: string, requestId: string, location?: string): Promise<Resource[]> {
+async function formatSearchResultsWithClaude(rawContent: string, requestId: string, location?: string): Promise<FormatResult> {
   console.log(`[RESOURCE-SEARCH-${requestId}] Making Claude formatting call...`);
 
   const anthropic = new Anthropic({
@@ -250,8 +257,12 @@ Return the structured data as clean JSON.`;
       parsedData = JSON.parse(cleanedContent);
     } catch (parseError) {
       console.error(`[RESOURCE-SEARCH-${requestId}] Failed to parse JSON: ${parseError}`);
-      // Return empty array if parsing fails
-      return [];
+      // Return raw response for AI to handle instead of empty array
+      return {
+        resources: [],
+        rawResponse: responseContent,
+        parseError: true
+      };
     }
 
     const resourceArray = parsedData.resources || [];
@@ -295,7 +306,7 @@ Return the structured data as clean JSON.`;
       });
     }
 
-    return validResources;
+    return { resources: validResources };
 
   } catch (error) {
     console.error(`[RESOURCE-SEARCH-${requestId}] ❌ Claude formatting failed: ${error}`);
@@ -305,8 +316,12 @@ Return the structured data as clean JSON.`;
       console.error(`[RESOURCE-SEARCH-${requestId}] Raw content that failed to parse:`, responseContent?.substring(0, 500));
     }
 
-    // Return empty array instead of throwing
-    return [];
+    // Return raw response for AI to handle instead of empty array
+    return {
+      resources: [],
+      rawResponse: responseContent,
+      parseError: true
+    };
   }
 }
 
@@ -445,13 +460,42 @@ export async function POST(request: NextRequest) {
       console.log(`[RESOURCE-SEARCH-${requestId}] Using formatting API to structure results`);
 
       // Make second Claude API call for formatting
-      const formattedResources = await formatSearchResultsWithClaude(rawSearchContent, requestId, body.location);
+      const formatResult = await formatSearchResultsWithClaude(rawSearchContent, requestId, body.location);
 
-      if (formattedResources && formattedResources.length > 0) {
+      // Check if parsing failed and we got a raw response for AI to handle
+      if (formatResult.parseError && formatResult.rawResponse) {
+        console.log(`[RESOURCE-SEARCH-${requestId}] Returning raw Claude response for AI to handle`);
+        
+        return NextResponse.json({
+          success: true,
+          results: {
+            summary: formatResult.rawResponse,
+            resources: [],
+            result_count: 0,
+            query_context: {
+              resource_type: body.resource_type || 'general',
+              location_specific: body.location_specific || false,
+              location: body.location || 'general',
+              mapView: body.mapView || false
+            },
+            raw_content: rawSearchContent,
+            citation_links: searchResults.citations || [],
+            formatted_response: formatResult.rawResponse,
+            requestId,
+            parseError: true,
+            aiShouldHandle: true
+          },
+          query: body.query,
+          resource_type: body.resource_type || 'general',
+          location: body.location || 'general',
+        });
+      }
+
+      if (formatResult.resources && formatResult.resources.length > 0) {
         const formattedResults = {
-          summary: `Found ${formattedResources.length} resources in ${body.location || 'the specified area'}`,
-          resources: formattedResources,
-          result_count: formattedResources.length,
+          summary: `Found ${formatResult.resources.length} resources in ${body.location || 'the specified area'}`,
+          resources: formatResult.resources,
+          result_count: formatResult.resources.length,
           query_context: {
             resource_type: body.resource_type || 'general',
             location_specific: body.location_specific || false,
@@ -461,8 +505,8 @@ export async function POST(request: NextRequest) {
           raw_content: rawSearchContent,
           citation_links: searchResults.citations || [],
           formatted_response: formatResponseForDisplay(
-            `Found ${formattedResources.length} resources in ${body.location || 'the specified area'}`,
-            formattedResources,
+            `Found ${formatResult.resources.length} resources in ${body.location || 'the specified area'}`,
+            formatResult.resources,
             searchResults.citations || []
           ),
           requestId
