@@ -11,12 +11,118 @@ import SmartSendDialog from './SmartSendDialog';
 import DisplayNameDialog from './DisplayNameDialog';
 import ContributorsModal from './ContributorsModal';
 import PhoneAuth from './PhoneAuth';
+import { createPortal } from 'react-dom';
 import { 
   SUPPORTED_LANGUAGES, 
   getStoredLanguagePreference, 
   setStoredLanguagePreference,
   getLanguageByCode 
 } from '@/lib/language-utils';
+
+interface DropdownPortalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  triggerRef: React.RefObject<HTMLButtonElement>;
+  children: React.ReactNode;
+}
+
+function DropdownPortal({ isOpen, onClose, triggerRef, children }: DropdownPortalProps) {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 8,
+        left: rect.right - 192,
+      });
+    }
+  }, [isOpen, triggerRef]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const isOutsideTrigger = triggerRef.current && !triggerRef.current.contains(target);
+      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(target);
+      
+      if (isOutsideTrigger && isOutsideDropdown) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen, onClose, triggerRef]);
+
+  if (!isOpen || typeof window === 'undefined') return null;
+
+  return createPortal(
+    <div 
+      ref={dropdownRef}
+      className="fixed w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-[9999]"
+      style={{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+      }}
+      role="menu"
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
+
+function LanguageDropdownPortal({ isOpen, onClose, triggerRef, children }: DropdownPortalProps) {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 4,
+        left: rect.right - 256,
+      });
+    }
+  }, [isOpen, triggerRef]);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+      const isOutsideTrigger = triggerRef.current && !triggerRef.current.contains(target);
+      const isOutsideDropdown = dropdownRef.current && !dropdownRef.current.contains(target);
+      
+      if (isOutsideTrigger && isOutsideDropdown) {
+        onClose();
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isOpen, onClose, triggerRef]);
+
+  if (!isOpen || typeof window === 'undefined') return null;
+
+  return createPortal(
+    <div 
+      ref={dropdownRef}
+      className="fixed w-64 bg-sage-100 dark:bg-gray-900 border border-sage-400 dark:border-gray-600 rounded-md shadow-lg z-[9999] max-h-64 overflow-y-auto"
+      style={{
+        top: `${position.top}px`,
+        left: `${position.left}px`,
+      }}
+      role="menu"
+    >
+      {children}
+    </div>,
+    document.body
+  );
+}
 
 // Simple theme toggle that doesn't rely on context
 // function HeaderThemeToggle() {
@@ -124,6 +230,8 @@ function AuthButtons() {
     const [showPhoneAuth, setShowPhoneAuth] = useState(false);
     const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState('en');
+    const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
+    const languageTriggerRef = useRef<HTMLButtonElement>(null);
     
     // Helper function to format phone number for display
     const formatPhoneNumber = (phoneNumber: string | null) => {
@@ -137,8 +245,6 @@ function AuthButtons() {
         return phoneNumber;
     };
 
-    // Create a ref for the dropdown container
-    const dropdownRef = useRef<HTMLDivElement>(null);
 
     // Initialize language preference on mount
     useEffect(() => {
@@ -238,180 +344,155 @@ function AuthButtons() {
         });
     };
 
-    // Handle click outside using ref approach
-    useEffect(() => {
-        function handleClickOutside(event: MouseEvent) {
-            // If dropdown is not shown or clicking inside the dropdown, do nothing
-            if (!showDropdown ||
-                (dropdownRef.current &&
-                    dropdownRef.current.contains(event.target as Node))) {
-                return;
-            }
-
-            // Otherwise, close the dropdown
-            setShowDropdown(false);
-        }
-
-        // Add the listener with a slight delay to avoid conflicting with current clicks
-        const timeoutId = setTimeout(() => {
-            document.addEventListener('mousedown', handleClickOutside);
-        }, 10);
-
-        return () => {
-            clearTimeout(timeoutId);
-            document.removeEventListener('mousedown', handleClickOutside);
-        };
-    }, [showDropdown]);
 
     if (user) {
         return (
             <>
-                <div className="relative" ref={dropdownRef}>
-                    <button
-                        id="settings-menu-button"
-                        onClick={() => setShowDropdown(!showDropdown)}
-                        className="flex items-center gap-1 bg-sage-300 dark:bg-white bg-opacity-10 dark:bg-opacity-10 rounded-full px-3 py-2 cursor-pointer transition-all hover:bg-opacity-20"
-                        aria-label="Settings menu"
-                        aria-expanded={showDropdown}
-                        aria-haspopup="true"
-                        type="button"
+                <button
+                    ref={dropdownTriggerRef}
+                    id="settings-menu-button"
+                    onClick={() => setShowDropdown(!showDropdown)}
+                    className="flex items-center gap-1 bg-sage-300 dark:bg-white bg-opacity-10 dark:bg-opacity-10 rounded-full px-3 py-2 cursor-pointer transition-all hover:bg-opacity-20"
+                    aria-label="Settings menu"
+                    aria-expanded={showDropdown}
+                    aria-haspopup="true"
+                    type="button"
+                >
+                    <Settings className="w-5 h-5 text-sage-500 dark:text-gray-200" aria-hidden="true" />
+                    <svg 
+                        className={`w-4 h-4 text-sage-500 dark:text-gray-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                        aria-hidden="true"
                     >
-                        <Settings className="w-5 h-5 text-sage-500 dark:text-gray-200" aria-hidden="true" />
-                        <svg 
-                            className={`w-4 h-4 text-sage-500 dark:text-gray-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
-                            fill="none" 
-                            stroke="currentColor" 
-                            viewBox="0 0 24 24"
-                            aria-hidden="true"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                </button>
 
-                    {showDropdown && (
-                        <div 
-                            className="absolute right-0 mt-2 w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-50"
-                            role="menu"
-                            aria-labelledby="settings-menu-button"
-                        >
-                            <div className="py-1" role="none">
-                                <div className="px-4 py-2 text-sm text-sage-600 dark:text-gray-300 border-b border-sage-300 dark:border-gray-600">
-                                    <div className="truncate" title={user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}>
-                                        {user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}
-                                    </div>
-                                </div>
-                                <button
-                                    onClick={toggleTheme}
-                                    className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
-                                    role="menuitem"
-                                >
-                                    {theme === 'dark' ? (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-2 text-yellow-300">
-                                                <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
-                                            </svg>
-                                            Light Mode
-                                        </>
-                                    ) : (
-                                        <>
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-2 text-blue-600">
-                                                <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clipRule="evenodd" />
-                                            </svg>
-                                            Dark Mode
-                                        </>
-                                    )}
-                                </button>
-                                <Link
-                                    href="/chatbotV16/memory"
-                                    onClick={() => setShowDropdown(false)}
-                                    className="block w-full"
-                                    role="menuitem"
-                                >
-                                    <span className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700">
-                                        <Fingerprint className="w-5 h-5 mr-2" />
-                                        Memory
-                                    </span>
-                                </Link>
-                                <button
-                                    onClick={handleDisplayNameClick}
-                                    className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
-                                    role="menuitem"
-                                >
-                                    <User className="w-5 h-5 mr-2" />
-                                    Display Name
-                                </button>
-                                <button
-                                    onClick={handleSmartSendClick}
-                                    className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
-                                    role="menuitem"
-                                >
-                                    <Send className="w-5 h-5 mr-2" />
-                                    Smart Sending
-                                </button>
-                                <button
-                                    onClick={handleContributorsClick}
-                                    className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
-                                    role="menuitem"
-                                >
-                                    <Trophy className="w-5 h-5 mr-2" />
-                                    Wall of Contributors
-                                </button>
-                                <div className="relative">
-                                    <button
-                                        onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
-                                        className="flex items-center justify-between w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
-                                        role="menuitem"
-                                        aria-haspopup="true"
-                                        aria-expanded={showLanguageDropdown}
-                                    >
-                                        <div className="flex items-center">
-                                            <Languages className="w-5 h-5 mr-2" />
-                                            {getLanguageByCode(selectedLanguage)?.nativeName || 'English'}
-                                        </div>
-                                        <svg 
-                                            className={`w-4 h-4 ml-2 transition-transform ${showLanguageDropdown ? 'rotate-180' : ''}`}
-                                            fill="none" 
-                                            stroke="currentColor" 
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
-                                    {showLanguageDropdown && (
-                                        <div className="absolute right-0 top-full w-64 bg-sage-100 dark:bg-gray-900 border border-sage-400 dark:border-gray-600 rounded-md shadow-lg z-[60] max-h-64 overflow-y-auto">
-                                            <div className="py-1">
-                                                {SUPPORTED_LANGUAGES.map((language) => (
-                                                    <button
-                                                        key={language.code}
-                                                        onClick={() => handleLanguageSelect(language.code)}
-                                                        className={`block w-full text-left px-4 py-2 text-sm ${
-                                                            language.code === selectedLanguage
-                                                                ? 'bg-blue-600 text-white'
-                                                                : 'text-sage-500 dark:text-gray-200 hover:bg-sage-200 dark:hover:bg-gray-800'
-                                                        }`}
-                                                    >
-                                                        <div className="flex items-center justify-between">
-                                                            <span className="font-medium">{language.nativeName}</span>
-                                                            <span className="text-xs opacity-75">{language.name}</span>
-                                                        </div>
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                                <button
-                                    onClick={handleSignOut}
-                                    className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
-                                    role="menuitem"
-                                >
-                                    <LogOut className="w-5 h-5 mr-2" />
-                                    Sign Out
-                                </button>
+                <DropdownPortal
+                    isOpen={showDropdown}
+                    onClose={() => setShowDropdown(false)}
+                    triggerRef={dropdownTriggerRef}
+                >
+                    <div className="py-1" role="none">
+                        <div className="px-4 py-2 text-sm text-sage-600 dark:text-gray-300 border-b border-sage-300 dark:border-gray-600">
+                            <div className="truncate" title={user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}>
+                                {user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}
                             </div>
                         </div>
-                    )}
-                </div>
+                        <button
+                            onClick={toggleTheme}
+                            className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                            role="menuitem"
+                        >
+                            {theme === 'dark' ? (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-2 text-yellow-300">
+                                        <path d="M12 2.25a.75.75 0 01.75.75v2.25a.75.75 0 01-1.5 0V3a.75.75 0 01.75-.75zM7.5 12a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM18.894 6.166a.75.75 0 00-1.06-1.06l-1.591 1.59a.75.75 0 101.06 1.061l1.591-1.59zM21.75 12a.75.75 0 01-.75.75h-2.25a.75.75 0 010-1.5H21a.75.75 0 01.75.75zM17.834 18.894a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 10-1.061 1.06l1.59 1.591zM12 18a.75.75 0 01.75.75V21a.75.75 0 01-1.5 0v-2.25A.75.75 0 0112 18zM7.758 17.303a.75.75 0 00-1.061-1.06l-1.591 1.59a.75.75 0 001.06 1.061l1.591-1.59zM6 12a.75.75 0 01-.75.75H3a.75.75 0 010-1.5h2.25A.75.75 0 016 12zM6.697 7.757a.75.75 0 001.06-1.06l-1.59-1.591a.75.75 0 00-1.061 1.06l1.59 1.591z" />
+                                    </svg>
+                                    Light Mode
+                                </>
+                            ) : (
+                                <>
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 mr-2 text-blue-600">
+                                        <path fillRule="evenodd" d="M9.528 1.718a.75.75 0 01.162.819A8.97 8.97 0 009 6a9 9 0 009 9 8.97 8.97 0 003.463-.69.75.75 0 01.981.98 10.503 10.503 0 01-9.694 6.46c-5.799 0-10.5-4.701-10.5-10.5 0-4.368 2.667-8.112 6.46-9.694a.75.75 0 01.818.162z" clipRule="evenodd" />
+                                    </svg>
+                                    Dark Mode
+                                </>
+                            )}
+                        </button>
+                        <Link
+                            href="/chatbotV16/memory"
+                            onClick={() => setShowDropdown(false)}
+                            className="block w-full"
+                            role="menuitem"
+                        >
+                            <span className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700">
+                                <Fingerprint className="w-5 h-5 mr-2" />
+                                Memory
+                            </span>
+                        </Link>
+                        <button
+                            onClick={handleDisplayNameClick}
+                            className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                            role="menuitem"
+                        >
+                            <User className="w-5 h-5 mr-2" />
+                            Display Name
+                        </button>
+                        <button
+                            onClick={handleSmartSendClick}
+                            className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                            role="menuitem"
+                        >
+                            <Send className="w-5 h-5 mr-2" />
+                            Smart Sending
+                        </button>
+                        <button
+                            onClick={handleContributorsClick}
+                            className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                            role="menuitem"
+                        >
+                            <Trophy className="w-5 h-5 mr-2" />
+                            Wall of Contributors
+                        </button>
+                        <button
+                            ref={languageTriggerRef}
+                            onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
+                            className="flex items-center justify-between w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                            role="menuitem"
+                            aria-haspopup="true"
+                            aria-expanded={showLanguageDropdown}
+                        >
+                            <div className="flex items-center">
+                                <Languages className="w-5 h-5 mr-2" />
+                                {getLanguageByCode(selectedLanguage)?.nativeName || 'English'}
+                            </div>
+                            <svg 
+                                className={`w-4 h-4 ml-2 transition-transform ${showLanguageDropdown ? 'rotate-180' : ''}`}
+                                fill="none" 
+                                stroke="currentColor" 
+                                viewBox="0 0 24 24"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <button
+                            onClick={handleSignOut}
+                            className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                            role="menuitem"
+                        >
+                            <LogOut className="w-5 h-5 mr-2" />
+                            Sign Out
+                        </button>
+                    </div>
+                </DropdownPortal>
+
+                <LanguageDropdownPortal
+                    isOpen={showLanguageDropdown}
+                    onClose={() => setShowLanguageDropdown(false)}
+                    triggerRef={languageTriggerRef}
+                >
+                    <div className="py-1">
+                        {SUPPORTED_LANGUAGES.map((language) => (
+                            <button
+                                key={language.code}
+                                onClick={() => handleLanguageSelect(language.code)}
+                                className={`block w-full text-left px-4 py-2 text-sm ${
+                                    language.code === selectedLanguage
+                                        ? 'bg-blue-600 text-white'
+                                        : 'text-sage-500 dark:text-gray-200 hover:bg-sage-200 dark:hover:bg-gray-800'
+                                }`}
+                            >
+                                <div className="flex items-center justify-between">
+                                    <span className="font-medium">{language.nativeName}</span>
+                                    <span className="text-xs opacity-75">{language.name}</span>
+                                </div>
+                            </button>
+                        ))}
+                    </div>
+                </LanguageDropdownPortal>
 
                 {/* Smart Send Dialog */}
                 <SmartSendDialog
@@ -578,7 +659,7 @@ function BookSelector() {
             </button>
 
             {showDropdown && (
-                <div className="absolute top-full right-0 mt-2 w-64 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-50">
+                <div className="absolute top-full right-0 mt-2 w-64 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-[9999]">
                     <div className="py-1">
                         {books.map((book: Book) => (
                             <button

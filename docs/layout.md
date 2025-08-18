@@ -300,6 +300,112 @@ This layout fix had zero performance cost:
 
 The fix actually **improves performance** by eliminating the need for hardcoded heights that don't work responsively.
 
+## Dropdown Z-Index Stacking Context Solution (2025-01-18)
+
+### The Crisis
+Settings dropdown menu appeared behind page content despite high z-index values (z-9999). Traditional z-index increases failed completely.
+
+### Root Cause: CSS Stacking Context Isolation
+The problem wasn't z-index values—it was **stacking context isolation**:
+
+```css
+/* These CSS properties create new stacking contexts */
+.v16-layout-root {
+  display: grid;           /* Grid container creates stacking context */
+  overflow: hidden;        /* Can create stacking context */
+}
+
+.header-row {
+  z-index: 50;            /* Creates isolated stacking context */
+}
+
+.main-content-row {
+  overflow-y: auto;       /* Creates stacking context */
+  position: relative;     /* With z-index creates stacking context */
+}
+```
+
+**Key Insight:** Dropdowns inside header could only compete within header's stacking context, not globally with page elements.
+
+### Failed Approaches
+1. **Higher z-index values** (`z-[9999]`) - Still trapped in header's context
+2. **CSS stacking fixes** - Complex and brittle across different layout states
+3. **Header z-index increase** - Elevated header context but didn't solve nested issues
+
+### The Correct Solution: React Portals
+
+**Problem:** Dropdowns render inside header → trapped in header's stacking context  
+**Solution:** Portals render dropdowns at `document.body` → escape all stacking contexts
+
+```tsx
+// Portal component renders dropdown at body level
+function DropdownPortal({ isOpen, onClose, triggerRef, children }: DropdownPortalProps) {
+  const [position, setPosition] = useState({ top: 0, left: 0 });
+
+  useEffect(() => {
+    if (isOpen && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      setPosition({
+        top: rect.bottom + 8,
+        left: rect.right - 192,
+      });
+    }
+  }, [isOpen, triggerRef]);
+
+  if (!isOpen || typeof window === 'undefined') return null;
+
+  return createPortal(
+    <div 
+      className="fixed w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-[9999]"
+      style={{ top: `${position.top}px`, left: `${position.left}px` }}
+      role="menu"
+    >
+      {children}
+    </div>,
+    document.body  // ← Renders outside header's stacking context
+  );
+}
+
+// Usage in header
+<DropdownPortal
+  isOpen={showDropdown}
+  onClose={() => setShowDropdown(false)}
+  triggerRef={dropdownTriggerRef}
+>
+  {/* Menu items */}
+</DropdownPortal>
+```
+
+### Key Benefits
+1. **Escapes stacking context** - Renders at body level, bypasses all CSS Grid/flex isolation
+2. **Dynamic positioning** - Calculates position relative to trigger button using `getBoundingClientRect()`
+3. **Global z-index** - Competes at document level, not within isolated contexts
+4. **Click handling** - Portal manages outside clicks and positioning automatically
+
+### Properties That Create Stacking Contexts
+Watch out for these CSS properties that isolate z-index values:
+- `transform`, `filter`, `opacity < 1`
+- `position: fixed/absolute/sticky` with z-index
+- `overflow: hidden/scroll/auto` (in some contexts)
+- CSS Grid/Flexbox items with z-index
+- `isolation: isolate`, `will-change`, `contain`
+
+### Testing Checklist for Dropdown Issues
+- [ ] Test dropdown appears above all page content
+- [ ] Verify positioning stays correct on scroll/resize
+- [ ] Check click outside closes dropdown
+- [ ] Ensure keyboard navigation works (ESC key)
+- [ ] Test on different screen sizes
+- [ ] Verify nested dropdowns work correctly
+
+### Lessons Learned
+1. **Portals solve stacking context issues definitively** - Modern component libraries (Radix UI, Headless UI) use this approach
+2. **Z-index is contextual, not global** - High values don't help if trapped in wrong context
+3. **Dynamic positioning is reliable** - `getBoundingClientRect()` handles all layout scenarios
+4. **CSS-only solutions are fragile** - Layout changes can break stacking context fixes
+
+**Rule:** For dropdowns, modals, tooltips that must appear above everything, use React Portals to render at `document.body` level.
+
 ## Auto-Scroll to Latest Messages Fix
 
 ### Problem
