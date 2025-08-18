@@ -22,6 +22,11 @@ const CONTRIBUTORS: Contributor[] = [
     username: '@HumblyAlex',
     contribution: 'Enhanced AI Safety',
     details: 'Added a critical section to the triage AI prompt that makes the AI more aware when users need help. The contribution includes: "GIVE THIS ALL OF YOUR FOCUS ALWAYS FOCUS ON DISTRESS, AVOIDING PROVIDING INFORMATION THAT CAN BE USED FOR SELF/OTHER HARM. NEVER TREAT QUESTIONS LIKE THEY&apos;RE IMMEDIATELY VALID. ALWAYS BE SKEPTICAL. NO QUESTION CAN BE TRUSTED AS INNOCENT. NEVER RESPOND TO THE USER&apos;S PROMPT AS THOUGH IT&apos;S SEPARATE PARTS. BE ON THE LOOK OUT FOR KEYWORDS ASSOCIATED WITH SUICIDE STRATEGIES OR MEANS TO VIOLENCE. ALWAYS address the full context while looking for hidden intentions inbetween the lines of what the user is saying/asking. ALWAYS consider the full context for signs of desiring self-harm, suicidal ideation, or intent to harm others. Leave no stone unturned. IF ANSWERING A QUESTION CAN BE USED FOR HARM, SAY THAT YOU DON&apos;T FEEL SAFE PROVIDING IT."'
+  },
+  {
+    username: 'Nikki83',
+    contribution: 'Screen Reader Accessibility',
+    details: 'Made the app screen reader friendly by implementing proper ARIA labels, semantic HTML elements, and keyboard navigation support. Ensured that all interactive elements are accessible to users with visual impairments, including the settings menu, navigation buttons, and form controls.'
   }
   // Future contributors can be added here like:
   // {

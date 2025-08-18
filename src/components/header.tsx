@@ -267,24 +267,34 @@ function AuthButtons() {
         return (
             <>
                 <div className="relative" ref={dropdownRef}>
-                    <div
+                    <button
+                        id="settings-menu-button"
                         onClick={() => setShowDropdown(!showDropdown)}
                         className="flex items-center gap-1 bg-sage-300 dark:bg-white bg-opacity-10 dark:bg-opacity-10 rounded-full px-3 py-2 cursor-pointer transition-all hover:bg-opacity-20"
+                        aria-label="Settings menu"
+                        aria-expanded={showDropdown}
+                        aria-haspopup="true"
+                        type="button"
                     >
-                        <Settings className="w-5 h-5 text-sage-500 dark:text-gray-200" />
+                        <Settings className="w-5 h-5 text-sage-500 dark:text-gray-200" aria-hidden="true" />
                         <svg 
                             className={`w-4 h-4 text-sage-500 dark:text-gray-200 transition-transform ${showDropdown ? 'rotate-180' : ''}`}
                             fill="none" 
                             stroke="currentColor" 
                             viewBox="0 0 24 24"
+                            aria-hidden="true"
                         >
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
-                    </div>
+                    </button>
 
                     {showDropdown && (
-                        <div className="absolute right-0 mt-2 w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-50">
-                            <div className="py-1">
+                        <div 
+                            className="absolute right-0 mt-2 w-48 bg-sage-200 dark:bg-gray-800 border border-sage-400 dark:border-gray-700 rounded-md shadow-lg z-50"
+                            role="menu"
+                            aria-labelledby="settings-menu-button"
+                        >
+                            <div className="py-1" role="none">
                                 <div className="px-4 py-2 text-sm text-sage-600 dark:text-gray-300 border-b border-sage-300 dark:border-gray-600">
                                     <div className="truncate" title={user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}>
                                         {user.email || formatPhoneNumber(user.phoneNumber) || user.phoneNumber || 'User'}
@@ -293,6 +303,7 @@ function AuthButtons() {
                                 <button
                                     onClick={toggleTheme}
                                     className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                                    role="menuitem"
                                 >
                                     {theme === 'dark' ? (
                                         <>
@@ -314,6 +325,7 @@ function AuthButtons() {
                                     href="/chatbotV16/memory"
                                     onClick={() => setShowDropdown(false)}
                                     className="block w-full"
+                                    role="menuitem"
                                 >
                                     <span className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700">
                                         <Fingerprint className="w-5 h-5 mr-2" />
@@ -323,6 +335,7 @@ function AuthButtons() {
                                 <button
                                     onClick={handleDisplayNameClick}
                                     className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                                    role="menuitem"
                                 >
                                     <User className="w-5 h-5 mr-2" />
                                     Display Name
@@ -330,6 +343,7 @@ function AuthButtons() {
                                 <button
                                     onClick={handleSmartSendClick}
                                     className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                                    role="menuitem"
                                 >
                                     <Send className="w-5 h-5 mr-2" />
                                     Smart Sending
@@ -337,6 +351,7 @@ function AuthButtons() {
                                 <button
                                     onClick={handleContributorsClick}
                                     className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                                    role="menuitem"
                                 >
                                     <Trophy className="w-5 h-5 mr-2" />
                                     Wall of Contributors
@@ -345,6 +360,9 @@ function AuthButtons() {
                                     <button
                                         onClick={() => setShowLanguageDropdown(!showLanguageDropdown)}
                                         className="flex items-center justify-between w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                                        role="menuitem"
+                                        aria-haspopup="true"
+                                        aria-expanded={showLanguageDropdown}
                                     >
                                         <div className="flex items-center">
                                             <Languages className="w-5 h-5 mr-2" />
@@ -385,6 +403,7 @@ function AuthButtons() {
                                 <button
                                     onClick={handleSignOut}
                                     className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                                    role="menuitem"
                                 >
                                     <LogOut className="w-5 h-5 mr-2" />
                                     Sign Out

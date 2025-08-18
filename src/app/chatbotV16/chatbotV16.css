@@ -345,6 +345,41 @@ html.dark body {
   display: none;
 }
 
+/* Mobile-specific fixes for bottom navigation visibility */
+@media (max-width: 768px) {
+  /* Ensure footer is always visible on mobile */
+  .v16-layout-root {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+  
+  /* Ensure footer row sticks to bottom on mobile */
+  .footer-row {
+    position: sticky;
+    bottom: 0;
+    background-color: white;
+    background-color: var(--bg-primary);
+    z-index: 100; /* Higher z-index to ensure it's always on top */
+  }
+  
+  /* Adjust main content to account for fixed positioning */
+  .main-content-row {
+    height: 100%;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  }
+  
+  /* Dark mode support for footer */
+  .dark .footer-row {
+    background-color: #131314;
+  }
+}
+
 /* Spinner animation */
 .spinner {
   display: inline-block;
