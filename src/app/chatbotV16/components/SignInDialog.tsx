@@ -107,7 +107,7 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
     >
       <div 
         ref={dialogRef}
-        className="bg-white dark:bg-[#1a1a1b] border border-gray-200 dark:border-gray-700 rounded-lg max-w-lg w-full"
+        className="bg-white dark:bg-[#1a1a1b] border border-gray-200 dark:border-gray-700 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
         onClick={(e) => e.stopPropagation()}
         tabIndex={-1}
       >
