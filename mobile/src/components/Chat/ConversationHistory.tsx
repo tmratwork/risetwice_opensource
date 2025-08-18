@@ -64,8 +64,10 @@ export default function ConversationHistory() {
           addMessage({
             id: `history-${index}-${msg.timestamp}`,
             role: msg.role,
+            text: msg.content || msg.text || '',
             content: msg.content,
-            timestamp: msg.timestamp,
+            timestamp: msg.timestamp?.toString() || Date.now().toString(),
+            isFinal: true,
             isHistorical: true,
           });
         });

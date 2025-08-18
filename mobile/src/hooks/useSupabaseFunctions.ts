@@ -13,7 +13,7 @@ import { supabase } from '../config/supabase';
 console.log('useSupabaseFunctions: supabase client loaded:', !!supabase);
 console.log('useSupabaseFunctions: supabase type:', typeof supabase);
 if (supabase) {
-  console.log('useSupabaseFunctions: supabase.supabaseUrl:', supabase.supabaseUrl);
+  console.log('useSupabaseFunctions: supabase client initialized');
 }
 
 export interface SupabaseFunctionDefinition {

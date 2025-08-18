@@ -1,4 +1,5 @@
 import { EventEmitter } from 'events';
+import { webRTCProxyService } from '../webrtc-proxy';
 
 export interface WebRTCConfig {
   apiKey: string;
@@ -37,7 +38,20 @@ export class WebRTCService extends EventEmitter {
     this.config = config;
     
     try {
-      // Connect through backend proxy instead of direct OpenAI connection
+      // First setup the proxy with our configuration
+      await webRTCProxyService.setupProxy({
+        apiKey: config.apiKey,
+        session: {
+          modalities: ['text', 'audio'],
+          instructions: config.instructions,
+          voice: config.voice,
+          input_audio_format: 'pcm16',
+          output_audio_format: 'pcm16',
+          tools: config.functions || [],
+        }
+      });
+
+      // Then connect through backend proxy WebSocket
       await this.connectThroughProxy(config);
 
       this.isConnected = true;

@@ -11,10 +11,13 @@ export interface ConversationMessage {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  content?: string; // Support both text and content for compatibility
   timestamp: string;
   isFinal: boolean;
   status?: 'speaking' | 'processing' | 'final' | 'thinking';
   specialist?: string;
+  isHistorical?: boolean; // For conversation history
+  isSaved?: boolean; // For saving state tracking
 }
 
 export interface TriageSession {

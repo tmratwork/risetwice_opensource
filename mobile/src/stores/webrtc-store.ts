@@ -67,8 +67,8 @@ const initialState: WebRTCStoreState & { pendingHandoff: any; currentConversatio
 // WebRTC service instance
 let webrtcService: WebRTCService | null = null;
 
-export const useWebRTCStore = create<WebRTCStoreState & WebRTCStoreActions & { pendingHandoff: any; currentConversationId: string | null }>(
-  persist(
+export const useWebRTCStore = create(
+  persist<WebRTCStoreState & WebRTCStoreActions & { pendingHandoff: any; currentConversationId: string | null }>(
     (set, get) => ({
       ...initialState,
       
@@ -215,8 +215,10 @@ export const useWebRTCStore = create<WebRTCStoreState & WebRTCStoreActions & { p
             get().addMessage({
               id: `greeting-${Date.now()}`,
               role: 'assistant',
+              text: data.greeting || '',
               content: data.greeting,
-              timestamp: Date.now(),
+              timestamp: Date.now().toString(),
+              isFinal: true,
             });
           }
         } catch (error) {
@@ -317,12 +319,14 @@ export const useWebRTCStore = create<WebRTCStoreState & WebRTCStoreActions & { p
           await AsyncStorage.removeItem(name);
         },
       },
-      partialize: (state) => ({
-        // Only persist conversation and session data
-        conversation: state.conversation,
-        triageSession: state.triageSession,
-        currentConversationId: state.currentConversationId,
-      }),
+      // Simplified - persist all state for now
+      // partialize: (state) => {
+      //   return {
+      //     conversation: state.conversation,
+      //     triageSession: state.triageSession,
+      //     currentConversationId: state.currentConversationId,
+      //   };
+      // },
     }
   )
 );

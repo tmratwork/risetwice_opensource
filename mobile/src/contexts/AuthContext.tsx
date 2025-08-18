@@ -14,7 +14,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   signInWithGoogle: () => Promise<void>;
   signInWithApple: () => Promise<void>;
-  signInWithPhone: (phoneNumber: string) => Promise<void>;
+  signInWithPhone: (phoneNumber: string) => Promise<any>;
   continueWithoutAuth: () => void;
 }
 
@@ -86,7 +86,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const userInfo = await GoogleSignin.signIn();
       
       // Create a Google credential with the token
-      const googleCredential = auth.GoogleAuthProvider.credential(userInfo.data?.idToken);
+      const googleCredential = auth.GoogleAuthProvider.credential(userInfo.data?.idToken || null);
       
       // Sign-in the user with the credential
       await auth().signInWithCredential(googleCredential);
