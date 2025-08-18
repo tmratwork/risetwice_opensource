@@ -2,6 +2,8 @@
 
   To view all prompts, visit https://www.r2ai.me/prompts
 
+  To view the knowledge base, visit https://docs.google.com/document/d/1ePTSwXbmYZqsGhVQCWGcqJ7h26R-s-_9cfl7H1cE4R8/edit?usp=sharing
+
   An AI-powered mental health support platform designed specifically for at-risk youth. 
   Specialized conversational AI that combines therapeutic content, crisis intervention, resource
   location, and future planning support through an innovative voice-first interface.
