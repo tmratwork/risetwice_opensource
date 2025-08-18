@@ -22,7 +22,7 @@ import {
 interface DropdownPortalProps {
   isOpen: boolean;
   onClose: () => void;
-  triggerRef: React.RefObject<HTMLButtonElement>;
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
   children: React.ReactNode;
 }
 
