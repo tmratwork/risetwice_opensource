@@ -2,34 +2,22 @@ import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Text } from 'react-native';
 
-// Screen imports - will be created later
-import ChatScreen from '../../screens/ChatScreen';
+// Screen imports - simplified for mental health focus
 import MentalHealthScreen from '../../screens/MentalHealthScreen';
-import FuturePathwaysScreen from '../../screens/FuturePathwaysScreen';
-import SleepScreen from '../../screens/SleepScreen';
-import MemoryScreen from '../../screens/MemoryScreen';
+import AdminScreen from '../../screens/AdminScreen';
 
 const Tab = createBottomTabNavigator();
 
 // Simple icon component using emoji
 const TabIcon = ({ route, color, size }: { route: any; color: string; size: number }) => {
-  let emoji = '💬';
+  let emoji = '🧠';
   
   switch (route.name) {
-    case 'Chat':
-      emoji = '💬';
-      break;
     case 'MentalHealth':
       emoji = '🧠';
       break;
-    case 'FuturePathways':
-      emoji = '🚀';
-      break;
-    case 'Sleep':
-      emoji = '😴';
-      break;
-    case 'Memory':
-      emoji = '💭';
+    case 'Admin':
+      emoji = '⚙️';
       break;
   }
 
@@ -51,29 +39,14 @@ export default function TabNavigator() {
       })}
     >
       <Tab.Screen 
-        name="Chat" 
-        component={ChatScreen}
-        options={{ title: 'Chat' }}
-      />
-      <Tab.Screen 
         name="MentalHealth" 
         component={MentalHealthScreen}
         options={{ title: 'Mental Health' }}
       />
       <Tab.Screen 
-        name="FuturePathways" 
-        component={FuturePathwaysScreen}
-        options={{ title: 'Pathways' }}
-      />
-      <Tab.Screen 
-        name="Sleep" 
-        component={SleepScreen}
-        options={{ title: 'Sleep' }}
-      />
-      <Tab.Screen 
-        name="Memory" 
-        component={MemoryScreen}
-        options={{ title: 'Memory' }}
+        name="Admin" 
+        component={AdminScreen}
+        options={{ title: 'Settings' }}
       />
     </Tab.Navigator>
   );

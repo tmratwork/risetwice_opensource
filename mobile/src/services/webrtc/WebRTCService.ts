@@ -8,16 +8,24 @@ export interface WebRTCConfig {
   functions?: any[];
 }
 
-// Simplified WebRTC Service for mobile compatibility
-// This is a basic implementation that can be extended with actual WebRTC functionality
+export interface AudioData {
+  audio: string; // base64 encoded audio
+  type: 'input_audio_buffer.append' | 'input_audio_buffer.commit';
+}
+
+// Enhanced WebRTC Service with authentication proxy support
 export class WebRTCService extends EventEmitter {
   private websocket: WebSocket | null = null;
   private isConnected = false;
   private isConnecting = false;
   private connectionState: string = 'disconnected';
+  private config: WebRTCConfig | null = null;
+  private proxyEndpoint: string;
 
-  constructor() {
+  constructor(proxyEndpoint?: string) {
     super();
+    // Use backend proxy to handle OpenAI authentication
+    this.proxyEndpoint = proxyEndpoint || 'ws://localhost:3000/api/v16/webrtc-proxy';
   }
 
   async connect(config: WebRTCConfig): Promise<void> {
@@ -26,11 +34,11 @@ export class WebRTCService extends EventEmitter {
     }
 
     this.isConnecting = true;
+    this.config = config;
     
     try {
-      // For now, we'll focus on WebSocket connection to OpenAI
-      // WebRTC peer connection can be added later with proper mobile setup
-      await this.connectWebSocket(config);
+      // Connect through backend proxy instead of direct OpenAI connection
+      await this.connectThroughProxy(config);
 
       this.isConnected = true;
       this.isConnecting = false;
@@ -44,27 +52,21 @@ export class WebRTCService extends EventEmitter {
     }
   }
 
-  private async connectWebSocket(config: WebRTCConfig): Promise<void> {
+  private async connectThroughProxy(config: WebRTCConfig): Promise<void> {
     return new Promise((resolve, reject) => {
-      // IMPORTANT: React Native WebSocket limitations
-      // - Cannot send headers (like Authorization) in constructor
-      // - For production, you should:
-      //   1. Use a backend proxy to handle OpenAI authentication
-      //   2. Or implement token-based auth through WebSocket messages
-      //   3. Or use a different WebSocket library that supports headers
-      
-      const wsUrl = 'wss://api.openai.com/v1/realtime?model=' + config.model;
-      
       try {
-        this.websocket = new WebSocket(wsUrl);
+        // Connect to backend proxy WebSocket endpoint
+        // The backend will handle OpenAI authentication
+        this.websocket = new WebSocket(this.proxyEndpoint);
 
         this.websocket.onopen = () => {
-          // Send authentication and session config
-          this.sendAuthAndSessionConfig(config);
+          // Send session configuration through proxy
+          this.sendSessionConfig(config);
           resolve();
         };
 
-        this.websocket.onerror = () => {
+        this.websocket.onerror = (error) => {
+          console.error('[webrtc_service] WebSocket connection error:', error);
           reject(new Error('WebSocket connection failed'));
         };
 
@@ -72,24 +74,31 @@ export class WebRTCService extends EventEmitter {
           this.handleWebSocketMessage(event.data);
         };
 
-        this.websocket.onclose = () => {
+        this.websocket.onclose = (event) => {
+          console.log('[webrtc_service] WebSocket connection closed:', event.code, event.reason);
           this.isConnected = false;
           this.connectionState = 'disconnected';
           this.emit('disconnected');
         };
       } catch (error) {
+        console.error('[webrtc_service] WebSocket connection setup error:', error);
         reject(error);
       }
     });
   }
 
-  private sendAuthAndSessionConfig(config: WebRTCConfig): void {
-    if (!this.websocket) return;
+  private sendSessionConfig(config: WebRTCConfig): void {
+    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      console.error('[webrtc_service] Cannot send session config - WebSocket not open');
+      return;
+    }
 
-    // For React Native, we'll need to handle authentication differently
-    // This is a simplified implementation - in production you'd need proper auth flow
+    console.log('[webrtc_service] Sending session configuration');
+
+    // Send authentication and session configuration through proxy
     this.websocket.send(JSON.stringify({
       type: 'session.update',
+      apiKey: config.apiKey, // Proxy will use this for OpenAI auth
       session: {
         modalities: ['text', 'audio'],
         instructions: config.instructions,
@@ -106,8 +115,6 @@ export class WebRTCService extends EventEmitter {
           silence_duration_ms: 200,
         },
         tools: config.functions || [],
-        // Note: API key would need to be handled through a different auth mechanism
-        // in a real React Native app (e.g., through a backend proxy)
       },
     }));
   }
@@ -115,11 +122,24 @@ export class WebRTCService extends EventEmitter {
   private handleWebSocketMessage(data: string): void {
     try {
       const message = JSON.parse(data);
+      
+      // Log important messages for debugging
+      if (message.type === 'error') {
+        console.error('[webrtc_service] Error from server:', message.error);
+      } else if (message.type === 'response.done') {
+        console.log('[webrtc_service] Response completed');
+      } else if (message.type === 'session.updated') {
+        console.log('[webrtc_service] Session updated successfully');
+      }
+
       this.emit('message', message);
 
       switch (message.type) {
         case 'response.audio.delta':
           this.emit('audioData', message.delta);
+          break;
+        case 'response.audio_transcript.delta':
+          this.emit('audioTranscript', message.delta);
           break;
         case 'conversation.item.input_audio_transcription.completed':
           this.emit('transcription', message.transcript);
@@ -130,69 +150,129 @@ export class WebRTCService extends EventEmitter {
         case 'response.function_call_arguments.delta':
           this.emit('functionCall', message);
           break;
+        case 'response.function_call_arguments.done':
+          this.emit('functionCallComplete', message);
+          break;
+        case 'input_audio_buffer.speech_started':
+          this.emit('speechStarted');
+          break;
+        case 'input_audio_buffer.speech_stopped':  
+          this.emit('speechStopped');
+          break;
+        case 'response.audio.done':
+          this.emit('audioComplete');
+          break;
+        case 'response.done':
+          this.emit('responseComplete');
+          break;
         case 'error':
-          this.emit('error', new Error(message.error.message));
+          this.emit('error', new Error(message.error?.message || 'Unknown error'));
           break;
       }
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error);
+      console.error('[webrtc_service] Error parsing WebSocket message:', error);
+      this.emit('error', new Error('Failed to parse server message'));
     }
   }
 
   public sendAudio(audioData: ArrayBuffer): void {
     if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      console.warn('[webrtc_service] Cannot send audio - WebSocket not open');
+      return;
+    }
+
+    try {
+      this.websocket.send(JSON.stringify({
+        type: 'input_audio_buffer.append',
+        audio: this.arrayBufferToBase64(audioData),
+      }));
+    } catch (error) {
+      console.error('[webrtc_service] Error sending audio data:', error);
+      this.emit('error', new Error('Failed to send audio data'));
+    }
+  }
+
+  public commitAudioBuffer(): void {
+    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      console.warn('[webrtc_service] Cannot commit audio buffer - WebSocket not open');
       return;
     }
 
     this.websocket.send(JSON.stringify({
-      type: 'input_audio_buffer.append',
-      audio: this.arrayBufferToBase64(audioData),
+      type: 'input_audio_buffer.commit',
     }));
   }
 
   public sendText(text: string): void {
     if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      console.warn('[webrtc_service] Cannot send text - WebSocket not open');
+      return;
+    }
+
+    console.log('[webrtc_service] Sending text message:', text);
+
+    try {
+      // Create conversation item
+      this.websocket.send(JSON.stringify({
+        type: 'conversation.item.create',
+        item: {
+          type: 'message',
+          role: 'user',
+          content: [{ type: 'input_text', text }],
+        },
+      }));
+
+      // Generate response
+      this.websocket.send(JSON.stringify({
+        type: 'response.create',
+      }));
+    } catch (error) {
+      console.error('[webrtc_service] Error sending text:', error);
+      this.emit('error', new Error('Failed to send text message'));
+    }
+  }
+
+  public cancelResponse(): void {
+    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
       return;
     }
 
     this.websocket.send(JSON.stringify({
-      type: 'conversation.item.create',
-      item: {
-        type: 'message',
-        role: 'user',
-        content: [{ type: 'input_text', text }],
-      },
-    }));
-
-    this.websocket.send(JSON.stringify({
-      type: 'response.create',
+      type: 'response.cancel',
     }));
   }
 
   public setMuted(muted: boolean): void {
-    // Mock implementation - in a real app this would control microphone
-    console.log('Mute state changed:', muted);
+    console.log('[webrtc_service] Mute state changed:', muted);
     this.emit('muteChanged', muted);
   }
 
   public disconnect(): void {
+    console.log('[webrtc_service] Disconnecting...');
+    
     if (this.websocket) {
-      this.websocket.close();
+      this.websocket.close(1000, 'Client disconnect');
       this.websocket = null;
     }
 
     this.isConnected = false;
     this.connectionState = 'disconnected';
+    this.config = null;
     this.emit('disconnected');
   }
 
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
+    try {
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    } catch (error) {
+      console.error('[webrtc_service] Error converting audio to base64:', error);
+      throw new Error('Failed to encode audio data');
     }
-    return btoa(binary);
   }
 
   public getConnectionState(): string {
@@ -200,17 +280,49 @@ export class WebRTCService extends EventEmitter {
   }
 
   public isConnectionOpen(): boolean {
-    return this.isConnected;
+    return this.isConnected && this.websocket?.readyState === WebSocket.OPEN;
   }
 
-  // Mock methods for audio stream simulation
+  // Audio stream simulation methods for development
   public startLocalAudioStream(): void {
-    // Simulate local audio stream
+    console.log('[webrtc_service] Starting local audio stream simulation');
     this.emit('localStream', { id: 'mock-local-stream' });
   }
 
   public getLocalAudioLevel(): number {
-    // Mock audio level between 0-1
+    // Mock audio level between 0-1 for visualization
     return Math.random() * 0.5;
   }
+
+  // Function calling support
+  public executeFunctionCall(name: string, args: string): void {
+    if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    this.websocket.send(JSON.stringify({
+      type: 'conversation.item.create',
+      item: {
+        type: 'function_call_output',
+        call_id: Date.now().toString(),
+        output: args,
+      },
+    }));
+  }
+
+  // Reconnection support
+  public async reconnect(): Promise<void> {
+    if (this.config) {
+      console.log('[webrtc_service] Attempting to reconnect...');
+      this.disconnect();
+      
+      // Wait before reconnecting
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      return this.connect(this.config);
+    }
+    throw new Error('No configuration available for reconnection');
+  }
 }
+
+export default WebRTCService;

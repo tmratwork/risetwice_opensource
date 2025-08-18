@@ -13,7 +13,7 @@ import { useWebRTCStore } from '../stores/webrtc-store';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function AdminScreen() {
-  const { user } = useAuth();
+  const { user, signOut, signInWithGoogle } = useAuth();
   const { 
     isConnected, 
     connectionState, 
@@ -58,6 +58,24 @@ export default function AdminScreen() {
   const handleExportLogs = () => {
     // Implementation would export debug logs
     Alert.alert('Export Logs', 'Debug logs exported successfully');
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      // No success alert - user experience should be smooth
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    }
+  };
+
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      // No success alert - user experience should be smooth
+    } catch (error) {
+      Alert.alert('Error', 'Failed to sign in. Please try again.');
+    }
   };
 
   const renderConnectionStatus = () => (
@@ -148,6 +166,22 @@ export default function AdminScreen() {
       >
         <Text style={styles.actionButtonText}>Export Debug Logs</Text>
       </TouchableOpacity>
+      
+      {user ? (
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.signOutButton]} 
+          onPress={handleSignOut}
+        >
+          <Text style={[styles.actionButtonText, styles.signOutButtonText]}>Sign Out</Text>
+        </TouchableOpacity>
+      ) : (
+        <TouchableOpacity 
+          style={[styles.actionButton, styles.signInButton]} 
+          onPress={handleSignIn}
+        >
+          <Text style={[styles.actionButtonText, styles.signInButtonText]}>Sign In with Google</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 
@@ -249,6 +283,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#ef4444',
   },
   dangerButtonText: {
+    color: 'white',
+  },
+  signOutButton: {
+    backgroundColor: '#f59e0b',
+  },
+  signOutButtonText: {
+    color: 'white',
+  },
+  signInButton: {
+    backgroundColor: '#10b981',
+  },
+  signInButtonText: {
     color: 'white',
   },
 });

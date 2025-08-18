@@ -1,40 +1,79 @@
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { signInAnonymously, signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function AuthScreen() {
   const [isLoading, setIsLoading] = useState(false);
+  const { signInWithGoogle, signInWithPhone, continueWithoutAuth } = useAuth();
 
-  const handleAnonymousSignIn = async () => {
+  const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signInAnonymously(auth);
+      await signInWithGoogle();
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      Alert.alert('Google Sign-In Error', error.message);
     } finally {
       setIsLoading(false);
     }
   };
 
+  const handlePhoneSignIn = async () => {
+    // For now, using a test phone number - in production you'd get this from user input
+    const phoneNumber = '+1234567890'; // Replace with actual phone input
+    setIsLoading(true);
+    try {
+      await signInWithPhone(phoneNumber);
+      Alert.alert('Verification Sent', 'Check your phone for the verification code');
+    } catch (error: any) {
+      Alert.alert('Phone Sign-In Error', error.message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleContinueWithoutAuth = () => {
+    console.log('User chose to continue without authentication');
+    continueWithoutAuth();
+  };
+
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.title}>Welcome to RiseTwice</Text>
-        <Text style={styles.subtitle}>Your AI-powered conversation companion</Text>
-        
+        <Text style={styles.title}>RiseTwice</Text>
+        <Text style={styles.subtitle}>Therapeutic AI</Text>
+
         <TouchableOpacity
-          style={styles.button}
-          onPress={handleAnonymousSignIn}
+          style={[styles.button, styles.googleButton]}
+          onPress={handleGoogleSignIn}
           disabled={isLoading}
         >
           <Text style={styles.buttonText}>
-            {isLoading ? 'Signing in...' : 'Continue as Guest'}
+            {isLoading ? 'Signing in...' : 'Sign in with Google'}
           </Text>
         </TouchableOpacity>
-        
+
+        <TouchableOpacity
+          style={[styles.button, styles.phoneButton]}
+          onPress={handlePhoneSignIn}
+          disabled={isLoading}
+        >
+          <Text style={styles.buttonText}>
+            Sign in with Phone
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.button, styles.anonymousButton]}
+          onPress={handleContinueWithoutAuth}
+          disabled={isLoading}
+        >
+          <Text style={styles.buttonText}>
+            Anonymous
+          </Text>
+        </TouchableOpacity>
+
         <Text style={styles.footerText}>
-          Start chatting immediately with anonymous access
+          Sign in for enhanced features, or start chatting immediately
         </Text>
       </View>
     </View>
@@ -66,12 +105,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   button: {
-    backgroundColor: '#3b82f6',
     paddingHorizontal: 32,
     paddingVertical: 16,
     borderRadius: 24,
     marginBottom: 16,
-    minWidth: 200,
+    minWidth: 250,
+  },
+  googleButton: {
+    backgroundColor: '#4285f4', // Google blue
+  },
+  phoneButton: {
+    backgroundColor: '#34d399', // Green for phone
+  },
+  anonymousButton: {
+    backgroundColor: '#6b7280', // Gray for anonymous
   },
   buttonText: {
     color: 'white',

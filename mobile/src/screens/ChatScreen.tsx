@@ -1,6 +1,7 @@
 import React from 'react';
 import ChatInterface from '../components/Chat/ChatInterface';
 
+// Simplified mobile app - always defaults to mental health support
 export default function ChatScreen() {
-  return <ChatInterface mode="general" />;
+  return <ChatInterface specialist="mental_health" mode="mental-health" />;
 }
