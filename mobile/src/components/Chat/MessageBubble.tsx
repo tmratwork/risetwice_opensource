@@ -10,6 +10,11 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isThinking = message.status === 'thinking';
   const isProcessing = message.status === 'processing';
+  
+  // Ensure text is always a string to prevent React render errors
+  const safeText = typeof message.text === 'string' 
+    ? message.text 
+    : JSON.stringify(message.text);
 
   return (
     <View style={[
@@ -27,7 +32,7 @@ export default function MessageBubble({ message }: MessageBubbleProps) {
         ]}>
           {isThinking ? 'Thinking...' : 
            isProcessing ? 'Processing...' : 
-           message.text}
+           safeText}
         </Text>
         
         {message.specialist && (

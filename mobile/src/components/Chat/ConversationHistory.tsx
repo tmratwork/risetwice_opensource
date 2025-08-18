@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, View, Text, ActivityIndicator } from 'react-nat
 import { useWebRTCStore } from '../../stores/webrtc-store';
 import { useAuth } from '../../contexts/AuthContext';
 import MessageBubble from './MessageBubble';
+import { API_BASE_URL } from '@env';
 
 export default function ConversationHistory() {
   const { user } = useAuth();
@@ -41,7 +42,8 @@ export default function ConversationHistory() {
     setIsLoadingHistory(true);
 
     try {
-      const response = await fetch(`http://localhost:3000/api/v16/conversation/${currentConversationId}`, {
+      const apiBaseUrl = API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/v16/conversation/${currentConversationId}`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
       });
@@ -61,11 +63,23 @@ export default function ConversationHistory() {
       // Add historical messages to conversation
       if (data.messages && Array.isArray(data.messages)) {
         data.messages.forEach((msg: any, index: number) => {
+          // Ensure text is always a string
+          let messageText = '';
+          if (typeof msg.content === 'string') {
+            messageText = msg.content;
+          } else if (typeof msg.text === 'string') {
+            messageText = msg.text;
+          } else if (msg.content && typeof msg.content === 'object') {
+            messageText = JSON.stringify(msg.content);
+          } else if (msg.text && typeof msg.text === 'object') {
+            messageText = JSON.stringify(msg.text);
+          }
+          
           addMessage({
             id: `history-${index}-${msg.timestamp}`,
             role: msg.role,
-            text: msg.content || msg.text || '',
-            content: msg.content,
+            text: messageText,
+            content: messageText,
             timestamp: msg.timestamp?.toString() || Date.now().toString(),
             isFinal: true,
             isHistorical: true,

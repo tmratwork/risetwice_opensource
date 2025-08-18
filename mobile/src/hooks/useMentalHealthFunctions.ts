@@ -3,6 +3,7 @@
 
 import { useState, useCallback, useMemo, useRef } from 'react';
 import { supabase } from '../config/supabase';
+import { API_BASE_URL } from '@env';
 
 /**
  * V16 Mental Health Functions Hook - Mobile Version
@@ -57,8 +58,9 @@ export function useMentalHealthFunctions() {
     console.log(`[MOBILE] Querying therapeutic content:`, params.query);
     
     try {
-      // Call web app's API from mobile - using localhost for development
-      const response = await fetch('http://localhost:3000/api/v16/book-content', {
+      // Call web app's API from mobile
+      const apiBaseUrl = API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/v16/book-content`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -325,7 +327,8 @@ export function useMentalHealthFunctions() {
       setFunctionError(null);
 
       // Call web app's resource search API from mobile
-      const response = await fetch('http://localhost:3000/api/v16/search-resources', {
+      const apiBaseUrl = API_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${apiBaseUrl}/api/v16/search-resources`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

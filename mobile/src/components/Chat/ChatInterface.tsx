@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import { View, StyleSheet, SafeAreaView, Alert, Text, TouchableOpacity } from 'react-native';
 import { useWebRTCStore } from '../../stores/webrtc-store';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseFunctions } from '../../hooks/useSupabaseFunctions';
 import ConversationHistory from './ConversationHistory';
 import AudioOrbMobile from '../AudioOrb/AudioOrbMobile';
 import { PermissionsManager } from '../../utils/permissions';
+import { OPENAI_API_KEY } from '@env';
 
 interface ChatInterfaceProps {
   specialist?: string;
@@ -16,6 +17,7 @@ export default function ChatInterface({ specialist, mode = 'general' }: ChatInte
   const { user } = useAuth();
   const [isInitialized, setIsInitialized] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
+  const [hasStartedConversation, setHasStartedConversation] = useState(false);
   
   const {
     isConnected,
@@ -123,18 +125,9 @@ export default function ChatInterface({ specialist, mode = 'general' }: ChatInte
     console.log(`[MOBILE] Starting chat session for mode: ${mode}, specialist: ${specialist}`);
 
     try {
-      // Start session through WebRTC store - calls /api/v16/start-session
-      const sessionResult = await startSession({
-        userId: user?.uid || 'anonymous',
-        specialistType: specialist || mode,
-        sessionType: 'mobile_chat',
-      });
-
-      if (!sessionResult.success) {
-        throw new Error(sessionResult.error || 'Failed to start session');
-      }
-
-      console.log(`[MOBILE] Session started successfully:`, sessionResult);
+      // For new conversations, we don't call start-session API (that's only for resume)
+      // Instead, we directly connect to WebRTC like Next.js web app does
+      console.log(`[MOBILE] Starting new conversation - connecting WebRTC directly`);
 
       // Load greeting for this specialist/mode
       await loadGreeting({
@@ -142,9 +135,9 @@ export default function ChatInterface({ specialist, mode = 'general' }: ChatInte
         userId: user?.uid || 'anonymous',
       });
 
-      // Connect WebRTC with AI functions
+      // Connect WebRTC with AI functions (matches Next.js behavior)
       await connect({
-        apiKey: process.env.EXPO_PUBLIC_OPENAI_API_KEY || '',
+        apiKey: OPENAI_API_KEY || '',
         model: 'gpt-4o-realtime-preview-2024-10-01',
         voice: 'alloy',
         instructions: `You are a helpful assistant in ${specialist || mode} mode.`,
@@ -182,21 +175,45 @@ export default function ChatInterface({ specialist, mode = 'general' }: ChatInte
     }
   }, [user, specialist, mode, saveMessage]);
 
-  // Auto-start session when initialized and functions loaded
-  useEffect(() => {
-    if (isInitialized && functionDefinitions.length > 0 && !isConnected && !isConnecting) {
-      startChatSession();
-    }
-  }, [isInitialized, functionDefinitions.length, isConnected, isConnecting, startChatSession]);
+  // Only start session when user explicitly clicks "Let's Talk"
+  const handleLetsTalk = useCallback(async () => {
+    if (hasStartedConversation || isConnecting || isConnected) return;
+    
+    setHasStartedConversation(true);
+    await startChatSession();
+  }, [hasStartedConversation, isConnecting, isConnected, startChatSession]);
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.content}>
-        <ConversationHistory />
-        
-        <View style={styles.audioOrbContainer}>
-          <AudioOrbMobile size={140} />
-        </View>
+        {hasStartedConversation ? (
+          // Show conversation interface once started
+          <>
+            <ConversationHistory />
+            
+            <View style={styles.audioOrbContainer}>
+              <AudioOrbMobile size={140} />
+            </View>
+          </>
+        ) : (
+          // Show "Let's Talk" button before conversation starts
+          <View style={styles.welcomeContainer}>
+            <TouchableOpacity 
+              style={[
+                styles.letsTalkButton,
+                (isConnecting || !isInitialized) && styles.letsTalkButtonDisabled
+              ]}
+              onPress={handleLetsTalk}
+              disabled={isConnecting || !isInitialized}
+            >
+              {isConnecting ? (
+                <Text style={styles.letsTalkButtonText}>Connecting...</Text>
+              ) : (
+                <Text style={styles.letsTalkButtonText}>Let's Talk</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
     </SafeAreaView>
   );
@@ -209,6 +226,37 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  welcomeContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+  },
+  letsTalkButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 9999,
+    minWidth: 200,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  letsTalkButtonDisabled: {
+    backgroundColor: '#9ca3af',
+    opacity: 0.7,
+  },
+  letsTalkButtonText: {
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
   },
   audioOrbContainer: {
     height: 200,

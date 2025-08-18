@@ -127,6 +127,18 @@ We are working on V16. Ignore previous versions, they will be deleted.
 - Present SQL statements if Supabase project needs changing
 - Assume `.sql` files may be out-of-date
 
+## 🚨 CRITICAL REMINDER: MOBILE APP IS NOT EXPO
+
+**THE MOBILE APP USES REACT NATIVE WITHOUT EXPO**
+- ❌ DO NOT use `EXPO_PUBLIC_` environment variables
+- ❌ DO NOT reference Expo commands or configuration
+- ❌ DO NOT assume Expo tooling or libraries
+- ✅ USE `react-native-dotenv` with `@env` imports for environment variables
+- ✅ USE standard React Native commands: `react-native run-android`, `react-native run-ios`
+- ✅ REFER to mobile folder structure: standard React Native without Expo managed workflow
+
+**This is a VANILLA React Native project. If you mention Expo, STOP and correct yourself immediately.**
+
 ## Key Reminders
 - V16 is a fresh start
 - Reference files are in `docs/` folder

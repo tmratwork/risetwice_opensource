@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WebRTCService, WebRTCConfig } from '../services/webrtc/WebRTCService';
 import type { ConversationMessage, TriageSession, ResourceLocatorContext, ConnectionState, WebRTCStoreState } from '../types';
+import { API_BASE_URL } from '@env';
 
 interface WebRTCStoreActions {
   // Connection actions
@@ -13,7 +14,7 @@ interface WebRTCStoreActions {
   disconnect: () => void;
   
   // V16 API Integration actions
-  startSession: (params: { userId: string; specialistType: string; sessionType: string }) => Promise<{ success: boolean; error?: string }>;
+  startSession: (params: { userId: string; specialistType: string; conversationId?: string; contextSummary?: string }) => Promise<{ success: boolean; error?: string }>;
   saveMessage: (params: { role: string; content: string; userId: string; specialistType: string; timestamp: number }) => Promise<void>;
   loadGreeting: (params: { specialistType: string; userId: string }) => Promise<void>;
   createConversation: () => Promise<string>;
@@ -140,10 +141,20 @@ export const useWebRTCStore = create(
         console.log('[MOBILE] Starting V16 session:', params);
         
         try {
-          const response = await fetch('http://localhost:3000/api/v16/start-session', {
+          console.log('[MOBILE] 🐛 DEBUG: Raw API_BASE_URL from @env:', API_BASE_URL);
+          console.log('[MOBILE] 🐛 DEBUG: typeof API_BASE_URL:', typeof API_BASE_URL);
+          const apiBaseUrl = API_BASE_URL || 'http://localhost:3000';
+          console.log('[MOBILE] Using API base URL:', apiBaseUrl);
+          
+          const response = await fetch(`${apiBaseUrl}/api/v16/start-session`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(params),
+            body: JSON.stringify({
+              userId: params.userId,
+              specialistType: params.specialistType,
+              conversationId: params.conversationId || null,
+              contextSummary: params.contextSummary || null,
+            }),
           });
           
           if (!response.ok) {
@@ -164,7 +175,8 @@ export const useWebRTCStore = create(
         console.log('[MOBILE] Saving message to V16 API:', params);
         
         try {
-          const response = await fetch('http://localhost:3000/api/v16/save-message', {
+          const apiBaseUrl = API_BASE_URL || 'http://localhost:3000';
+          const response = await fetch(`${apiBaseUrl}/api/v16/save-message`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -194,13 +206,15 @@ export const useWebRTCStore = create(
         console.log('[MOBILE] Loading greeting from V16 API:', params);
         
         try {
-          const response = await fetch('http://localhost:3000/api/v16/greeting-prompt', {
-            method: 'POST',
+          const apiBaseUrl = API_BASE_URL || 'http://localhost:3000';
+          // Use GET with query parameters to match API endpoint expectation
+          const queryParams = new URLSearchParams({
+            type: 'triage',
+            userId: params.userId,
+          });
+          const response = await fetch(`${apiBaseUrl}/api/v16/greeting-prompt?${queryParams}`, {
+            method: 'GET',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              specialistType: params.specialistType,
-              userId: params.userId,
-            }),
           });
           
           if (!response.ok) {
@@ -212,11 +226,27 @@ export const useWebRTCStore = create(
           
           // Add greeting message to conversation
           if (data.greeting) {
+            let greetingText = '';
+            
+            // Handle different greeting data structures
+            if (typeof data.greeting === 'string') {
+              greetingText = data.greeting;
+            } else if (data.greeting.content) {
+              greetingText = typeof data.greeting.content === 'string' 
+                ? data.greeting.content 
+                : JSON.stringify(data.greeting.content);
+            } else if (typeof data.greeting === 'object') {
+              // If greeting is an object but no content field, stringify it
+              greetingText = JSON.stringify(data.greeting);
+            }
+              
+            console.log('[MOBILE] Adding greeting message with text:', greetingText);
+            
             get().addMessage({
               id: `greeting-${Date.now()}`,
               role: 'assistant',
-              text: data.greeting || '',
-              content: data.greeting,
+              text: greetingText,
+              content: greetingText,
               timestamp: Date.now().toString(),
               isFinal: true,
             });
@@ -231,7 +261,8 @@ export const useWebRTCStore = create(
         console.log('[MOBILE] Creating new conversation via V16 API');
         
         try {
-          const response = await fetch('http://localhost:3000/api/v16/create-conversation', {
+          const apiBaseUrl = API_BASE_URL || 'http://localhost:3000';
+          const response = await fetch(`${apiBaseUrl}/api/v16/create-conversation`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({}),

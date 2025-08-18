@@ -10,17 +10,17 @@ export default function MentalHealthScreen() {
   return (
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor="#ffffff" />
-      
+
       {/* Header */}
-      <View style={styles.header}>
+      {/* <View style={styles.header}>
         <Text style={styles.title}>Mental Health Support</Text>
         <Text style={styles.subtitle}>Specialized AI support for mental wellness</Text>
-      </View>
-      
+      </View> */}
+
       {/* Chat Interface with mental health specialist */}
-      <ChatInterface 
-        specialist="mental_health" 
-        mode="mental-health" 
+      <ChatInterface
+        specialist="triage"
+        mode="mental-health"
       />
     </View>
   );
