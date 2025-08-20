@@ -13,12 +13,15 @@ interface DeleteBookmarkRequest {
   userId: string;
 }
 
-export async function DELETE(req: Request, { params }: { params: { bookmarkId: string } }) {
+export async function DELETE(
+  req: Request,
+  { params }: { params: Promise<{ bookmarkId: string }> }
+) {
   const requestId = Date.now().toString().slice(-6);
   const logPrefix = `[BOOKMARK-DELETE-${requestId}]`;
 
   try {
-    const { bookmarkId } = params;
+    const { bookmarkId } = await params;
     
     // Parse request body
     const body: DeleteBookmarkRequest = await req.json();
