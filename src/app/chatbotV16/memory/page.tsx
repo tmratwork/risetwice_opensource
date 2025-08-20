@@ -20,6 +20,16 @@ interface WarmHandoffData {
   source_memory_id: string;
 }
 
+interface Bookmark {
+  id: string;
+  user_id: string;
+  conversation_id: string | null;
+  ai_message_content: string;
+  user_note: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function V16MemoryPage() {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
@@ -28,6 +38,12 @@ export default function V16MemoryPage() {
   const [warmHandoffData, setWarmHandoffData] = useState<WarmHandoffData | null>(null);
   const [memoryPanelExpanded, setMemoryPanelExpanded] = useState(true);
   const [handoffPanelExpanded, setHandoffPanelExpanded] = useState(true);
+  
+  // Bookmarks state
+  const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
+  const [bookmarksPanelExpanded, setBookmarksPanelExpanded] = useState(true);
+  const [bookmarksLoading, setBookmarksLoading] = useState(false);
+  const [deletingBookmarkId, setDeletingBookmarkId] = useState<string | null>(null);
 
   // Processing states
   const [memoryProcessing, setMemoryProcessing] = useState(false);
@@ -429,6 +445,70 @@ export default function V16MemoryPage() {
       fetchMemoryData();
     }
   }, [user, fetchMemoryData]);
+
+  // Fetch user's bookmarks
+  const fetchBookmarks = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      setBookmarksLoading(true);
+      
+      const response = await fetch(`/api/bookmarks?userId=${user.uid}`);
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setBookmarks(data.bookmarks || []);
+        }
+      } else {
+        console.error('Failed to fetch bookmarks');
+      }
+    } catch (err) {
+      console.error('Error fetching bookmarks:', err);
+    } finally {
+      setBookmarksLoading(false);
+    }
+  }, [user]);
+
+  // Load bookmarks on component mount
+  useEffect(() => {
+    if (user) {
+      fetchBookmarks();
+    }
+  }, [user, fetchBookmarks]);
+
+  // Delete a bookmark
+  const deleteBookmark = useCallback(async (bookmarkId: string) => {
+    if (!user) return;
+
+    try {
+      setDeletingBookmarkId(bookmarkId);
+      
+      const response = await fetch(`/api/bookmarks/${bookmarkId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          // Remove the bookmark from local state
+          setBookmarks(prev => prev.filter(bookmark => bookmark.id !== bookmarkId));
+        }
+      } else {
+        console.error('Failed to delete bookmark');
+      }
+    } catch (err) {
+      console.error('Error deleting bookmark:', err);
+    } finally {
+      setDeletingBookmarkId(null);
+    }
+  }, [user]);
 
   // Render memory content
   const renderMemoryContent = (content: Record<string, unknown>) => {
@@ -860,6 +940,104 @@ export default function V16MemoryPage() {
           )}
         </div>
       )}
+
+      {/* Bookmarks Section */}
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-6 rounded-lg shadow-md mb-6">
+        <div className="flex justify-between items-center cursor-pointer" onClick={() => setBookmarksPanelExpanded(!bookmarksPanelExpanded)}>
+          <h2 className="text-xl font-semibold">Your Bookmarks</h2>
+          <span className="text-gray-700 dark:text-gray-300">{bookmarksPanelExpanded ? '▲' : '▼'}</span>
+        </div>
+
+        {bookmarksPanelExpanded && (
+          <div className="mt-4">
+            <p className="mb-4 text-gray-700 dark:text-gray-300">
+              Your saved conversation moments and notes. Use the bookmark button next to the speaker icon during conversations to save important AI responses.
+            </p>
+
+            {bookmarksLoading ? (
+              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div className="flex items-center">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500 mr-3"></div>
+                  <span className="text-gray-700 dark:text-gray-300">Loading bookmarks...</span>
+                </div>
+              </div>
+            ) : bookmarks.length > 0 ? (
+              <div className="space-y-4">
+                {bookmarks.map((bookmark) => (
+                  <div key={bookmark.id} className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 border border-gray-200 dark:border-gray-600">
+                    <div className="flex justify-between items-start mb-2">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {new Date(bookmark.created_at).toLocaleDateString()} at {new Date(bookmark.created_at).toLocaleTimeString()}
+                      </span>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={async () => {
+                            try {
+                              await navigator.clipboard.writeText(bookmark.user_note);
+                              // Could add a toast notification here
+                            } catch (err) {
+                              console.error('Failed to copy bookmark:', err);
+                            }
+                          }}
+                          className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 rounded"
+                          title="Copy note to clipboard"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (window.confirm('Are you sure you want to delete this bookmark? This action cannot be undone.')) {
+                              deleteBookmark(bookmark.id);
+                            }
+                          }}
+                          disabled={deletingBookmarkId === bookmark.id}
+                          className="text-gray-400 hover:text-red-600 dark:hover:text-red-400 p-1 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                          title="Delete bookmark"
+                        >
+                          {deletingBookmarkId === bookmark.id ? (
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-500"></div>
+                          ) : (
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div className="mb-3">
+                      <h4 className="font-medium text-gray-900 dark:text-gray-100 mb-2">Your Note:</h4>
+                      <p className="text-gray-700 dark:text-gray-300 text-sm bg-white dark:bg-gray-600 p-3 rounded border">
+                        {bookmark.user_note}
+                      </p>
+                    </div>
+                    
+                    <div className="mb-2">
+                      <h5 className="font-medium text-gray-700 dark:text-gray-400 text-xs uppercase tracking-wide mb-1">
+                        Original AI Response:
+                      </h5>
+                      <p className="text-gray-600 dark:text-gray-400 text-sm italic">
+                        {bookmark.ai_message_content.length > 200 
+                          ? `${bookmark.ai_message_content.substring(0, 200)}...` 
+                          : bookmark.ai_message_content
+                        }
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                <p className="text-yellow-700 dark:text-yellow-300">
+                  No bookmarks saved yet. During conversations, use the bookmark button next to the speaker icon to save important AI responses with your own notes.
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

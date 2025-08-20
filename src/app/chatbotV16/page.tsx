@@ -122,6 +122,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(null);
   const [feedbackType, setFeedbackType] = useState<'thumbs_up' | 'thumbs_down' | null>(null);
 
+  // Bookmark state
+  const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
+  const [bookmarkText, setBookmarkText] = useState('');
+
   // Function execution state for visual indicator
   const [isFunctionExecuting, setIsFunctionExecuting] = useState(false);
 
@@ -164,6 +168,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const conversation = useWebRTCStore(state => state.conversation);
   const userMessage = useWebRTCStore(state => state.userMessage);
   const isAudioOutputMuted = useWebRTCStore(state => state.isAudioOutputMuted);
+  const conversationId = useWebRTCStore(state => state.conversationId);
 
   // Get stable function references - these are action functions that don't change
   const sendMessage = useWebRTCStore(state => state.sendMessage);
@@ -1189,6 +1194,54 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     setFeedbackType(null);
   }, []);
 
+  // Bookmark handlers
+  const handleBookmarkClick = useCallback(() => {
+    // Get the most recent AI message
+    const lastAiMessage = conversation
+      .filter(msg => msg.role === 'assistant')
+      .slice(-1)[0];
+    
+    if (lastAiMessage) {
+      setBookmarkText(lastAiMessage.text);
+      setIsBookmarkModalOpen(true);
+    }
+  }, [conversation]);
+
+  const handleCloseBookmarkModal = useCallback(() => {
+    setIsBookmarkModalOpen(false);
+    setBookmarkText('');
+  }, []);
+
+  const handleSaveBookmark = useCallback(async () => {
+    if (!user?.uid || !bookmarkText.trim()) return;
+
+    try {
+      const response = await fetch('/api/bookmarks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          conversationId: conversationId,
+          aiMessageContent: conversation
+            .filter(msg => msg.role === 'assistant')
+            .slice(-1)[0]?.text || '',
+          userNote: bookmarkText.trim(),
+        }),
+      });
+
+      if (response.ok) {
+        handleCloseBookmarkModal();
+        // Optional: Show success message
+      } else {
+        console.error('Failed to save bookmark');
+      }
+    } catch (error) {
+      console.error('Error saving bookmark:', error);
+    }
+  }, [user?.uid, bookmarkText, conversationId, conversation, handleCloseBookmarkModal]);
+
   // Layout debugging function
   const debugLayoutHeights = () => {
     if (process.env.NEXT_PUBLIC_ENABLE_LAYOUT_DEBUG_LOGS === 'true') {
@@ -1681,6 +1734,22 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 </svg>
               )}
             </button>
+            <button
+              type="button"
+              onClick={handleBookmarkClick}
+              className="mute-button ml-3"
+              aria-label="Bookmark last AI response"
+              disabled={!conversation.some(msg => msg.role === 'assistant')}
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" 
+                      stroke="currentColor" 
+                      strokeWidth="2" 
+                      strokeLinecap="round" 
+                      strokeLinejoin="round" 
+                />
+              </svg>
+            </button>
             <label htmlFor="message-input" className="sr-only">
               Type your message to RiseTwice AI
             </label>
@@ -1771,6 +1840,43 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           messageId={feedbackMessageId}
           feedbackType={feedbackType}
         />
+      )}
+
+      {/* Bookmark Modal */}
+      {isBookmarkModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Save Bookmark
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Edit the text below to customize your bookmark note:
+              </p>
+              <textarea
+                value={bookmarkText}
+                onChange={(e) => setBookmarkText(e.target.value)}
+                className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                placeholder="Enter your bookmark note..."
+              />
+              <div className="flex gap-3 mt-6">
+                <button
+                  onClick={handleCloseBookmarkModal}
+                  className="flex-1 px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveBookmark}
+                  disabled={!bookmarkText.trim()}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Save Bookmark
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </main >
   );
