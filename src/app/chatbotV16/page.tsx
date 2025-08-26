@@ -126,6 +126,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
   const [bookmarkText, setBookmarkText] = useState('');
 
+  // Terms of Service state
+  const [isTermsLoading, setIsTermsLoading] = useState(false);
+
   // Function execution state for visual indicator
   const [isFunctionExecuting, setIsFunctionExecuting] = useState(false);
 
@@ -1242,6 +1245,26 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     }
   }, [user?.uid, bookmarkText, conversationId, conversation, handleCloseBookmarkModal]);
 
+  // Terms of Service handler
+  const handleTermsOfServiceClick = useCallback(async () => {
+    setIsTermsLoading(true);
+    try {
+      const response = await fetch('/api/terms-of-service');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch terms: ${response.status}`);
+      }
+      const termsData = await response.json();
+      
+      // Display terms in an alert box
+      alert(termsData.content);
+    } catch (error) {
+      console.error('Error fetching Terms of Service:', error);
+      alert('Unable to load Terms of Service. Please try again later.');
+    } finally {
+      setIsTermsLoading(false);
+    }
+  }, []);
+
   // Layout debugging function
   const debugLayoutHeights = () => {
     if (process.env.NEXT_PUBLIC_ENABLE_LAYOUT_DEBUG_LOGS === 'true') {
@@ -1625,6 +1648,18 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                   View conversation history
                 </button >
               )}
+
+            {/* Terms of Service link for all users */}
+            <button
+              onClick={handleTermsOfServiceClick}
+              disabled={isTermsLoading}
+              className="text-sm underline mt-6 cursor-pointer pointer-events-auto block"
+              style={{ color: '#3b503c', pointerEvents: 'auto' }}
+              onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#9dbbac'}
+              onMouseLeave={(e) => (e.target as HTMLElement).style.color = '#3b503c'}
+            >
+              {isTermsLoading ? 'Loading...' : 'By selecting "Let\'s Talk" to start your session, you agree to these Terms of Service. Select here for details.'}
+            </button>
 
             {/* Show checking resume status */}
             {
