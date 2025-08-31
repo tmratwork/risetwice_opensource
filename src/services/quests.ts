@@ -2,6 +2,7 @@
 import { anthropic } from '@/lib/anthropic';
 import { supabase } from '@/lib/supabase';
 import { updateQuestProgress } from '@/lib/progress-tracker';
+import { getClaudeModel } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
 import { AnyStreamEvent, ContentBlockDeltaEvent, MessageErrorEvent } from '@anthropic/sdk';
@@ -305,7 +306,7 @@ No predefined key concepts are available for this chapter. Please identify the m
     let stream;
     try {
       stream = await anthropic.messages.stream({
-        model: "claude-sonnet-4-20250514",
+        model: getClaudeModel(),
         max_tokens: 4000,
         temperature: 0.5,
         system: "You are an AI assistant specialized in creating engaging educational quests for learners based on books of any type. You create simple, conversational challenges that make complex concepts accessible and practical. You MUST return ONLY valid JSON with no explanatory text before or after it.",
@@ -902,7 +903,7 @@ No predefined key concepts are available for this book. Please identify the most
 
       console.log(`[generate_quest] Making Claude API call with ${prompt.length} character prompt`);
       stream = await anthropic.messages.stream({
-        model: "claude-sonnet-4-20250514",
+        model: getClaudeModel(),
         max_tokens: 32000, // Using the actual max supported value
         temperature: 0.7,
         system: systemMessage,

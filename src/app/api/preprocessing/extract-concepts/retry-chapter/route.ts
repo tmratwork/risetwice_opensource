@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { anthropic } from '@/lib/anthropic';
 import { supabase } from '@/lib/supabase';
+import { getClaudeModel } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
 
@@ -145,7 +146,7 @@ ${chapterContent}`;
     // Step 7: Process this chapter with Claude
     console.log(`${logPrefix} Sending request to Claude to extract concepts...`);
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 4000,
       temperature: 0,
       system: "You are an AI assistant that analyzes book content and extracts key concepts in valid JSON format. You MUST ONLY return valid JSON, with no explanatory text before or after it.",

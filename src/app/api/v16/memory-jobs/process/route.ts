@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { getGPT5Model, getGPT5MiniModel } from '@/config/models';
 import { logV16MemoryServer } from '@/utils/server-logger';
 import { generateAISummaryFromV16Profile, updateUserProfileAISummary } from '../../utils/ai-summary';
 
@@ -436,7 +437,7 @@ export async function POST(request: NextRequest) {
         let processingStatus = 'processing';
         let errorDetails = null;
         let skipReason = null;
-        let modelUsed = 'gpt-5-mini'; // Default model - GPT-5-mini with 272K token limit
+        let modelUsed = getGPT5MiniModel(); // Default model - GPT-5-mini with 272K token limit
 
         try {
           // Skip if conversation is too short (less than 2 messages)
@@ -471,7 +472,7 @@ export async function POST(request: NextRequest) {
             // GPT-5-mini: 272K input tokens, fast and cost-effective ($1.25/million input)
             // GPT-5: Full flagship model for complex conversations
             // Use gpt-5-mini by default as it has massive 272K token limit and is cost-effective
-            modelUsed = estimatedTokens > 50000 ? 'gpt-5' : 'gpt-5-mini';
+            modelUsed = estimatedTokens > 50000 ? getGPT5Model() : getGPT5MiniModel();
             
             logV16Memory(`🤖 Using model ${modelUsed} for conversation ${conv.id} with ${estimatedTokens} estimated tokens`);
             
@@ -733,7 +734,7 @@ export async function POST(request: NextRequest) {
         const mergeUserPrompt = await getPrompt('v16_what_ai_remembers_profile_merge_user');
 
         const mergeResponse = await openai.chat.completions.create({
-          model: 'gpt-5-mini',
+          model: getGPT5MiniModel(),
           messages: [
             { role: 'system', content: mergeSystemPrompt },
             { 

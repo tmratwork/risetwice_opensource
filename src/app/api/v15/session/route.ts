@@ -1,6 +1,7 @@
 // src/app/api/v15/session
 
 import { NextResponse } from 'next/server';
+import { MODELS } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
 
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
     // Log what we're sending to OpenAI
     const openaiPayload = {
-      model: "gpt-4o-realtime-preview-2025-06-03",
+      model: MODELS.OPENAI.GPT_REALTIME,
       voice: config.voice || "alloy",
       modalities: ["audio", "text"],
       instructions: config.instructions || "You are a helpful AI companion for mental health support and educational assistance.",

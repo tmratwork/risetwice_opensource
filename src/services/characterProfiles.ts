@@ -1,6 +1,7 @@
 // src/services/characterProfiles.ts
 import { anthropic } from '@/lib/anthropic';
 import { supabase } from '@/lib/supabase';
+import { getClaudeModel } from '@/config/models';
 
 interface CharacterProfile {
   character_name: string;
@@ -128,7 +129,7 @@ async function identifyMainCharacters(bookTitle: string, bookContent: string, de
     console.log(`[CharacterProfileService] Sending character identification request to Claude...`);
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 1000,
       temperature: 0,
       system: "You are an AI assistant specialized in literary analysis. You extract character information from book text.",
@@ -247,7 +248,7 @@ async function generateCharacterProfile(characterName: string, bookTitle: string
     console.log(`[CharacterProfileService] Sending profile generation request to Claude for character: ${characterName}...`);
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 4000,
       temperature: 0,
       system: "You are an AI assistant specialized in literary analysis and character development. You create comprehensive character profiles based on book text.",

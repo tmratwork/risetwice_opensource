@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getGPT5MiniModel } from '@/config/models';
 import OpenAI from 'openai';
 
 const supabase = createClient(
@@ -110,7 +111,7 @@ export async function POST(request: NextRequest) {
 
     // Generate the warm handoff using OpenAI
     const handoffResponse = await openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: getGPT5MiniModel(),
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt }

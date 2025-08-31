@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { SUPPORTED_LANGUAGES } from '@/lib/language-utils';
+import { getGPT4Model } from '@/config/models';
 import OpenAI from 'openai';
 
 // Initialize OpenAI client with GPT-4o
@@ -182,7 +183,7 @@ The greeting is used when users first interact with mental health support AI, so
 Provide only the translation, no explanations or additional text.`;
 
             const mainCompletion = await openai.chat.completions.create({
-              model: 'gpt-4o',
+              model: getGPT4Model(),
               messages: [
                 { role: 'system', content: mainSystemPrompt },
                 { role: 'user', content: mainUserPrompt }
@@ -219,7 +220,7 @@ IMPORTANT GUIDELINES:
 Provide only the translation, no explanations or additional text. Make sure it's grammatically correct and natural in ${language.nativeName}.`;
 
             const reqCompletion = await openai.chat.completions.create({
-              model: 'gpt-4o',
+              model: getGPT4Model(),
               messages: [
                 { role: 'system', content: reqSystemPrompt },
                 { role: 'user', content: reqUserPrompt }

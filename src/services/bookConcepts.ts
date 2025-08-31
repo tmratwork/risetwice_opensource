@@ -1,6 +1,7 @@
 // src/services/bookConcepts.ts
 import { anthropic } from '@/lib/anthropic';
 import { supabase } from '@/lib/supabase';
+import { getClaudeModel } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
 
@@ -295,7 +296,7 @@ async function extractConceptsWithClaude(prompt: string, contextName: string): P
   try {
     console.log(`[BookConceptsService] Sending request to Claude to extract concepts for "${contextName}"...`);
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 4000,
       temperature: 0,
       system: "You are an AI assistant that analyzes book content and extracts key concepts in valid JSON format. You MUST ONLY return valid JSON, with no explanatory text before or after it.",

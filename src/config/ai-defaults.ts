@@ -1,5 +1,7 @@
 // file: src/config/ai-defaults.ts
 
+import { getTranscriptionModel } from './models';
+
 // TODO: Move these configuration values to Supabase tables
 // This is a temporary file to avoid hardcoding values in the main codebase
 // Eventually, these should be fetched from the database
@@ -10,7 +12,7 @@ export const AI_DEFAULTS = {
   outputAudioFormat: "pcm16",
   modalities: ["text", "audio"],
   inputAudioTranscription: {
-    model: "gpt-4o-transcribe",
+    model: getTranscriptionModel(),
     language: "en"
   },
   turnDetection: {

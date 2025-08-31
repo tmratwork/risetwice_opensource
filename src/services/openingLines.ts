@@ -1,6 +1,7 @@
 // src/services/openingLines.ts
 import { anthropic } from '@/lib/anthropic';
 import { supabase } from '@/lib/supabase';
+import { getClaudeModel } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
 
@@ -391,7 +392,7 @@ CORRECT: "I'm wrestling with 'Impermanence and Continuous Change' as I watch my 
     console.log(`[OpeningLinesService] Sending request to Claude to generate all ${totalToGenerate} opening lines...`);
 
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 8000, // Increased for full set of opening lines
       temperature: 0.5, // Lower temperature for more reliable JSON formatting
       system: "You are an AI assistant specialized in generating dialogue for thought-provoking conversation based on books. You create attention-grabbing opening lines that reference key concepts from books. IMPORTANT: You MUST return ONLY valid JSON with no explanatory text before or after it.",

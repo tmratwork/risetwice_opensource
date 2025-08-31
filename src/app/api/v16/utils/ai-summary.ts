@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
+import { getClaude35Model } from '@/config/models';
 import { logV16MemoryServer } from '@/utils/server-logger';
 
 function getSupabaseClient() {
@@ -74,7 +75,7 @@ export async function generateAISummaryFromV16Profile(
 
     // Generate AI summary using Claude
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: getClaude35Model(),
       max_tokens: 1000,
       temperature: 0.3,
       messages: [

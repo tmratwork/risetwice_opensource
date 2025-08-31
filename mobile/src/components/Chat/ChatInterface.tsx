@@ -3,6 +3,7 @@ import { View, StyleSheet, SafeAreaView, Alert, Text, TouchableOpacity } from 'r
 import { useWebRTCStore } from '../../stores/webrtc-store';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSupabaseFunctions } from '../../hooks/useSupabaseFunctions';
+import { getOpenAIRealtimeModel } from '../../config/models';
 import ConversationHistory from './ConversationHistory';
 import AudioOrbMobile from '../AudioOrb/AudioOrbMobile';
 import { PermissionsManager } from '../../utils/permissions';
@@ -138,7 +139,7 @@ export default function ChatInterface({ specialist, mode = 'general' }: ChatInte
       // Connect WebRTC with AI functions (matches Next.js behavior)
       await connect({
         apiKey: OPENAI_API_KEY || '',
-        model: 'gpt-4o-realtime-preview-2024-10-01',
+        model: getOpenAIRealtimeModel(),
         voice: 'alloy',
         instructions: `You are a helpful assistant in ${specialist || mode} mode.`,
         functions: functionDefinitions,

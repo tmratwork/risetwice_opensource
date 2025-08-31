@@ -1,4 +1,5 @@
 import { FunctionRegistry } from './function-registry';
+import { MODELS } from '@/config/models';
 
 interface AITool {
     type: string;
@@ -83,7 +84,7 @@ export class AgoraAIService {
                             failure_message: "I'm sorry, I couldn't process that request.",
                             max_history: 10,
                             params: {
-                                model: "gpt-4o",
+                                model: MODELS.OPENAI.GPT_4O,
                                 tools: config.tools.map(toolObj => {
                                     if (toolObj.type === 'function' && toolObj.function) {
                                         const fn = toolObj.function;

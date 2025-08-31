@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import OpenAI from 'openai';
+import { getGPT4Model } from '@/config/models';
 import { logV16MemoryServer } from '@/utils/server-logger';
 
 const supabase = createClient(
@@ -298,14 +299,14 @@ export async function POST(request: NextRequest) {
       data: { 
         qualityConversations: qualityConversations.length,
         totalConversationTextLength: conversationTexts.length,
-        model: 'gpt-4',
+        model: getGPT4Model(),
         temperature: 0.3
       }
     });
 
     // Call OpenAI to extract memory data
     const extractionResponse = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: getGPT4Model(),
       messages: [
         { role: 'system', content: extractionSystemPrompt },
         { role: 'user', content: `${extractionUserPrompt}\n\nConversations:\n${conversationTexts}` }
@@ -469,7 +470,7 @@ export async function POST(request: NextRequest) {
       const mergeUserPrompt = await getPrompt('v16_what_ai_remembers_profile_merge_user');
 
       const mergeResponse = await openai.chat.completions.create({
-        model: 'gpt-4',
+        model: getGPT4Model(),
         messages: [
           { role: 'system', content: mergeSystemPrompt },
           { 

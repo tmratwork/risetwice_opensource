@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { getGPT4Model } from '@/config/models';
 import { OpenAI } from 'openai';
 
 const openai = new OpenAI({
@@ -165,7 +166,7 @@ Respond with a JSON object containing an array of flags. Possible flags:
 If no concerning content is found, return {"flags": []}`;
 
     const response = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: getGPT4Model(),
       messages: [{ role: 'user', content: prompt }],
       max_tokens: 100,
       temperature: 0.1
