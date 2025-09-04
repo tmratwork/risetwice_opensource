@@ -21,6 +21,7 @@ type AuthContextType = {
     signInWithPhone: (phoneNumber: string) => Promise<ConfirmationResult | undefined>;
     verifyPhoneCode: (confirmationResult: ConfirmationResult, code: string) => Promise<void>;
     setupRecaptcha: (elementId: string) => void;
+    resetRecaptcha: () => void;
     signOut: () => Promise<void>;
 };
 
@@ -106,10 +107,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        // Don't recreate if we already have a valid verifier
+        // Clean up any existing verifier first
         if (recaptchaVerifier) {
-            console.log('[AUTH] Recaptcha already initialized');
-            return;
+            console.log('[AUTH] Cleaning up existing reCAPTCHA verifier before reinitializing');
+            try {
+                recaptchaVerifier.clear();
+                setRecaptchaVerifier(null);
+            } catch (clearError) {
+                console.error('[AUTH] Error clearing existing verifier:', clearError);
+                setRecaptchaVerifier(null);
+            }
         }
 
         try {
@@ -210,11 +217,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         
         try {
+            // Clean up reCAPTCHA verifier before signing out
+            if (recaptchaVerifier) {
+                try {
+                    console.log('[AUTH] Cleaning up reCAPTCHA verifier during sign out');
+                    recaptchaVerifier.clear();
+                    setRecaptchaVerifier(null);
+                    
+                    // Clear the container element to ensure clean state
+                    const element = document.getElementById('recaptcha-container');
+                    if (element) {
+                        element.innerHTML = '';
+                    }
+                } catch (clearError) {
+                    console.error('[AUTH] Error clearing reCAPTCHA during sign out:', clearError);
+                }
+            }
+            
             await firebaseSignOut(auth);
+            console.log('[AUTH] Sign out completed successfully');
         } catch (error) {
             console.error('Error signing out:', error);
         }
-    }, [firebaseAvailable]);
+    }, [firebaseAvailable, recaptchaVerifier]);
+
+    const resetRecaptcha = useCallback(() => {
+        console.log('[AUTH] Manually resetting reCAPTCHA state');
+        if (recaptchaVerifier) {
+            try {
+                recaptchaVerifier.clear();
+            } catch (error) {
+                console.error('[AUTH] Error clearing reCAPTCHA verifier:', error);
+            }
+        }
+        setRecaptchaVerifier(null);
+        
+        // Clear the container element
+        const element = document.getElementById('recaptcha-container');
+        if (element) {
+            element.innerHTML = '';
+        }
+    }, [recaptchaVerifier]);
 
     const contextValue = useMemo(() => ({
         user,
@@ -225,8 +268,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithPhone,
         verifyPhoneCode,
         setupRecaptcha,
+        resetRecaptcha,
         signOut
-    }), [user, loading, firebaseAvailable, signInWithGoogle, signInWithApple, signInWithPhone, verifyPhoneCode, setupRecaptcha, signOut]);
+    }), [user, loading, firebaseAvailable, signInWithGoogle, signInWithApple, signInWithPhone, verifyPhoneCode, setupRecaptcha, resetRecaptcha, signOut]);
 
     return (
         <AuthContext.Provider value={contextValue}>
