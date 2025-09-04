@@ -128,6 +128,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
   // Terms of Service state
   const [isTermsLoading, setIsTermsLoading] = useState(false);
+  const [isTermsModalOpen, setIsTermsModalOpen] = useState(false);
+  const [termsContent, setTermsContent] = useState('');
 
   // Function execution state for visual indicator
   const [isFunctionExecuting, setIsFunctionExecuting] = useState(false);
@@ -1255,14 +1257,21 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       }
       const termsData = await response.json();
       
-      // Display terms in an alert box
-      alert(termsData.content);
+      // Set terms content and open modal
+      setTermsContent(termsData.content);
+      setIsTermsModalOpen(true);
     } catch (error) {
       console.error('Error fetching Terms of Service:', error);
       alert('Unable to load Terms of Service. Please try again later.');
     } finally {
       setIsTermsLoading(false);
     }
+  }, []);
+
+  // Close terms modal handler
+  const handleCloseTermsModal = useCallback(() => {
+    setIsTermsModalOpen(false);
+    setTermsContent('');
   }, []);
 
   // Layout debugging function
@@ -1907,6 +1916,32 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Save Bookmark
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Terms of Service Modal */}
+      {isTermsModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh]">
+            <div className="p-6 flex flex-col h-full">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                Terms of Service
+              </h2>
+              <div className="flex-1 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
+                <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-sans leading-relaxed">
+                  {termsContent}
+                </pre>
+              </div>
+              <div className="flex justify-end mt-6">
+                <button
+                  onClick={handleCloseTermsModal}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Close
                 </button>
               </div>
             </div>
