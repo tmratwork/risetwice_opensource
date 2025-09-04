@@ -3,7 +3,7 @@
 import { optimizedAudioLogger } from '../audio/optimized-audio-logger';
 import type { ConnectionConfig } from '../types';
 import { AI_DEFAULTS } from '@/config/ai-defaults';
-import { AI_MODELS } from '@/config/ai-models';
+import { getOpenAIRealtimeModel } from '@/config/models';
 
 /**
  * Connection Manager for V15
@@ -756,7 +756,7 @@ export class ConnectionManager {
 
     // Send SDP offer to OpenAI Realtime API
     const baseUrl = "https://api.openai.com/v1/realtime";
-    const model = "gpt-4o-realtime-preview-2024-12-17";
+    const model = getOpenAIRealtimeModel();
     const voice = this.config.voice || "alloy";
 
     optimizedAudioLogger.debug('webrtc', 'sending_offer_to_openai', {

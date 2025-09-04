@@ -35,6 +35,7 @@ This `route.ts` file:
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getChatModel } from '@/config/models';
 
 export const maxDuration = 300; // Set maximum duration allowed for HTTP call request response to 300 seconds (5 minutes)
 export const dynamic = 'force-dynamic';
@@ -278,7 +279,7 @@ async function analyzeWithOpenAI(
     try {
       console.log(`[Request ${requestId}] Sending request to OpenAI API (model: gpt-4o)`);
       const response = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: getChatModel(),
         messages: [
           {
             role: "system",

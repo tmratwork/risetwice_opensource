@@ -5,6 +5,7 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { OpenAI } from 'openai';
+import { getAnalysisModel } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
 
@@ -549,7 +550,7 @@ export async function POST(req: Request) {
 
     // Call OpenAI to analyze the conversation without function calling
     const analysisResponse = await openai.chat.completions.create({
-      model: "gpt-4o", // Using OpenAI's most capable model
+      model: getAnalysisModel(), // Using OpenAI's most capable model
       messages: [
         {
           role: "system",
@@ -572,7 +573,7 @@ export async function POST(req: Request) {
 ======================= OPENAI INPUT: API CONFIGURATION =======================
 =======================================================================
 =======================================================================`, {
-      model: "gpt-4o",
+      model: getAnalysisModel(),
       system_prompt_source: systemSource,
       user_prompt_source: userSource,
       system_prompt_length: systemPrompt.length,

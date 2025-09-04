@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { AI_MODELS } from '@/config/ai-models';
+import { MODELS } from '@/config/models';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       // Default configuration if no body is provided
       config = {
         voice: "alloy",
-        model: AI_MODELS.DEFAULTS.REALTIME_VOICE,
+        model: MODELS.DEFAULTS.REALTIME_VOICE,
         instructions: "You are a helpful assistant.",
       };
       console.error("Error parsing request body:", error);
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: AI_MODELS.DEFAULTS.REALTIME_VOICE,
+        model: MODELS.DEFAULTS.REALTIME_VOICE,
         voice: config.voice || "alloy",
         modalities: ["audio", "text"],
         instructions: config.instructions || "You are a helpful assistant.",

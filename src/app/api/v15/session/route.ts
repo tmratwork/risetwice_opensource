@@ -4,7 +4,6 @@ import { NextResponse } from 'next/server';
 import { MODELS } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
-import { AI_MODELS } from '@/config/ai-models';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,7 +39,7 @@ export async function POST(req: Request) {
 
     // Log what we're sending to OpenAI
     const openaiPayload = {
-      model: AI_MODELS.DEFAULTS.REALTIME_VOICE,
+      model: MODELS.DEFAULTS.REALTIME_VOICE,
       voice: config.voice || "alloy",
       modalities: ["audio", "text"],
       instructions: config.instructions || "You are a helpful AI companion for mental health support and educational assistance.",
