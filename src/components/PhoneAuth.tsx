@@ -219,14 +219,14 @@ export default function PhoneAuth({ onBack, onSignedIn }: PhoneAuthProps) {
             <div 
                 id="recaptcha-container" 
                 style={{
-                    display: 'none',
-                    position: 'absolute',
+                    position: 'fixed',
                     top: '-9999px',
                     left: '-9999px',
-                    width: '1px',
-                    height: '1px',
+                    width: '300px',
+                    height: '300px',
                     overflow: 'hidden',
-                    visibility: 'hidden'
+                    visibility: 'hidden',
+                    zIndex: -1
                 }}
             ></div>
 

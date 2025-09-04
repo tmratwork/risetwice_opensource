@@ -163,6 +163,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             console.error('Error signing in with phone:', error);
             // Handle recaptcha-related errors more gracefully
             const authError = error as { code?: string; message?: string };
+            
+            // Don't clear the container if the error mentions "client element has been removed"
+            // This happens during the reCAPTCHA v2 fallback flow
+            if (authError?.message?.includes('reCAPTCHA client element has been removed')) {
+                console.log('[AUTH] reCAPTCHA element removal error - likely during fallback flow');
+                throw error; // Re-throw without clearing
+            }
+            
             if (authError?.code === 'auth/recaptcha-not-verified' || 
                 authError?.message?.includes('recaptcha') ||
                 authError?.message?.includes('style')) {
@@ -171,11 +179,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                         recaptchaVerifier.clear();
                     }
                     setRecaptchaVerifier(null);
-                    // Clear the container element
-                    const element = document.getElementById('recaptcha-container');
-                    if (element) {
-                        element.innerHTML = '';
-                    }
+                    // Don't clear container innerHTML to avoid breaking reCAPTCHA v2 fallback
                     console.log('[AUTH] Recaptcha cleared due to error');
                 } catch (clearError) {
                     console.error('Error clearing recaptcha:', clearError);
