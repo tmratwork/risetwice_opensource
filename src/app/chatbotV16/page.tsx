@@ -1930,7 +1930,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           onClick={handleCloseTermsModal}
         >
           <div 
-            className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col"
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[70vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
