@@ -98,7 +98,7 @@ If you're seeing API errors and the logs don't make the cause clear:
 ## Project Context
 We are working on V16. Ignore previous versions, they will be deleted. 
 
-**Do not start coding until I specify the task.**
+**Do not start coding until your plan approved.**
 
 ## Project Structure
 - Reference files in folder: `docs/`
@@ -127,18 +127,6 @@ We are working on V16. Ignore previous versions, they will be deleted.
 - Present SQL statements if Supabase project needs changing
 - Assume `.sql` files may be out-of-date
 
-## 🚨 CRITICAL REMINDER: MOBILE APP IS NOT EXPO
-
-**THE MOBILE APP USES REACT NATIVE WITHOUT EXPO**
-- ❌ DO NOT use `EXPO_PUBLIC_` environment variables
-- ❌ DO NOT reference Expo commands or configuration
-- ❌ DO NOT assume Expo tooling or libraries
-- ✅ USE `react-native-dotenv` with `@env` imports for environment variables
-- ✅ USE standard React Native commands: `react-native run-android`, `react-native run-ios`
-- ✅ REFER to mobile folder structure: standard React Native without Expo managed workflow
-
-**This is a VANILLA React Native project. If you mention Expo, STOP and correct yourself immediately.**
-
 ## Key Reminders
 - V16 is a fresh start
 - Reference files are in `docs/` folder
@@ -148,3 +136,10 @@ We are working on V16. Ignore previous versions, they will be deleted.
 - Follow logging rules in @docs/logging_method.md
 - No fallbacks - errors should be visible in beta
 - All AI prompts/functions from Supabase tables, not hardcoded
+
+## Adding New AI Functions - CRITICAL PROCESS
+
+  When adding new functions for AI to call, you MUST update THREE locations:
+  1. **Implementation**: Add function in `use-mental-health-functions-v16.ts`
+  2. **Router**: Add case in switch statement in `use-supabase-functions.ts`
+  3. **Registration**: Ensure function definitions are loaded from Supabase

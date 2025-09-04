@@ -4,6 +4,7 @@ import { NextResponse } from 'next/server';
 import { MODELS } from '@/config/models';
 import fs from 'fs';
 import path from 'path';
+import { AI_MODELS } from '@/config/ai-models';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export async function POST(req: Request) {
 
     // Log what we're sending to OpenAI
     const openaiPayload = {
-      model: MODELS.OPENAI.GPT_REALTIME,
+      model: AI_MODELS.DEFAULTS.REALTIME_VOICE,
       voice: config.voice || "alloy",
       modalities: ["audio", "text"],
       instructions: config.instructions || "You are a helpful AI companion for mental health support and educational assistance.",
@@ -59,9 +60,9 @@ export async function POST(req: Request) {
       instructions: openaiPayload.instructions || 'NO INSTRUCTIONS PROVIDED',
       greeting_instructions: config.greetingInstructions || 'NO GREETING INSTRUCTIONS PROVIDED'
     };
-    
+
     const logFile = path.join(process.cwd(), 'logs', 'v15-session-payload.log');
-    
+
     try {
       // Check if logging is enabled via environment variable
       if (process.env.ENABLE_V15_SESSION_LOGS === 'true') {
@@ -70,11 +71,11 @@ export async function POST(req: Request) {
         if (!fs.existsSync(logsDir)) {
           fs.mkdirSync(logsDir, { recursive: true });
         }
-        
+
         // Append to log file
         fs.appendFileSync(logFile, JSON.stringify(logData, null, 2) + '\n---\n');
       }
-      
+
       // Log resource greeting instructions
       if (process.env.NEXT_PUBLIC_ENABLE_RESOURCE_GREETING_LOGS === 'true') {
         console.log('[resource_greeting] Session API: received config', {
@@ -130,13 +131,13 @@ export async function POST(req: Request) {
         if (!fs.existsSync(logsDir)) {
           fs.mkdirSync(logsDir, { recursive: true });
         }
-        
+
         const payloadLog = {
           timestamp: new Date().toISOString(),
           event: 'SENDING_TO_OPENAI',
           payload: JSON.stringify(openaiPayload)
         };
-        
+
         fs.appendFileSync(logFile, JSON.stringify(payloadLog, null, 2) + '\n---\n');
       }
     } catch (error) {

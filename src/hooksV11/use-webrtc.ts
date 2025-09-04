@@ -10,6 +10,7 @@ import audioLogger from './audio-logger';
 import audioCutoffDiagnostics from './audio-cutoff-diagnostics';
 import audioService from './audio-service';
 import { useAudioService } from './use-audio-service';
+import { AI_MODELS } from '@/config/ai-models';
 
 // Define types for conversation items
 export interface Conversation {
@@ -209,13 +210,13 @@ export function useWebRTC(): UseWebRTCReturn {
 
       const userId = localStorage.getItem('userId');
       const bookId = localStorage.getItem('selectedBookId');
-      
+
       // FIXED: Prioritize conversation ID from sessionStorage, fall back to localStorage
       const conversationId = sessionStorage.getItem('current_conversation_id') || localStorage.getItem('conversationId');
 
       console.log(`${logPrefix} Preparing to save ${message.role} message`);
       console.log(`${logPrefix} Using provided conversation ID: ${conversationId || 'not found'}`);
-      
+
       if (sessionStorage.getItem('current_conversation_id')) {
         console.log(`${logPrefix} Using conversation ID from sessionStorage: ${sessionStorage.getItem('current_conversation_id')}`);
       } else if (localStorage.getItem('conversationId')) {
@@ -254,7 +255,7 @@ export function useWebRTC(): UseWebRTCReturn {
             console.log(`${logPrefix} Updating conversation ID in sessionStorage: ${sessionConversationId || 'none'} → ${data.conversationId}`);
             sessionStorage.setItem('current_conversation_id', data.conversationId);
           }
-          
+
           if (prevConversationId !== data.conversationId) {
             console.log(`${logPrefix} Updating conversation ID in localStorage: ${prevConversationId || 'none'} → ${data.conversationId}`);
             localStorage.setItem('conversationId', data.conversationId);
@@ -633,17 +634,17 @@ export function useWebRTC(): UseWebRTCReturn {
       try {
         // Check if we're in quest mode based on greeting instructions
         const isQuestMode = config.greetingInstructions?.includes('QUEST CONTEXT');
-        
+
         // Use the greeting instructions passed from the page component, or fall back to default
         const defaultGreetingInstructions = `Ask a general, warm, friendly, and open ended greeting question such as "What's on your mind?" or "How can I help you?" or any similar variation. Be brief and to the point.`;
         let greetingInstructions = config.greetingInstructions || defaultGreetingInstructions;
         console.log("Using greeting instructions:", greetingInstructions.substring(0, 30) + "...");
-        
+
         if (isQuestMode) {
           // Using the modern direct response.create approach for quest mode
           // This avoids the empty message issue causing phantom "Thank you" detection
           console.log("Quest mode detected - using direct response.create approach to prevent phantom transcription");
-          
+
           const response = {
             type: "response.create",
             response: {
@@ -652,10 +653,10 @@ export function useWebRTC(): UseWebRTCReturn {
               max_output_tokens: 2000
             }
           };
-          
+
           console.log("Sending direct response.create for quest greeting");
           dataChannel.send(JSON.stringify(response));
-          
+
         } else {
           // Regular mode - use traditional approach with empty message first
           const message = {
@@ -671,10 +672,10 @@ export function useWebRTC(): UseWebRTCReturn {
               ],
             },
           };
-  
+
           console.log("Sending initial message for greeting:", JSON.stringify(message));
           dataChannel.send(JSON.stringify(message));
-          
+
           // Then queue response.create for regular mode
           const response = {
             type: "response.create",
@@ -684,7 +685,7 @@ export function useWebRTC(): UseWebRTCReturn {
               max_output_tokens: 2000
             }
           };
-  
+
           console.log("Queueing response.create for greeting");
           // Use queue system to ensure only one response at a time
           queueResponseCreate(response, "initial-greeting");
@@ -2115,10 +2116,10 @@ export function useWebRTC(): UseWebRTCReturn {
           console.log(`${logPrefix} EXECUTING FUNCTION: ${fnName}`);
           console.log(`${logPrefix} Call ID: ${callId}`);
           console.log(`${logPrefix} AI decided to use function: ${fnName}`);
-          
+
           // Emit event for function execution start
           if (typeof window !== 'undefined') {
-            const event = new CustomEvent('function_execution_start', { 
+            const event = new CustomEvent('function_execution_start', {
               detail: { functionName: fnName }
             });
             window.dispatchEvent(event);
@@ -2438,10 +2439,10 @@ export function useWebRTC(): UseWebRTCReturn {
                 console.log(`${logPrefix} Function call and response process completed for ${fnName}`);
               }
               console.log(`${logPrefix} === FUNCTION EXECUTION COMPLETE ===`);
-              
+
               // Emit event for function execution end
               if (typeof window !== 'undefined') {
-                const event = new CustomEvent('function_execution_end', { 
+                const event = new CustomEvent('function_execution_end', {
                   detail: { functionName: fnName }
                 });
                 window.dispatchEvent(event);
@@ -2484,10 +2485,10 @@ export function useWebRTC(): UseWebRTCReturn {
               console.log(`${logPrefix} Queueing response.create message after error`);
               queueResponseCreate(responseCreate, `function-${fnName}-error`);
               console.log(`${logPrefix} === FUNCTION ERROR HANDLING COMPLETE ===`);
-              
+
               // Emit event for function execution end (even on error)
               if (typeof window !== 'undefined') {
-                const event = new CustomEvent('function_execution_end', { 
+                const event = new CustomEvent('function_execution_end', {
                   detail: { functionName: fnName }
                 });
                 window.dispatchEvent(event);
@@ -2527,10 +2528,10 @@ export function useWebRTC(): UseWebRTCReturn {
             console.log(`${logPrefix} Queueing response.create message for unregistered function`);
             queueResponseCreate(responseCreate, `function-${fnName}-unregistered`);
             console.log(`${logPrefix} === UNREGISTERED FUNCTION HANDLING COMPLETE ===`);
-            
+
             // Emit event for function execution end (even for unregistered)
             if (typeof window !== 'undefined') {
-              const event = new CustomEvent('function_execution_end', { 
+              const event = new CustomEvent('function_execution_end', {
                 detail: { functionName: fnName }
               });
               window.dispatchEvent(event);
@@ -2996,7 +2997,7 @@ export function useWebRTC(): UseWebRTCReturn {
 
       // Send SDP offer to OpenAI Realtime
       const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = getOpenAIRealtimeModel();
+      const model = AI_MODELS.DEFAULTS.REALTIME_VOICE;
       const voice = config.voice || "alloy";
 
       const response = await fetch(`${baseUrl}?model=${model}&voice=${voice}`, {
