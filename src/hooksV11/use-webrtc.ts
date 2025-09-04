@@ -9,6 +9,7 @@ import audioLogger from './audio-logger';
 import audioCutoffDiagnostics from './audio-cutoff-diagnostics';
 import audioService from './audio-service';
 import { useAudioService } from './use-audio-service';
+import { AI_MODELS } from '@/config/ai-models';
 
 // Define types for conversation items
 export interface Conversation {
@@ -2995,7 +2996,7 @@ export function useWebRTC(): UseWebRTCReturn {
 
       // Send SDP offer to OpenAI Realtime
       const baseUrl = "https://api.openai.com/v1/realtime";
-      const model = "gpt-4o-realtime-preview-2024-12-17";
+      const model = AI_MODELS.DEFAULTS.REALTIME_VOICE;
       const voice = config.voice || "alloy";
 
       const response = await fetch(`${baseUrl}?model=${model}&voice=${voice}`, {

@@ -84,6 +84,7 @@ export function useMentalHealthFunctionsV16() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           query: params.query,
+          book: '3f8df7a9-5d1f-47b4-ab0b-70aa31740e2e', // Default book ID for therapeutic content
           namespace: params.namespace || 'trauma_informed_youth_mental_health_companion_v250420',
           filter_metadata: params.filter_metadata || {},
           top_k: params.top_k || 5

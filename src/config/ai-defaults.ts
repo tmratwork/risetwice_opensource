@@ -10,7 +10,7 @@ export const AI_DEFAULTS = {
   outputAudioFormat: "pcm16",
   modalities: ["text", "audio"],
   inputAudioTranscription: {
-    model: "gpt-4o-transcribe",
+    model: "gpt-4o-transcribe", // Latest transcription model (Whisper deprecated)
     language: "en"
   },
   turnDetection: {

@@ -444,6 +444,37 @@ async function executeFunctionImplementation(functionName: string, args: unknown
     case 'futures_assessment_function':
       return await mentalHealthFunctions.futuresAssessmentFunction(args as Parameters<typeof mentalHealthFunctions.futuresAssessmentFunction>[0]);
 
+    // Therapeutic Content Functions - V16 Implementations
+    case 'get_safety_triage_protocol':
+      return await mentalHealthFunctions.getSafetyTriageProtocol(args as Parameters<typeof mentalHealthFunctions.getSafetyTriageProtocol>[0]);
+
+    case 'get_conversation_stance_guidance':
+      return await mentalHealthFunctions.getConversationStanceGuidance(args as Parameters<typeof mentalHealthFunctions.getConversationStanceGuidance>[0]);
+
+    case 'get_assessment_protocol':
+      return await mentalHealthFunctions.getAssessmentProtocol(args as Parameters<typeof mentalHealthFunctions.getAssessmentProtocol>[0]);
+
+    case 'get_continuity_framework':
+      return await mentalHealthFunctions.getContinuityFramework(args as Parameters<typeof mentalHealthFunctions.getContinuityFramework>[0]);
+
+    case 'get_cbt_intervention':
+      return await mentalHealthFunctions.getCbtIntervention(args as Parameters<typeof mentalHealthFunctions.getCbtIntervention>[0]);
+
+    case 'get_dbt_skills':
+      return await mentalHealthFunctions.getDbtSkills(args as Parameters<typeof mentalHealthFunctions.getDbtSkills>[0]);
+
+    case 'get_trauma_informed_approach':
+      return await mentalHealthFunctions.getTraumaInformedApproach(args as Parameters<typeof mentalHealthFunctions.getTraumaInformedApproach>[0]);
+
+    case 'get_substance_use_support':
+      return await mentalHealthFunctions.getSubstanceUseSupport(args as Parameters<typeof mentalHealthFunctions.getSubstanceUseSupport>[0]);
+
+    case 'get_practical_support_guidance':
+      return await mentalHealthFunctions.getPracticalSupportGuidance(args as Parameters<typeof mentalHealthFunctions.getPracticalSupportGuidance>[0]);
+
+    case 'get_acute_distress_protocol':
+      return await mentalHealthFunctions.getAcuteDistressProtocol(args as Parameters<typeof mentalHealthFunctions.getAcuteDistressProtocol>[0]);
+
     // Resource Locator Functions - V16 Implementations (using functionRegistry)
     case 'emergency_shelter_function':
     case 'food_assistance_function':
