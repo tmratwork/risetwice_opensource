@@ -1925,25 +1925,35 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       
       {/* Terms of Service Modal */}
       {isTermsModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh]">
-            <div className="p-6 flex flex-col h-full">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        <div 
+          className="fixed inset-0 bg-black/75 flex items-center justify-center z-[9999] p-4"
+          onClick={handleCloseTermsModal}
+        >
+          <div 
+            className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                 Terms of Service
               </h2>
-              <div className="flex-1 overflow-y-auto border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-700">
-                <pre className="whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 font-sans leading-relaxed">
-                  {termsContent}
-                </pre>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4">
+              <div className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed space-y-4">
+                {termsContent.split('\n\n').map((paragraph, index) => (
+                  <p key={index} className="whitespace-pre-wrap">
+                    {paragraph}
+                  </p>
+                ))}
               </div>
-              <div className="flex justify-end mt-6">
-                <button
-                  onClick={handleCloseTermsModal}
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Close
-                </button>
-              </div>
+            </div>
+            <div className="p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+              <button
+                onClick={handleCloseTermsModal}
+                className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              >
+                Close
+              </button>
             </div>
           </div>
         </div>
