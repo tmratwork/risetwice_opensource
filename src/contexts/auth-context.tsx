@@ -113,6 +113,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         try {
+            // Clear any existing recaptcha content in the container
+            element.innerHTML = '';
+            
             const verifier = new RecaptchaVerifier(auth, elementId, {
                 size: 'invisible',
                 callback: () => {
@@ -121,13 +124,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 },
                 'error-callback': (error: Error) => {
                     console.error('[AUTH] Recaptcha error:', error);
+                    // Clear the verifier and element content on error
                     setRecaptchaVerifier(null);
+                    const errorElement = document.getElementById(elementId);
+                    if (errorElement) {
+                        errorElement.innerHTML = '';
+                    }
                 }
             });
+            
             setRecaptchaVerifier(verifier);
             console.log('[AUTH] Recaptcha initialized successfully');
         } catch (error) {
             console.error('Error setting up recaptcha:', error);
+            // Clear element content on setup error
+            element.innerHTML = '';
+            setRecaptchaVerifier(null);
         }
     }, [firebaseAvailable, recaptchaVerifier]);
 
@@ -149,13 +161,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return confirmationResult;
         } catch (error) {
             console.error('Error signing in with phone:', error);
-            // Don't clear the verifier here - it causes the internal error
-            // Only reset if it's a specific recaptcha error
-            const authError = error as { code?: string };
-            if (authError?.code === 'auth/recaptcha-not-verified') {
+            // Handle recaptcha-related errors more gracefully
+            const authError = error as { code?: string; message?: string };
+            if (authError?.code === 'auth/recaptcha-not-verified' || 
+                authError?.message?.includes('recaptcha') ||
+                authError?.message?.includes('style')) {
                 try {
-                    recaptchaVerifier.clear();
+                    if (recaptchaVerifier) {
+                        recaptchaVerifier.clear();
+                    }
                     setRecaptchaVerifier(null);
+                    // Clear the container element
+                    const element = document.getElementById('recaptcha-container');
+                    if (element) {
+                        element.innerHTML = '';
+                    }
+                    console.log('[AUTH] Recaptcha cleared due to error');
                 } catch (clearError) {
                     console.error('Error clearing recaptcha:', clearError);
                 }

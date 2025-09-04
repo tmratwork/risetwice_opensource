@@ -49,10 +49,24 @@ export default function PhoneAuth({ onBack, onSignedIn }: PhoneAuthProps) {
     const [showCountryDropdown, setShowCountryDropdown] = useState(false);
 
     useEffect(() => {
-        // Setup invisible recaptcha on component mount with a small delay to ensure DOM is ready
+        // Setup invisible recaptcha on component mount with a delay to ensure DOM is ready
+        // Longer delay for mobile devices to allow proper rendering
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const delay = isMobile ? 500 : 100;
+        
         const timer = setTimeout(() => {
-            setupRecaptcha('recaptcha-container');
-        }, 100);
+            // Double-check element exists before setup
+            const element = document.getElementById('recaptcha-container');
+            if (element) {
+                setupRecaptcha('recaptcha-container');
+            } else {
+                console.warn('[PhoneAuth] reCAPTCHA container not found, retrying...');
+                // Retry once more after additional delay
+                setTimeout(() => {
+                    setupRecaptcha('recaptcha-container');
+                }, delay);
+            }
+        }, delay);
         
         return () => clearTimeout(timer);
     }, [setupRecaptcha]);
@@ -201,8 +215,20 @@ export default function PhoneAuth({ onBack, onSignedIn }: PhoneAuthProps) {
             maxWidth: '400px',
             margin: '0 auto'
         }}>
-            {/* Hidden recaptcha container */}
-            <div id="recaptcha-container"></div>
+            {/* Hidden recaptcha container with mobile-safe styling */}
+            <div 
+                id="recaptcha-container" 
+                style={{
+                    display: 'none',
+                    position: 'absolute',
+                    top: '-9999px',
+                    left: '-9999px',
+                    width: '1px',
+                    height: '1px',
+                    overflow: 'hidden',
+                    visibility: 'hidden'
+                }}
+            ></div>
 
             {onBack && (
                 <button
