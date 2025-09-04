@@ -107,16 +107,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return;
         }
 
-        // Clean up any existing verifier first
+        // Don't recreate if we already have a valid verifier
         if (recaptchaVerifier) {
-            console.log('[AUTH] Cleaning up existing reCAPTCHA verifier before reinitializing');
-            try {
-                recaptchaVerifier.clear();
-                setRecaptchaVerifier(null);
-            } catch (clearError) {
-                console.error('[AUTH] Error clearing existing verifier:', clearError);
-                setRecaptchaVerifier(null);
-            }
+            console.log('[AUTH] Recaptcha already initialized');
+            return;
         }
 
         try {
@@ -148,7 +142,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             element.innerHTML = '';
             setRecaptchaVerifier(null);
         }
-    }, [firebaseAvailable, recaptchaVerifier]);
+    }, [firebaseAvailable]);
 
     const signInWithPhone = useCallback(async (phoneNumber: string) => {
         if (!firebaseAvailable) {
@@ -257,7 +251,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (element) {
             element.innerHTML = '';
         }
-    }, [recaptchaVerifier]);
+    }, []);
 
     const contextValue = useMemo(() => ({
         user,
