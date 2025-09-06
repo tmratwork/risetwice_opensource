@@ -112,6 +112,7 @@ export function MobileFooterNavV15({ }: MobileFooterNavV15Props = {}) {
         <span className="text-center">Let&rsquo;s Talk</span>
       </Link>
 
+      {/* Community tab - commented out for now, can be re-enabled if needed
       <Link
         href="/chatbotV16/community"
         className={`flex flex-col items-center text-xs ${pathname === '/chatbotV16/community' ? 'text-sage-500 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-400'}`}
@@ -124,6 +125,7 @@ export function MobileFooterNavV15({ }: MobileFooterNavV15Props = {}) {
         </svg>
         <span className="text-center">Community</span>
       </Link>
+      */}
 
       <Link
         href="/chatbotV16/resources"

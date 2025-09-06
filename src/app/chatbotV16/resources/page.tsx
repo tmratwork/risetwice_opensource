@@ -46,37 +46,37 @@ export default function ResourcesV15Page() {
     const gridRoot = document.querySelector('.v11-layout-root');
     const mainContent = document.querySelector('.main-content-row');
     const footer = document.querySelector('.footer-row');
-    
+
     // console.log(`[layout-measurements] ResourcesV15Page: phase=${phase}, timestamp=${timestamp}`);
     void phase;
     if (gridRoot) {
-    // console.log(`[layout-measurements] v11-layout-root: height=${gridRoot.getBoundingClientRect().height}, scrollHeight=${(gridRoot as HTMLElement).scrollHeight}`);
+      // console.log(`[layout-measurements] v11-layout-root: height=${gridRoot.getBoundingClientRect().height}, scrollHeight=${(gridRoot as HTMLElement).scrollHeight}`);
     }
     if (mainContent) {
-    // console.log(`[layout-measurements] main-content-row: height=${mainContent.getBoundingClientRect().height}, scrollHeight=${(mainContent as HTMLElement).scrollHeight}, scrollTop=${(mainContent as HTMLElement).scrollTop}`);
+      // console.log(`[layout-measurements] main-content-row: height=${mainContent.getBoundingClientRect().height}, scrollHeight=${(mainContent as HTMLElement).scrollHeight}, scrollTop=${(mainContent as HTMLElement).scrollTop}`);
     }
     if (footer) {
       // const rect = footer.getBoundingClientRect();
-    // console.log(`[layout-footer] ResourcesV15Page: top=${rect.top}, bottom=${rect.bottom}, viewportHeight=${window.innerHeight}, visible=${rect.bottom <= window.innerHeight}`);
+      // console.log(`[layout-footer] ResourcesV15Page: top=${rect.top}, bottom=${rect.bottom}, viewportHeight=${window.innerHeight}, visible=${rect.bottom <= window.innerHeight}`);
     }
     // console.log(`[layout-measurements] window: innerHeight=${window.innerHeight}, documentScrollTop=${document.documentElement.scrollTop}`);
   };
 
   useEffect(() => {
     // console.log(`[layout-lifecycle] ResourcesV15Page: state=mounting, timestamp=${Date.now()}`);
-    
+
     // Initial measurements
     setTimeout(() => logMeasurements('mount'), 100);
 
     // Scroll logging  
     const handleScroll = () => {
-    // console.log(`[layout-scroll] ResourcesV15Page: documentScrollTop=${document.documentElement.scrollTop}, timestamp=${Date.now()}`);
+      // console.log(`[layout-scroll] ResourcesV15Page: documentScrollTop=${document.documentElement.scrollTop}, timestamp=${Date.now()}`);
     };
-    
+
     const handleMainContentScroll = () => {
       const mainContent = document.querySelector('.main-content-row');
       if (mainContent) {
-    // console.log(`[layout-scroll] ResourcesV15Page: main-content-row scrollTop=${(mainContent as HTMLElement).scrollTop}, timestamp=${Date.now()}`);
+        // console.log(`[layout-scroll] ResourcesV15Page: main-content-row scrollTop=${(mainContent as HTMLElement).scrollTop}, timestamp=${Date.now()}`);
       }
     };
 
@@ -333,7 +333,7 @@ export default function ResourcesV15Page() {
   };
 
   const handleResourceSelection = (resourceCard: ResourceFunction, parameters: Record<string, unknown>) => {
-    logResourceGreeting('🎯 SELECTION: handleResourceSelection called', { 
+    logResourceGreeting('🎯 SELECTION: handleResourceSelection called', {
       resourceCardId: resourceCard.id,
       resourceCardTitle: resourceCard.title,
       functionName: resourceCard.functionName,
@@ -352,7 +352,7 @@ export default function ResourcesV15Page() {
       cardTitle: resourceCard.title,
       cardFunctionName: resourceCard.functionName
     });
-    
+
     // Store resource locator context in sessionStorage
     const resourceContext = {
       source: 'resource_locator',
@@ -377,7 +377,7 @@ export default function ResourcesV15Page() {
     });
 
     sessionStorage.setItem('resourceLocatorContext', JSON.stringify(resourceContext));
-    
+
     logResourceGreeting('🎯 SELECTION: ✅ Resource context stored successfully');
 
     // Navigate to V16 chat page
@@ -427,7 +427,7 @@ export default function ResourcesV15Page() {
     };
 
     const parameters = defaultParameters[selectedCard.functionName] || {};
-    
+
     logResourceGreeting('🚀 START: About to call handleResourceSelection with selectedCard', {
       selectedCardId: selectedCard.id,
       selectedCardTitle: selectedCard.title,
@@ -453,7 +453,7 @@ export default function ResourcesV15Page() {
         <div className="mb-8 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <h3 className="font-semibold text-blue-800 mb-2">Building in Public</h3>
           <p className="text-blue-700 text-sm">
-            We are working with local organizations to increase the awareness of vital resources. This page is an early draft to encourage feedback on what works, and what to improve.
+            We are working with local organizations to increase the awareness of vital resources. This page is an early beta to encourage feedback on what works, and what to improve.
           </p>
         </div>
 
@@ -464,8 +464,8 @@ export default function ResourcesV15Page() {
               key={category.id}
               onClick={() => setSelectedCategory(category.id)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${selectedCategory === category.id
-                  ? 'bg-[var(--button-primary)] text-white'
-                  : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)]'
+                ? 'bg-[var(--button-primary)] text-white'
+                : 'bg-[var(--bg-secondary)] text-[var(--text-secondary)] hover:bg-[var(--border-color)]'
                 }`}
             >
               {category.label}
