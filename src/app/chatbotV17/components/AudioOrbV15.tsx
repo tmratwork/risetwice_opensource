@@ -1,17 +1,16 @@
 "use client";
 
-import { useOrbVisualizationV15 } from '@/hooksV15/use-orb-visualization-v15';
-import { useWebRTCStore } from '@/stores/webrtc-store';
+import { useElevenLabsStore } from '@/stores/elevenlabs-store';
 import BlueOrbVoiceUI from '@/components/BlueOrbVoiceUI';
 
 /**
- * Enhanced Audio Orb for V15
+ * Enhanced Audio Orb for V17
  * 
- * Uses the same BlueOrbVoiceUI as V11 but with V15's clean architecture:
- * - Real-time volume monitoring from WebRTC streams
+ * Uses the same BlueOrbVoiceUI as V16 but with V17's Eleven Labs architecture:
+ * - Real-time volume monitoring from Eleven Labs streams
  * - Thinking state detection during AI processing
  * - Proper volume-reactive animations and particle effects
- * - Full compatibility with V11's visual experience
+ * - Full compatibility with V16's visual experience
  */
 
 interface AudioOrbV15Props {
@@ -19,23 +18,29 @@ interface AudioOrbV15Props {
 }
 
 export function AudioOrbV15({ isFunctionExecuting = false }: AudioOrbV15Props) {
-  // Get enhanced visualization state from our custom hook
-  const orbState = useOrbVisualizationV15();
+  // Get state from Eleven Labs store instead of WebRTC store
+  const isAudioPlaying = useElevenLabsStore(state => state.isAudioPlaying);
+  const isThinking = useElevenLabsStore(state => state.isThinking);
+  const isMuted = useElevenLabsStore(state => state.isMuted);
+  const currentVolume = useElevenLabsStore(state => state.currentVolume);
+  const audioLevel = useElevenLabsStore(state => state.audioLevel);
+  const setIsMuted = useElevenLabsStore(state => state.setIsMuted);
   
-  // Get toggle mute function from the store (stable reference)
-  const toggleMute = useWebRTCStore(state => state.toggleMute);
+  // Toggle mute function for V17
+  const toggleMute = () => {
+    setIsMuted(!isMuted);
+  };
   
-  // Removed console.log to prevent render storm
-  
-  // Enhanced AudioOrbV15 with real-time volume data and mute functionality
+  // Use audioLevel for effective volume (with fallback to currentVolume)
+  const effectiveVolume = audioLevel > 0 ? audioLevel : currentVolume;
   
   return (
     <BlueOrbVoiceUI
-      isSpeaking={orbState.isActuallyPlaying}
-      isThinking={orbState.isAiThinking}
-      isMuted={orbState.isMuted}
+      isSpeaking={isAudioPlaying}
+      isThinking={isThinking}
+      isMuted={isMuted}
       isFunctionExecuting={isFunctionExecuting}
-      currentVolume={orbState.effectiveVolume}
+      currentVolume={effectiveVolume}
       onClick={toggleMute}
       particleSizeMin={15}
       particleSizeMax={35}
@@ -43,7 +48,7 @@ export function AudioOrbV15({ isFunctionExecuting = false }: AudioOrbV15Props) {
       particleSpeedMax={0.4}
       transitionSpeed={0.25}
       size={125}
-      className="blue-orb-v15"
+      className="blue-orb-v17"
       draggable={false}
     />
   );

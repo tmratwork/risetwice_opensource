@@ -223,7 +223,7 @@ export function useElevenLabsConversation() {
   // Update store with speaking status
   useEffect(() => {
     store.setIsAudioPlaying(isSpeaking);
-  }, [isSpeaking, store]);
+  }, [isSpeaking, store.setIsAudioPlaying]);
 
   // Connection status from Eleven Labs
   const status = conversation?.status || 'disconnected';
@@ -239,7 +239,7 @@ export function useElevenLabsConversation() {
       store.setConnectionState('disconnected');
       store.setIsConnected(false);
     }
-  }, [status, store]);
+  }, [status, store.setConnectionState, store.setIsConnected]);
 
   return {
     // Eleven Labs conversation instance
