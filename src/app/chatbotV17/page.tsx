@@ -45,7 +45,7 @@ export default function ChatBotV17Page() {
               aria-label="Start a new conversation with RiseTwice AI assistant"
               onClick={handleLetsTalkClick}
             >
-              <span className="button-text">Let's Talk</span>
+              <span className="button-text">Let&apos;s Talk</span>
             </button>
 
             {/* Spacing between Let's Talk and other elements - exact copy from V16 */}
@@ -62,7 +62,7 @@ export default function ChatBotV17Page() {
               onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#9dbbac'}
               onMouseLeave={(e) => (e.target as HTMLElement).style.color = '#3b503c'}
             >
-              By selecting "Let's Talk" to start your session, you agree to these Terms of Service. Select here for details.
+              By selecting &ldquo;Let&apos;s Talk&rdquo; to start your session, you agree to these Terms of Service. Select here for details.
             </button>
           </div>
         )}
