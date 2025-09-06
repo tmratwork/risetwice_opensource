@@ -17,8 +17,12 @@ export function useElevenLabsConversation() {
   const { user } = useAuth();
   const store = useElevenLabsStore();
   const conversationRef = useRef<ReturnType<typeof useConversation> | null>(null);
+  const originalGetUserMediaRef = useRef<typeof navigator.mediaDevices.getUserMedia | null>(null);
+  const isMicrophoneMutedRef = useRef<boolean>(false);
+  const activeStreamsRef = useRef<MediaStream[]>([]); // Track active streams
 
-  // Initialize Eleven Labs conversation hook
+  // Initialize Eleven Labs conversation hook  
+  // Note: micMuted as initialization parameter might cause re-initialization issues
   const conversation = useConversation({
     onConnect: () => {
       logV17('🔌 Connected to Eleven Labs');
@@ -33,25 +37,71 @@ export function useElevenLabsConversation() {
     },
     
     onMessage: (message: unknown) => {
+      // Always log message structure for debugging
+      console.log('[V17] 💬 Raw message from Eleven Labs:', message);
+      
       logV17('💬 Received message from Eleven Labs', {
         messageType: typeof message,
-        hasContent: !!(message as Record<string, unknown>)?.content
+        messageStructure: message,
+        hasContent: !!(message as Record<string, unknown>)?.content,
+        hasText: !!(message as Record<string, unknown>)?.text,
+        hasMessage: !!(message as Record<string, unknown>)?.message
       });
       
-      // Handle incoming messages from AI
-      if ((message as Record<string, unknown>)?.content) {
-        const messageContent = (message as Record<string, unknown>).content as string;
+      // Handle incoming messages from AI - try multiple possible structures
+      const msgObj = message as Record<string, unknown>;
+      let messageContent = '';
+      let messageSource = 'ai'; // default to AI
+      
+      // Extract message content
+      if (msgObj?.content) {
+        messageContent = msgObj.content as string;
+      } else if (msgObj?.text) {
+        messageContent = msgObj.text as string;
+      } else if (msgObj?.message) {
+        messageContent = msgObj.message as string;
+      } else if (typeof message === 'string') {
+        messageContent = message;
+      }
+      
+      // Extract message source to determine role
+      if (msgObj?.source) {
+        messageSource = msgObj.source as string;
+      }
+      
+      if (messageContent && messageContent.trim()) {
         const messageId = `v17-msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+        const role = messageSource === 'user' ? 'user' : 'assistant';
+        
+        console.log(`[V17] ✅ Adding ${role} message to conversation:`, messageContent);
+        
+        // Only add user messages from voice input - not typed messages (they're already added)
+        if (role === 'user') {
+          // Check if this is a duplicate of a typed message by comparing recent messages
+          const recentMessages = store.conversationHistory.slice(-3);
+          const isDuplicate = recentMessages.some(msg => 
+            msg.role === 'user' && 
+            msg.text.trim() === messageContent.trim() &&
+            Date.now() - new Date(msg.timestamp).getTime() < 5000 // within 5 seconds
+          );
+          
+          if (isDuplicate) {
+            console.log('[V17] 🚫 Skipping duplicate user message:', messageContent);
+            return;
+          }
+        }
         
         store.addMessage({
           id: messageId,
-          role: 'assistant',
+          role,
           text: messageContent,
           timestamp: new Date().toISOString(),
           isFinal: true,
           status: 'final',
           specialist: store.triageSession?.currentSpecialist || 'triage',
         });
+      } else {
+        console.log('[V17] ⚠️ No message content found in:', message);
       }
     },
     
@@ -63,6 +113,93 @@ export function useElevenLabsConversation() {
   });
 
   conversationRef.current = conversation;
+  
+  // Debug: Log available conversation methods when conversation is initialized - run once
+  useEffect(() => {
+    if (conversation) {
+      console.log('[V17] 🔧 Conversation object initialized with methods:', Object.keys(conversation));
+      console.log('[V17] 🔧 Initial mute state - store:', store.isMuted, 'conversation micMuted:', conversation.micMuted);
+    }
+  }, [conversation]); // Remove store.isMuted dependency to prevent re-initialization
+
+  // Simple getUserMedia interception with immediate mute state application - run once on mount
+  useEffect(() => {
+    console.log('[V17] 🎤 Setting up simple microphone control...');
+    
+    // Only setup interception once
+    if (!originalGetUserMediaRef.current && typeof navigator !== 'undefined') {
+      // Store original function
+      originalGetUserMediaRef.current = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+      
+      // Simple mute state flag initialization
+      isMicrophoneMutedRef.current = store.isMuted;
+      
+      // Intercept getUserMedia to apply mute state immediately and track streams
+      navigator.mediaDevices.getUserMedia = async function(constraints: MediaStreamConstraints) {
+        console.log('[V17] 🎤 getUserMedia called with constraints:', constraints);
+        
+        // Get the stream normally
+        const originalGetUserMedia = originalGetUserMediaRef.current!;
+        const stream = await originalGetUserMedia(constraints);
+        
+        // If this is an audio stream, track it and apply current mute state immediately
+        if (constraints.audio) {
+          // Track this stream
+          activeStreamsRef.current.push(stream);
+          console.log('[V17] 🎤 Added stream to tracking, total streams:', activeStreamsRef.current.length);
+          
+          // Apply mute state to all tracks
+          stream.getAudioTracks().forEach((track, index) => {
+            track.enabled = !isMicrophoneMutedRef.current;
+            console.log(`[V17] 🎤 Audio track ${index} created - enabled:`, track.enabled);
+          });
+          console.log('[V17] 🎤 Applied mute state to new audio stream:', isMicrophoneMutedRef.current ? 'MUTED' : 'UNMUTED');
+          
+          // Clean up stream reference when it ends
+          stream.addEventListener('ended', () => {
+            console.log('[V17] 🎤 Stream ended, removing from tracking');
+            activeStreamsRef.current = activeStreamsRef.current.filter(s => s !== stream);
+          });
+        }
+        
+        return stream;
+      };
+      
+      // Enhanced global control function that affects both existing and future streams
+      (window as any).controlMicrophone = (muted: boolean) => {
+        console.log('[V17] 🎤 Setting microphone mute state:', muted);
+        isMicrophoneMutedRef.current = muted;
+        
+        // Control ALL existing streams immediately
+        console.log('[V17] 🎤 Controlling', activeStreamsRef.current.length, 'existing streams');
+        activeStreamsRef.current.forEach((stream, streamIndex) => {
+          stream.getAudioTracks().forEach((track, trackIndex) => {
+            track.enabled = !muted;
+            console.log(`[V17] 🎤 Stream ${streamIndex}, track ${trackIndex} - enabled:`, track.enabled);
+          });
+        });
+        
+        console.log('[V17] 🎤 Microphone control complete:', muted ? 'MUTED' : 'UNMUTED');
+      };
+      
+      console.log('[V17] ✅ Simple microphone control setup complete');
+    }
+  }, []); // Run once on mount
+  
+  // Update the simple mute state when store changes
+  useEffect(() => {
+    console.log('[V17] 🎤 Store mute state changed:', store.isMuted);
+    
+    // Update the simple flag
+    isMicrophoneMutedRef.current = store.isMuted;
+    
+    // Also call global function
+    if (typeof (window as any).controlMicrophone === 'function') {
+      (window as any).controlMicrophone(store.isMuted);
+    }
+    
+    console.log('[V17] 🎤 Simple mute flag updated:', store.isMuted ? 'MUTED' : 'UNMUTED');
+  }, [store.isMuted]);
 
   // Start a new conversation session
   const startSession = useCallback(async (
@@ -240,6 +377,7 @@ export function useElevenLabsConversation() {
       store.setIsConnected(false);
     }
   }, [status, store.setConnectionState, store.setIsConnected]);
+
 
   return {
     // Eleven Labs conversation instance

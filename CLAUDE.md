@@ -49,7 +49,7 @@
 ## AI-Driven Design Principles (ALL VERSIONS)
 - **MINIMIZE CODE, MAXIMIZE AI REASONING**: Always prefer sending complete context to AI models rather than writing complex conditional logic
 - For user intent detection (like topic transitions), always send the full user input to the AI rather than trying to parse it with code
-- **AVOID KEYWORD DETECTION AND PATTERN MATCHING**: Do not implement regex or string matching for user intent - this applies to ALL versions, not just V5
+- **AVOID KEYWORD DETECTION AND PATTERN MATCHING**: Do not implement regex or string matching for user intent - this applies to ALL versions.
 - If AI analysis fails, treat it as a critical error since AI is the core of the application's functionality
 - Rely on well-crafted prompts rather than code-based heuristics
 - Trust the AI models to handle nuanced understanding of language
