@@ -43,24 +43,48 @@ export function useElevenLabsConversation() {
     },
     
     onMessage: (message: unknown) => {
-      logV17('💬 Message received from agent', {
+      logV17('💬 Message received from conversation', {
         messageType: typeof message,
+        message: message, // Log full message to understand structure
         agentId: currentAgentId,
         specialist: store.triageSession?.currentSpecialist,
         timestamp: new Date().toISOString()
       });
       
       // Extract and process message content
-      const messageText = extractMessageText(message);
-      if (messageText) {
-        store.addMessage({
-          id: `v17-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          role: 'assistant',
-          text: messageText,
-          timestamp: new Date().toISOString(),
-          isFinal: true,
-          specialist: store.triageSession?.currentSpecialist || 'triage'
+      const messageData = extractMessageData(message);
+      if (messageData.text) {
+        // Determine if this is user or assistant message based on message structure
+        const role = messageData.isUserMessage ? 'user' : 'assistant';
+        
+        logV17(`💬 Adding ${role} message to conversation`, {
+          text: messageData.text,
+          isFinal: messageData.isFinal
         });
+        
+        // Prevent duplicate messages (same text within 2 seconds)
+        const recentMessages = store.conversationHistory.slice(-3); // Check last 3 messages
+        const isDuplicate = recentMessages.some(msg => 
+          msg.text === messageData.text && 
+          msg.role === role &&
+          (Date.now() - new Date(msg.timestamp).getTime()) < 2000
+        );
+
+        if (!isDuplicate) {
+          store.addMessage({
+            id: `v17-${role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+            role: role,
+            text: messageData.text,
+            timestamp: new Date().toISOString(),
+            isFinal: messageData.isFinal,
+            specialist: store.triageSession?.currentSpecialist || 'triage'
+          });
+        } else {
+          logV17('🚫 Skipping duplicate message', {
+            text: messageData.text,
+            role: role
+          });
+        }
       }
     },
     
@@ -247,26 +271,65 @@ export function useElevenLabsConversation() {
   };
 }
 
-// Helper function to extract text from various message formats
-function extractMessageText(message: unknown): string {
+// Helper function to extract message data and determine message type
+function extractMessageData(message: unknown): {
+  text: string;
+  isUserMessage: boolean;
+  isFinal: boolean;
+} {
   if (typeof message === 'string') {
-    return message;
+    return {
+      text: message,
+      isUserMessage: false, // Assume string messages are from assistant
+      isFinal: true
+    };
   }
 
   if (typeof message === 'object' && message !== null) {
     const msgObj = message as Record<string, unknown>;
     
-    // Try different possible text fields
-    return (
+    // Extract text content
+    const text = (
       (msgObj.content as string) ||
       (msgObj.text as string) ||
       (msgObj.message as string) ||
       (msgObj.data as string) ||
+      (msgObj.transcript as string) ||
       ''
     );
+
+    // Determine if this is a user message based on message structure
+    // ElevenLabs typically uses 'type', 'source', or 'role' fields
+    const isUserMessage = (
+      msgObj.type === 'user_transcript' ||
+      msgObj.source === 'user' ||
+      msgObj.role === 'user' ||
+      msgObj.speaker === 'user' ||
+      (msgObj.type === 'transcript' && msgObj.source !== 'agent') ||
+      false
+    );
+
+    // Determine if message is final (completed transcription)
+    const isFinal = (
+      msgObj.is_final === true ||
+      msgObj.isFinal === true ||
+      msgObj.final === true ||
+      msgObj.type !== 'partial_transcript' ||
+      !text.endsWith('...') // Tentative transcripts often end with ...
+    );
+
+    return {
+      text,
+      isUserMessage,
+      isFinal
+    };
   }
 
-  return '';
+  return {
+    text: '',
+    isUserMessage: false,
+    isFinal: true
+  };
 }
 
 // Register client-side tools that the agent can call
