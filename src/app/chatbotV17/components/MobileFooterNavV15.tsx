@@ -25,11 +25,11 @@ export function MobileFooterNavV15({ }: MobileFooterNavV15Props = {}) {
   const sendMessage = useWebRTCStore(state => state.sendMessage);
   const addConversationMessage = useWebRTCStore(state => state.addConversationMessage);
 
-  // Check if we're on the V15 chat page
-  const isOnV15ChatPage = pathname === '/chatbotV16';
+  // Check if we're on the V17 chat page
+  const isOnV17ChatPage = pathname === '/chatbotV17';
 
-  // Show end session only when on V15 chat page AND connected
-  const showEndSession = isOnV15ChatPage && isConnected;
+  // Show end session only when on V17 chat page AND connected
+  const showEndSession = isOnV17ChatPage && isConnected;
 
   // End session handler - identical logic to the original button
   const handleEndSession = async () => {
@@ -102,21 +102,22 @@ export function MobileFooterNavV15({ }: MobileFooterNavV15Props = {}) {
   return (
     <nav className="bg-white dark:bg-[#131314] border-t border-sage-400 dark:border-gray-800 flex justify-around items-center px-4 py-3">
       <Link
-        href="/chatbotV16"
-        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV16' ? 'text-sage-500 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-400'}`}
+        href="/chatbotV17"
+        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV17' ? 'text-sage-500 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-400'}`}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/chatbotV16' ? "3" : "2"} strokeLinecap="round" strokeLinejoin="round" className="mb-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/chatbotV17' ? "3" : "2"} strokeLinecap="round" strokeLinejoin="round" className="mb-1">
           <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
           <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
         </svg>
         <span className="text-center">Let&rsquo;s Talk</span>
       </Link>
 
+      {/* Community tab - commented out for now, can be re-enabled if needed
       <Link
-        href="/chatbotV16/community"
-        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV16/community' ? 'text-sage-500 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-400'}`}
+        href="/chatbotV17/community"
+        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV17/community' ? 'text-sage-500 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-400'}`}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/chatbotV16/community' ? "3" : "2"} strokeLinecap="round" strokeLinejoin="round" className="mb-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/chatbotV17/community' ? "3" : "2"} strokeLinecap="round" strokeLinejoin="round" className="mb-1">
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
           <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
@@ -124,12 +125,13 @@ export function MobileFooterNavV15({ }: MobileFooterNavV15Props = {}) {
         </svg>
         <span className="text-center">Community</span>
       </Link>
+      */}
 
       <Link
-        href="/chatbotV16/resources"
-        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV16/resources' ? 'text-sage-500 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-400'}`}
+        href="/chatbotV17/resources"
+        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV17/resources' ? 'text-sage-500 dark:text-white font-bold' : 'text-gray-700 dark:text-gray-400'}`}
       >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/chatbotV16/resources' ? "3" : "2"} strokeLinecap="round" strokeLinejoin="round" className="mb-1">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={pathname === '/chatbotV17/resources' ? "3" : "2"} strokeLinecap="round" strokeLinejoin="round" className="mb-1">
           <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
           <path d="M12 7v6" />
           <path d="M9 10h6" />
