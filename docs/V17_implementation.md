@@ -30,14 +30,6 @@ V17 has been fully implemented with ElevenLabs Conversational AI 2.0, providing 
 - `@elevenlabs/client` (latest) - Agent management
 - `@elevenlabs/react` (existing) - Conversation interface
 
-### 🚀 Ready to Test
-
-Your `.env.local` already has the essential credentials:
-```bash
-ELEVENLABS_API_KEY=sk_7599b85b1020f148924a35206cc85ed18e5e919057600e4e
-NEXT_PUBLIC_ELEVENLABS_AGENT_ID=agent_9001k4eazm2fffhapyz1z0ewyd77
-```
-
 **To test immediately:**
 1. Add `NEXT_PUBLIC_ENABLE_V17_LOGS=true` to `.env.local`
 2. Run database migrations: `psql -f docs/v17_database_schema.sql`
