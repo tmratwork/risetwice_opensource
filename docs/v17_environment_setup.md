@@ -13,8 +13,6 @@ Add these to your existing `.env.local` for enhanced V17 functionality:
 # Webhook Security (optional for production)
 ELEVENLABS_WEBHOOK_SECRET=your_webhook_secret_for_signature_validation
 
-
-
 # Knowledge Base Configuration (optional - has sensible defaults)
 ELEVENLABS_EMBEDDING_MODEL=e5_mistral_7b_instruct
 ELEVENLABS_MAX_CHUNKS=5
