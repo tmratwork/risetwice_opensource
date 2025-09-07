@@ -221,7 +221,7 @@ export function useElevenLabsConversation() {
         body: JSON.stringify({
           specialistType,
           userId: user?.uid || null,
-          voiceId: 'pNInz6obpgDQGcFmaJgB' // Adam voice default
+          voiceId: 'EmtkmiOFoQVpKRVpXH2B' // V17 specified voice ID
         })
       });
 

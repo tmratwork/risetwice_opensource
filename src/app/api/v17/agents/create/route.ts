@@ -23,13 +23,17 @@ const supabase = createClient(
 );
 
 export async function POST(request: NextRequest) {
+  console.log(`[V17] 🚨 FORCE LOG: API ENDPOINT CALLED - /api/v17/agents/create`);
+  
   try {
     const body = await request.json();
     const { 
       specialistType = 'triage', 
-      voiceId = 'pNInz6obpgDQGcFmaJgB', // Adam voice by default
+      voiceId = 'EmtkmiOFoQVpKRVpXH2B', // V17 specified voice by default
       userId 
     } = body;
+    
+    console.log(`[V17] 🚨 FORCE LOG: Request body parsed - voiceId: ${voiceId}, specialistType: ${specialistType}`);
 
     logV17('🤖 Creating ElevenLabs agent', {
       specialistType,
@@ -72,7 +76,7 @@ export async function POST(request: NextRequest) {
     // 2. SET VOICE CONFIGURATION
     const voiceConfig = {
       voice_id: voiceId,
-      model_id: "eleven_turbo_v2_5",
+      model_id: "eleven_turbo_v2",  // ✅ Change from v2_5 to v2 for English agent compatibility
       stability: 0.5,
       similarity_boost: 0.8,
       style: 0.0,
@@ -86,9 +90,11 @@ export async function POST(request: NextRequest) {
       throw new Error('NEXT_PUBLIC_ELEVENLABS_AGENT_ID not configured');
     }
 
-    logV17('🔄 Updating ElevenLabs agent with Supabase instructions', {
+    logV17('🔄 Updating ElevenLabs agent with Supabase instructions and voice config', {
       agentId: existingAgentId,
-      instructionLength: aiPrompt.prompt_content?.length || 0
+      instructionLength: aiPrompt.prompt_content?.length || 0,
+      voiceConfig: voiceConfig,
+      voiceId: voiceConfig.voice_id
     });
 
     // Initialize agent info
@@ -103,6 +109,8 @@ export async function POST(request: NextRequest) {
 
     // Update the agent with our Supabase instructions using POST-MAY 2025 API STRUCTURE
     try {
+      console.log(`[V17] 🚨 FORCE LOG: About to PATCH agent with voice_id: ${voiceConfig.voice_id}`);
+      
       const updateResponse = await fetch(`${ELEVENLABS_API_BASE}/convai/agents/${existingAgentId}`, {
         method: 'PATCH',
         headers: {
@@ -116,7 +124,8 @@ export async function POST(request: NextRequest) {
                 prompt: aiPrompt.prompt_content || `You are a ${specialistType} AI assistant specialized in mental health support.`,
                 first_message: "Hello! I'm here to provide mental health support. How can I help you today?"
               }
-            }
+            },
+            tts: voiceConfig
           },
           name: `RiseTwice ${specialistType} Agent`,
           tags: ["mental-health", specialistType, "risetwice"]
@@ -125,6 +134,7 @@ export async function POST(request: NextRequest) {
 
       if (!updateResponse.ok) {
         const errorText = await updateResponse.text();
+        console.log(`[V17] 🚨 FORCE LOG: PATCH FAILED - Status: ${updateResponse.status}, Error: ${errorText}`);
         logV17('❌ Failed to update ElevenLabs agent', {
           status: updateResponse.status,
           error: errorText
@@ -133,6 +143,9 @@ export async function POST(request: NextRequest) {
       }
 
       const updatedAgent = await updateResponse.json();
+      console.log(`[V17] 🚨 FORCE LOG: PATCH SUCCESS - Voice should now be: ${voiceConfig.voice_id}`);
+      console.log(`[V17] 🚨 FORCE LOG: Response voice_id: ${updatedAgent.conversation_config?.tts?.voice_id || 'NOT SET'}`);
+      
       logV17('✅ ElevenLabs agent updated successfully', {
         agentId: updatedAgent.agent_id,
         hasInstructions: !!updatedAgent.conversation_config?.agent?.prompt?.prompt,
