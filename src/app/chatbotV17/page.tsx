@@ -89,17 +89,17 @@ export default function ChatBotV17Page() {
   const toggleMicrophone = useCallback(() => {
     const newMuteState = !store.isMuted;
     console.log(`[V17] 🎤 ${newMuteState ? 'MUTING' : 'UNMUTING'} microphone`);
-    
+
     // Immediately update state
     store.setIsMuted(newMuteState);
-    
+
     // Visual feedback for user
     if (newMuteState) {
       console.log('[V17] 🔇 MICROPHONE MUTED - AI should not hear new audio input');
     } else {
       console.log('[V17] 🎤 MICROPHONE UNMUTED - AI can now hear audio input');
     }
-    
+
     // Double-check the mute state was updated
     setTimeout(() => {
       console.log('[V17] 🎤 Final mute state:', {
@@ -198,7 +198,13 @@ export default function ChatBotV17Page() {
             {/* Show placeholder when connected but no messages yet */}
             {isConnected && store.conversationHistory.length === 0 && (
               <div className="conversation-placeholder">
-                <p>Start speaking or type a message to begin your conversation...</p>
+                <div className="flex flex-col items-center justify-center py-8">
+                  <div className="relative w-12 h-12 mb-4">
+                    <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
+                    <div className="absolute inset-0 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                  <p className="text-gray-600">Getting ready...</p>
+                </div>
               </div>
             )}
 
@@ -216,7 +222,7 @@ export default function ChatBotV17Page() {
               onClick={toggleAudioOutputMute}
               className={`control-button ${store.isAudioOutputMuted ? 'muted' : ''}`}
               aria-label={store.isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
-              style={{ 
+              style={{
                 padding: '8px',
                 borderRadius: '50%',
                 minWidth: '40px',
