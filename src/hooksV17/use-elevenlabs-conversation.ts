@@ -19,6 +19,11 @@ export function useElevenLabsConversation() {
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
 
+  // WebRTC stream tracking for microphone mute control
+  const activeStreamsRef = useRef<MediaStream[]>([]);
+  const isMicrophoneMutedRef = useRef<boolean>(store.isMuted);
+  const originalGetUserMediaRef = useRef<typeof navigator.mediaDevices.getUserMedia | null>(null);
+
   // Initialize ElevenLabs conversation hook with agent support and v0.6.1 features
   const conversation = useConversation({
     onConnect: () => {
@@ -106,12 +111,98 @@ export function useElevenLabsConversation() {
     useWakeLock: false // Prevent device sleep during conversation
   });
 
-  // Register client-side tools for agent to call
+  // Set up getUserMedia interception for microphone mute control
   useEffect(() => {
-    if (conversation && store.isConnected) {
-      registerClientTools(conversation);
+    // Store original getUserMedia if not already stored
+    if (!originalGetUserMediaRef.current) {
+      originalGetUserMediaRef.current = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
     }
-  }, [conversation, store.isConnected]);
+
+    const originalGetUserMedia = originalGetUserMediaRef.current;
+
+    // Intercept getUserMedia calls
+    navigator.mediaDevices.getUserMedia = async function(constraints: MediaStreamConstraints) {
+      logV17('🎤 getUserMedia called', { 
+        hasAudio: !!constraints.audio, 
+        currentMuteState: isMicrophoneMutedRef.current 
+      });
+
+      const stream = await originalGetUserMedia(constraints);
+      
+      if (constraints.audio) {
+        // Track the stream for mute control
+        activeStreamsRef.current.push(stream);
+        logV17('🎤 Added stream to tracking', { 
+          streamId: stream.id, 
+          totalTracked: activeStreamsRef.current.length 
+        });
+        
+        // Apply current mute state to this stream
+        stream.getAudioTracks().forEach((track, index) => {
+          track.enabled = !isMicrophoneMutedRef.current;
+          logV17(`🎤 Stream ${stream.id}, track ${index} - enabled: ${track.enabled}`, {
+            trackId: track.id,
+            muted: isMicrophoneMutedRef.current
+          });
+        });
+        
+        // Cleanup when stream ends
+        stream.addEventListener('ended', () => {
+          logV17('🎤 Stream ended, removing from tracking', { streamId: stream.id });
+          activeStreamsRef.current = activeStreamsRef.current.filter(s => s !== stream);
+        });
+      }
+      
+      return stream;
+    };
+
+    // Global control function for mute/unmute
+    (window as any).controlMicrophone = (muted: boolean) => {
+      logV17('🎤 Setting microphone mute state', { 
+        muted, 
+        activeStreams: activeStreamsRef.current.length 
+      });
+      
+      isMicrophoneMutedRef.current = muted;
+      
+      // Control ALL existing streams immediately
+      activeStreamsRef.current.forEach((stream, streamIndex) => {
+        stream.getAudioTracks().forEach((track, trackIndex) => {
+          track.enabled = !muted;
+          logV17(`🎤 Stream ${streamIndex}, track ${trackIndex} - enabled: ${track.enabled}`, {
+            streamId: stream.id,
+            trackId: track.id,
+            muted
+          });
+        });
+      });
+    };
+
+    // Cleanup on unmount
+    return () => {
+      if (originalGetUserMediaRef.current) {
+        navigator.mediaDevices.getUserMedia = originalGetUserMediaRef.current;
+        logV17('🎤 Restored original getUserMedia');
+      }
+      delete (window as any).controlMicrophone;
+    };
+  }, []); // Empty dependency array - only run once
+
+  // Update mute state when store changes
+  useEffect(() => {
+    isMicrophoneMutedRef.current = store.isMuted;
+    
+    if (typeof (window as any).controlMicrophone === 'function') {
+      (window as any).controlMicrophone(store.isMuted);
+    }
+  }, [store.isMuted]);
+
+  // Client-side tools integration - disabled for now as registerTool is not available in current SDK
+  // useEffect(() => {
+  //   if (conversation && store.isConnected) {
+  //     registerClientTools(conversation);
+  //   }
+  // }, [conversation, store.isConnected]);
 
   // Start session with specific specialist agent
   const startSession = useCallback(async (specialistType: string = 'triage') => {
@@ -235,13 +326,14 @@ export function useElevenLabsConversation() {
   // Set volume control
   const setVolume = useCallback((volume: number) => {
     logV17('🔊 Setting volume', { volume });
-    store.setVolume(volume);
+    store.setCurrentVolume(volume);
     
     // Apply to ElevenLabs conversation if available
     if (conversation && typeof conversation.setVolume === 'function') {
-      conversation.setVolume(volume);
+      conversation.setVolume({ volume });
     }
   }, [conversation, store]);
+
 
   return {
     // Connection state
@@ -332,96 +424,9 @@ function extractMessageData(message: unknown): {
   };
 }
 
-// Register client-side tools that the agent can call
-function registerClientTools(conversation: ReturnType<typeof useConversation>) {
-  logV17('🔧 Registering client-side tools for agent');
-
-  // Tool: Get user location
-  conversation.registerTool?.({
-    name: 'get_user_location',
-    description: 'Get the current user location for location-based services',
-    parameters: {},
-    handler: async () => {
-      logV17('📍 Agent requested user location');
-      
-      return new Promise((resolve) => {
-        if (!navigator.geolocation) {
-          resolve({ error: 'Geolocation not supported' });
-          return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            const result = {
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              accuracy: position.coords.accuracy,
-              timestamp: new Date().toISOString()
-            };
-            logV17('✅ Location obtained', result);
-            resolve(result);
-          },
-          (error) => {
-            logV17('❌ Location access denied', { error: error.message });
-            resolve({ 
-              error: 'Location access denied',
-              message: 'Please enable location access to find nearby resources'
-            });
-          },
-          { timeout: 10000, enableHighAccuracy: true }
-        );
-      });
-    }
-  });
-
-  // Tool: Display notification
-  conversation.registerTool?.({
-    name: 'show_notification',
-    description: 'Show a notification to the user',
-    parameters: {
-      title: { type: 'string', description: 'Notification title' },
-      message: { type: 'string', description: 'Notification message' },
-      type: { type: 'string', description: 'Notification type (info, warning, error)' }
-    },
-    handler: async ({ title, message, type = 'info' }) => {
-      logV17('🔔 Agent requested notification', { title, message, type });
-
-      // Show browser notification if permitted
-      if (Notification.permission === 'granted') {
-        new Notification(title as string, {
-          body: message as string,
-          icon: '/favicon.ico'
-        });
-      }
-
-      return {
-        success: true,
-        message: `Notification displayed: ${title}`
-      };
-    }
-  });
-
-  // Tool: Open external link
-  conversation.registerTool?.({
-    name: 'open_link',
-    description: 'Open an external link in new tab',
-    parameters: {
-      url: { type: 'string', description: 'URL to open' },
-      title: { type: 'string', description: 'Link title/description' }
-    },
-    handler: async ({ url, title }) => {
-      logV17('🔗 Agent requested to open link', { url, title });
-
-      if (typeof window !== 'undefined') {
-        window.open(url as string, '_blank', 'noopener,noreferrer');
-      }
-
-      return {
-        success: true,
-        message: `Link opened: ${title || url}`
-      };
-    }
-  });
-
-  logV17('✅ Client-side tools registered successfully');
-}
+// Client-side tools registration - disabled for now as registerTool is not available in current ElevenLabs SDK
+// function registerClientTools(conversation: ReturnType<typeof useConversation>) {
+//   logV17('🔧 Registering client-side tools for agent');
+//   // ... tool registration code commented out until SDK supports it
+//   logV17('✅ Client-side tools registered successfully');
+// }
