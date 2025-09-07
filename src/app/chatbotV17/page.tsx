@@ -22,7 +22,8 @@ export default function ChatBotV17Page() {
     connectionState,
     isPreparing,
     setVolume,
-    conversation
+    conversation,
+    conversationInstance
   } = useElevenLabsConversation();
 
   // Handle conversation start after auth
@@ -76,14 +77,41 @@ export default function ChatBotV17Page() {
       status: 'final',
     });
 
-    // Send via ElevenLabs conversation
-    if (conversation?.sendUserMessage) {
-      conversation.sendUserMessage(userMessage.trim());
+    // Send via ElevenLabs conversation instance (not conversation history)
+    const messageText = userMessage.trim();
+    
+    // Try different method names based on SDK version
+    if (conversationInstance) {
+      console.log('[V17] 🔍 Available conversation methods:', Object.keys(conversationInstance));
+      
+      // Try sendUserMessage first (most likely)
+      if (typeof conversationInstance.sendUserMessage === 'function') {
+        console.log('[V17] ✅ Using sendUserMessage method');
+        conversationInstance.sendUserMessage(messageText);
+      }
+      // Try sendMessage as fallback
+      else if (typeof conversationInstance.sendMessage === 'function') {
+        console.log('[V17] ✅ Using sendMessage method');
+        conversationInstance.sendMessage(messageText);
+      }
+      // Try sendTextMessage as fallback
+      else if (typeof conversationInstance.sendTextMessage === 'function') {
+        console.log('[V17] ✅ Using sendTextMessage method');
+        conversationInstance.sendTextMessage(messageText);
+      }
+      else {
+        console.error('[V17] ❌ No suitable send method found on conversationInstance:', {
+          availableMethods: Object.keys(conversationInstance),
+          conversationInstance
+        });
+      }
+    } else {
+      console.error('[V17] ❌ conversationInstance not available - typed messages cannot reach AI');
     }
 
     // Clear input
     setUserMessage('');
-  }, [userMessage, isConnected, store, conversation]);
+  }, [userMessage, isConnected, store, conversationInstance]);
 
   // Handle mute controls
   const toggleMicrophone = useCallback(() => {

@@ -64,7 +64,9 @@ export function useElevenLabsConversation() {
         
         logV17(`💬 Adding ${role} message to conversation`, {
           text: messageData.text,
-          isFinal: messageData.isFinal
+          isFinal: messageData.isFinal,
+          source: messageData.isUserMessage ? 'typed_or_voice' : 'ai_response',
+          messageStructure: typeof message === 'object' ? Object.keys(message as object) : 'primitive'
         });
         
         // Prevent duplicate messages (same text within 2 seconds)
