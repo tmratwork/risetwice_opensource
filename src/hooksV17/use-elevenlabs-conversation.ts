@@ -159,7 +159,7 @@ export function useElevenLabsConversation() {
     };
 
     // Global control function for mute/unmute
-    (window as any).controlMicrophone = (muted: boolean) => {
+    (window as Window & { controlMicrophone?: (muted: boolean) => void }).controlMicrophone = (muted: boolean) => {
       logV17('🎤 Setting microphone mute state', { 
         muted, 
         activeStreams: activeStreamsRef.current.length 
@@ -186,7 +186,7 @@ export function useElevenLabsConversation() {
         navigator.mediaDevices.getUserMedia = originalGetUserMediaRef.current;
         logV17('🎤 Restored original getUserMedia');
       }
-      delete (window as any).controlMicrophone;
+      delete (window as Window & { controlMicrophone?: (muted: boolean) => void }).controlMicrophone;
     };
   }, []); // Empty dependency array - only run once
 
@@ -194,8 +194,9 @@ export function useElevenLabsConversation() {
   useEffect(() => {
     isMicrophoneMutedRef.current = store.isMuted;
     
-    if (typeof (window as any).controlMicrophone === 'function') {
-      (window as any).controlMicrophone(store.isMuted);
+    const windowWithMicrophone = window as Window & { controlMicrophone?: (muted: boolean) => void };
+    if (typeof windowWithMicrophone.controlMicrophone === 'function') {
+      windowWithMicrophone.controlMicrophone(store.isMuted);
     }
   }, [store.isMuted]);
 

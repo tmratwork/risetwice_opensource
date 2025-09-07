@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
       console.log(`[V17] 📝 AI Instructions for ${specialistType}:`, {
         promptPreview: aiPrompt.prompt_content?.substring(0, 500) + '...',
         fullPromptLength: aiPrompt.prompt_content?.length || 0,
-        functionNames: aiPrompt.functions?.map(f => f.name) || [],
+        functionNames: aiPrompt.functions?.map((f: { name: string }) => f.name) || [],
         lastUpdated: aiPrompt.updated_at
       });
     }

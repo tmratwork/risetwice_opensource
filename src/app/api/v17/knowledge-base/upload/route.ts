@@ -12,9 +12,6 @@ const logV17 = (message: string, ...args: unknown[]) => {
   }
 };
 
-// ElevenLabs API configuration (simplified for V17 MVP)
-const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
-
 // Initialize Supabase client
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -24,9 +21,9 @@ const supabase = createClient(
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { 
-      googleDocUrl, 
-      agentId, 
+    const {
+      googleDocUrl,
+      agentId,
       documentName,
       specialistType = 'triage'
     } = body;
@@ -39,8 +36,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!googleDocUrl) {
-      return NextResponse.json({ 
-        error: 'Google Doc URL is required' 
+      return NextResponse.json({
+        error: 'Google Doc URL is required'
       }, { status: 400 });
     }
 
@@ -55,7 +52,7 @@ export async function POST(request: NextRequest) {
 
       // Convert to text export URL (public documents)
       exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
-      
+
       logV17('🔗 Converted Google Doc URL', {
         originalUrl: googleDocUrl,
         exportUrl,
@@ -102,7 +99,7 @@ export async function POST(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to upload to knowledge base',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
@@ -119,7 +116,7 @@ export async function GET(request: NextRequest) {
     logV17('🔍 Getting knowledge base documents', { agentId, specialistType });
 
     let query = supabase.from('elevenlabs_knowledge_base').select('*');
-    
+
     if (agentId) {
       query = query.eq('agent_id', agentId);
     }
@@ -142,8 +139,8 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logV17('❌ Error fetching knowledge base documents', { error });
-    return NextResponse.json({ 
-      error: 'Failed to fetch documents' 
+    return NextResponse.json({
+      error: 'Failed to fetch documents'
     }, { status: 500 });
   }
 }
@@ -155,15 +152,15 @@ export async function DELETE(request: NextRequest) {
     const { documentId, agentId } = body;
 
     if (!documentId) {
-      return NextResponse.json({ 
-        error: 'Document ID is required' 
+      return NextResponse.json({
+        error: 'Document ID is required'
       }, { status: 400 });
     }
 
     logV17('🗑️ Deleting knowledge base document', { documentId, agentId });
 
-    // Delete from ElevenLabs
-    await elevenlabs.conversationalAi.knowledgeBase.documents.delete(documentId);
+    // TODO: Delete from ElevenLabs when SDK is properly imported
+    // await elevenlabs.conversationalAi.knowledgeBase.documents.delete(documentId);
 
     // Remove from database
     const { error: dbError } = await supabase
@@ -187,7 +184,7 @@ export async function DELETE(request: NextRequest) {
       error: error instanceof Error ? error.message : String(error)
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to delete document',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });

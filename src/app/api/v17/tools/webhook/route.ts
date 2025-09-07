@@ -6,6 +6,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Pinecone } from '@pinecone-database/pinecone';
 
+// Type definitions for function parameters
+interface KnowledgeBaseSearchParams {
+  query: string;
+}
+
+interface ResourceSearchParams {
+  query: string;
+  resource_category?: string;
+  location?: string;
+}
+
+interface SpecialistHandoffParams {
+  specialist_type: string;
+  handoff_reason?: string;
+  context_summary?: string;
+  urgency_level?: string;
+}
+
+interface CrisisResponseParams {
+  crisis_type: string;
+  urgency_level?: string;
+  location?: string;
+}
+
+interface UserLocationParams {
+  [key: string]: unknown;
+}
+
 // V17 conditional logging
 const logV17 = (message: string, ...args: unknown[]) => {
   if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
@@ -76,7 +104,7 @@ export async function POST(request: NextRequest) {
 }
 
 // Handle knowledge base search using Pinecone
-async function handleKnowledgeBaseSearch(parameters: any): Promise<NextResponse> {
+async function handleKnowledgeBaseSearch(parameters: KnowledgeBaseSearchParams): Promise<NextResponse> {
   const { query } = parameters;
 
   logV17('🔍 Searching knowledge base', { query });
@@ -124,7 +152,7 @@ async function handleKnowledgeBaseSearch(parameters: any): Promise<NextResponse>
 }
 
 // Handle resource search using existing V16 logic
-async function handleResourceSearch(parameters: any): Promise<NextResponse> {
+async function handleResourceSearch(parameters: ResourceSearchParams): Promise<NextResponse> {
   const { query, resource_category, location } = parameters;
 
   logV17('🏥 Searching resources', { query, resource_category, location });
@@ -179,7 +207,7 @@ async function handleResourceSearch(parameters: any): Promise<NextResponse> {
 }
 
 // Handle specialist handoff (V17 version)
-async function handleSpecialistHandoff(parameters: any): Promise<NextResponse> {
+async function handleSpecialistHandoff(parameters: SpecialistHandoffParams): Promise<NextResponse> {
   const { specialist_type, handoff_reason, context_summary, urgency_level } = parameters;
 
   logV17('🔄 Processing specialist handoff', {
@@ -230,7 +258,7 @@ async function handleSpecialistHandoff(parameters: any): Promise<NextResponse> {
 }
 
 // Handle crisis response
-async function handleCrisisResponse(parameters: any): Promise<NextResponse> {
+async function handleCrisisResponse(parameters: CrisisResponseParams): Promise<NextResponse> {
   const { crisis_type, urgency_level, location } = parameters;
 
   logV17('🚨 Processing crisis response', { crisis_type, urgency_level, location });
@@ -291,7 +319,7 @@ async function handleCrisisResponse(parameters: any): Promise<NextResponse> {
 }
 
 // Handle get user location (for client-side functions)
-async function handleGetUserLocation(parameters: any): Promise<NextResponse> {
+async function handleGetUserLocation(parameters: UserLocationParams): Promise<NextResponse> {
   logV17('📍 Location request received', parameters);
 
   // This is a client-side function that should be registered on the frontend

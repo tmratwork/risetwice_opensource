@@ -19,10 +19,7 @@ export default function ChatBotV17Page() {
   const {
     startSession,
     isConnected,
-    connectionState,
-    isPreparing,
     setVolume,
-    conversation,
     conversationInstance
   } = useElevenLabsConversation();
 
@@ -89,15 +86,15 @@ export default function ChatBotV17Page() {
         console.log('[V17] ✅ Using sendUserMessage method');
         conversationInstance.sendUserMessage(messageText);
       }
-      // Try sendMessage as fallback
-      else if (typeof conversationInstance.sendMessage === 'function') {
+      // Try sendMessage as fallback (with type assertion)
+      else if (typeof (conversationInstance as unknown as { sendMessage?: (text: string) => void }).sendMessage === 'function') {
         console.log('[V17] ✅ Using sendMessage method');
-        conversationInstance.sendMessage(messageText);
+        (conversationInstance as unknown as { sendMessage: (text: string) => void }).sendMessage(messageText);
       }
-      // Try sendTextMessage as fallback
-      else if (typeof conversationInstance.sendTextMessage === 'function') {
+      // Try sendTextMessage as fallback (with type assertion)
+      else if (typeof (conversationInstance as unknown as { sendTextMessage?: (text: string) => void }).sendTextMessage === 'function') {
         console.log('[V17] ✅ Using sendTextMessage method');
-        conversationInstance.sendTextMessage(messageText);
+        (conversationInstance as unknown as { sendTextMessage: (text: string) => void }).sendTextMessage(messageText);
       }
       else {
         console.error('[V17] ❌ No suitable send method found on conversationInstance:', {
