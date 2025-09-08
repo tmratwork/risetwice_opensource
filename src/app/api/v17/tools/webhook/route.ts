@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { Pinecone } from '@pinecone-database/pinecone';
+import OpenAI from 'openai';
 
 // Type definitions for function parameters
 interface KnowledgeBaseSearchParams {
@@ -271,6 +272,11 @@ const pinecone = new Pinecone({
   apiKey: process.env.PINECONE_API_KEY!,
 });
 
+// Initialize OpenAI client for embeddings
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY!
+});
+
 export async function POST(request: NextRequest) {
   try {
     // Verify ElevenLabs webhook authentication
@@ -451,7 +457,7 @@ async function handleResourceSearch(parameters: ResourceSearchParams): Promise<N
     // Query Pinecone resource database (same as V16)
     const embedding = await generateEmbedding(`${query} ${resource_category} ${location}`);
     
-    const index = pinecone.index('risetwice-resources');
+    const index = pinecone.index('book'); // Using the same index as V16
     const queryResponse = await index.namespace('resources').query({
       vector: embedding,
       topK: 10,
@@ -666,15 +672,43 @@ async function queryTherapeuticContent(query: string, namespace?: string): Promi
 
 // Generate embedding for text queries (same as V16)
 async function generateEmbedding(text: string): Promise<number[]> {
-  // This would use the same embedding model as your V16 implementation
-  // For now, return a mock embedding - replace with actual implementation
-  logV17('🧠 Generating embedding', { textLength: text.length });
-  
-  // TODO: Replace with actual embedding generation using same model as V16
-  // This is a placeholder - you'll need to use the same embedding service
-  // that you use for indexing your Pinecone database
-  
-  throw new Error('Embedding generation not implemented - please integrate with your V16 embedding service');
+  try {
+    logV17('🧠 Generating embedding for resource search', { textLength: text.length });
+    
+    if (!process.env.OPENAI_API_KEY) {
+      throw new Error('OpenAI API key missing for embedding generation');
+    }
+
+    const embeddingModel = "text-embedding-3-large";
+    
+    const embeddingResponse = await openai.embeddings.create({
+      model: embeddingModel,
+      input: text,
+    });
+
+    const embedding = embeddingResponse.data[0].embedding;
+    
+    // Validate expected dimension
+    const expectedDimension = 3072; // text-embedding-3-large = 3072 dimensions
+    if (embedding.length !== expectedDimension) {
+      logV17('⚠️ Embedding dimension mismatch', { 
+        expected: expectedDimension, 
+        actual: embedding.length 
+      });
+    }
+    
+    logV17('✅ Embedding generated successfully', { 
+      dimension: embedding.length,
+      model: embeddingModel
+    });
+    
+    return embedding;
+  } catch (error) {
+    logV17('❌ Embedding generation failed', { 
+      error: error instanceof Error ? error.message : String(error)
+    });
+    throw error;
+  }
 }
 
 // THERAPEUTIC CONTENT FUNCTION HANDLERS
@@ -684,10 +718,14 @@ async function handleSafetyTriageProtocol(parameters: SafetyTriageParams): Promi
   const startTime = performance.now();
   const { risk_type, risk_level, session_context } = parameters;
   
-  logV17('🛡️ Safety triage protocol requested', { risk_type, risk_level });
+  // Parameter validation with defaults
+  const safeRiskType = risk_type || 'general_safety_concern';
+  const safeRiskLevel = risk_level || 'moderate_concern';
+  
+  logV17('🛡️ Safety triage protocol requested', { risk_type: safeRiskType, risk_level: safeRiskLevel });
 
   try {
-    let queryText = `safety triage protocol for ${risk_type.replace(/_/g, ' ')} at ${risk_level.replace(/_/g, ' ')} risk level`;
+    let queryText = `safety triage protocol for ${safeRiskType.replace(/_/g, ' ')} at ${safeRiskLevel.replace(/_/g, ' ')} risk level`;
     if (session_context) {
       queryText += ` in context: ${session_context}`;
     }
@@ -784,10 +822,13 @@ async function handleSafetyTriageProtocol(parameters: SafetyTriageParams): Promi
 async function handleConversationStanceGuidance(parameters: ConversationStanceParams): Promise<NextResponse> {
   const { interaction_type, previous_interactions, user_emotional_intensity } = parameters;
   
-  logV17('💬 Conversation stance guidance requested', { interaction_type, user_emotional_intensity });
+  // Parameter validation with defaults
+  const safeInteractionType = interaction_type || 'general_conversation';
+  
+  logV17('💬 Conversation stance guidance requested', { interaction_type: safeInteractionType, user_emotional_intensity });
 
   try {
-    let queryText = `conversation stance guidance for ${interaction_type.replace(/_/g, ' ')}`;
+    let queryText = `conversation stance guidance for ${safeInteractionType.replace(/_/g, ' ')}`;
     if (user_emotional_intensity) {
       queryText += ` with ${user_emotional_intensity} emotional intensity`;
     }
@@ -824,10 +865,13 @@ async function handleConversationStanceGuidance(parameters: ConversationStancePa
 async function handleAssessmentProtocol(parameters: AssessmentProtocolParams): Promise<NextResponse> {
   const { assessment_stage, presenting_issue, repeat_topic } = parameters;
   
-  logV17('📋 Assessment protocol requested', { assessment_stage, presenting_issue });
+  // Parameter validation with defaults
+  const safeAssessmentStage = assessment_stage || 'initial_assessment';
+  
+  logV17('📋 Assessment protocol requested', { assessment_stage: safeAssessmentStage, presenting_issue });
 
   try {
-    let queryText = `assessment protocol for ${assessment_stage.replace(/_/g, ' ')} stage`;
+    let queryText = `assessment protocol for ${safeAssessmentStage.replace(/_/g, ' ')} stage`;
     if (presenting_issue) {
       queryText += ` addressing ${presenting_issue}`;
     }
@@ -867,10 +911,13 @@ async function handleAssessmentProtocol(parameters: AssessmentProtocolParams): P
 async function handleContinuityFramework(parameters: ContinuityFrameworkParams): Promise<NextResponse> {
   const { continuity_type, conversation_history_summary } = parameters;
   
-  logV17('🔄 Continuity framework requested', { continuity_type });
+  // Parameter validation with defaults
+  const safeContinuityType = continuity_type || 'session_continuity';
+  
+  logV17('🔄 Continuity framework requested', { continuity_type: safeContinuityType });
 
   try {
-    let queryText = `therapeutic continuity framework for ${continuity_type.replace(/_/g, ' ')}`;
+    let queryText = `therapeutic continuity framework for ${safeContinuityType.replace(/_/g, ' ')}`;
     if (conversation_history_summary) {
       queryText += ` with history: ${conversation_history_summary}`;
     }
@@ -906,10 +953,14 @@ async function handleContinuityFramework(parameters: ContinuityFrameworkParams):
 async function handleCbtIntervention(parameters: CbtInterventionParams): Promise<NextResponse> {
   const { intervention_submodule, conversation_step, user_situation, distortion_type } = parameters;
   
-  logV17('🧠 CBT intervention requested', { intervention_submodule, conversation_step });
+  // Parameter validation with defaults
+  const safeInterventionSubmodule = intervention_submodule || 'thought_challenging';
+  const safeConversationStep = conversation_step || 'initial_exploration';
+  
+  logV17('🧠 CBT intervention requested', { intervention_submodule: safeInterventionSubmodule, conversation_step: safeConversationStep });
 
   try {
-    let queryText = `CBT intervention ${intervention_submodule.replace(/_/g, ' ')} at ${conversation_step.replace(/_/g, ' ')} step`;
+    let queryText = `CBT intervention ${safeInterventionSubmodule.replace(/_/g, ' ')} at ${safeConversationStep.replace(/_/g, ' ')} step`;
     if (user_situation) {
       queryText += ` for situation: ${user_situation}`;
     }
@@ -950,10 +1001,14 @@ async function handleCbtIntervention(parameters: CbtInterventionParams): Promise
 async function handleDbtSkills(parameters: DbtSkillsParams): Promise<NextResponse> {
   const { skill_submodule, skill_application, user_distress_level, interpersonal_situation } = parameters;
   
-  logV17('🎯 DBT skills requested', { skill_submodule, skill_application });
+  // Parameter validation with defaults
+  const safeSkillSubmodule = skill_submodule || 'mindfulness';
+  const safeSkillApplication = skill_application || 'general_practice';
+  
+  logV17('🎯 DBT skills requested', { skill_submodule: safeSkillSubmodule, skill_application: safeSkillApplication });
 
   try {
-    let queryText = `DBT ${skill_submodule.replace(/_/g, ' ')} skill for ${skill_application.replace(/_/g, ' ')}`;
+    let queryText = `DBT ${safeSkillSubmodule.replace(/_/g, ' ')} skill for ${safeSkillApplication.replace(/_/g, ' ')}`;
     if (user_distress_level) {
       queryText += ` with ${user_distress_level} distress level`;
     }
@@ -994,10 +1049,13 @@ async function handleDbtSkills(parameters: DbtSkillsParams): Promise<NextRespons
 async function handleTraumaInformedApproach(parameters: TraumaInformedParams): Promise<NextResponse> {
   const { trauma_submodule, user_choice, parts_identified, trauma_response_detected } = parameters;
   
-  logV17('🏥 Trauma-informed approach requested', { trauma_submodule, trauma_response_detected });
+  // Parameter validation with defaults
+  const safeTraumaSubmodule = trauma_submodule || 'safety_first';
+  
+  logV17('🏥 Trauma-informed approach requested', { trauma_submodule: safeTraumaSubmodule, trauma_response_detected });
 
   try {
-    let queryText = `trauma informed approach ${trauma_submodule.replace(/_/g, ' ')}`;
+    let queryText = `trauma informed approach ${safeTraumaSubmodule.replace(/_/g, ' ')}`;
     if (user_choice) {
       queryText += ` with ${user_choice.replace(/_/g, ' ')} preference`;
     }
@@ -1038,10 +1096,13 @@ async function handleTraumaInformedApproach(parameters: TraumaInformedParams): P
 async function handleSubstanceUseSupport(parameters: SubstanceUseSupportParams): Promise<NextResponse> {
   const { mi_submodule, ambivalence_area, change_readiness, substance_mentioned } = parameters;
   
-  logV17('💊 Substance use support requested', { mi_submodule, change_readiness });
+  // Parameter validation with defaults
+  const safeMiSubmodule = mi_submodule || 'exploring_ambivalence';
+  
+  logV17('💊 Substance use support requested', { mi_submodule: safeMiSubmodule, change_readiness });
 
   try {
-    let queryText = `motivational interviewing ${mi_submodule.replace(/_/g, ' ')}`;
+    let queryText = `motivational interviewing ${safeMiSubmodule.replace(/_/g, ' ')}`;
     if (ambivalence_area) {
       queryText += ` for ${ambivalence_area.replace(/_/g, ' ')} ambivalence`;
     }
@@ -1085,10 +1146,13 @@ async function handleSubstanceUseSupport(parameters: SubstanceUseSupportParams):
 async function handlePracticalSupportGuidance(parameters: PracticalSupportParams): Promise<NextResponse> {
   const { support_type, urgency_context, resource_category } = parameters;
   
-  logV17('🔧 Practical support guidance requested', { support_type, urgency_context });
+  // Parameter validation with defaults
+  const safeSupportType = support_type || 'general_support';
+  
+  logV17('🔧 Practical support guidance requested', { support_type: safeSupportType, urgency_context });
 
   try {
-    let queryText = `practical support guidance for ${support_type.replace(/_/g, ' ')}`;
+    let queryText = `practical support guidance for ${safeSupportType.replace(/_/g, ' ')}`;
     if (urgency_context) {
       queryText += ` with ${urgency_context} urgency`;
     }
@@ -1141,7 +1205,7 @@ async function handleAcuteDistressProtocol(parameters: AcuteDistressParams): Pro
   }
 
   try {
-    let queryText = `acute distress protocol for ${distress_type.replace(/_/g, ' ')}`;
+    let queryText = `acute distress protocol for ${(distress_type || 'general_distress').replace(/_/g, ' ')}`;
     if (grounding_technique) {
       queryText += ` using ${grounding_technique.replace(/_/g, ' ')} technique`;
     }

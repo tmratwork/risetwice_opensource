@@ -25,64 +25,43 @@ const supabase = createClient(
 // Removed legacy server tools configuration - now using ElevenLabs Tools API exclusively
 
 // V17 Tools Configuration - ElevenLabs Tools API (post-July 2025)
-async function createV17Tools(): Promise<string[]> {
-  // COMPLETE V17 TOOL SET - All 33 V16 Triage Functions Migrated
-  // All tools already exist and are configured with proper POST schemas and parameter validation
-  const toolIds = [
-    // Core V17 Tools (6) - Previously available via server tools
-    'tool_5401k4kyv4ztexw95bsra3ctfm12',  // get_safety_triage_protocol
-    'tool_6701k4kyx3ysf98av4mpm20x8238',  // get_conversation_stance_guidance
-    'tool_6801k4kyxcg4fj38jsfke0de0k3d',  // get_assessment_protocol
-    'tool_4301k4kyxmjwfppahnf036bv1ed3',  // get_acute_distress_protocol
-    'tool_0901k4kyxz2cerarsc4d4yzaen1e',  // search_resources_unified
-    'tool_8101k4kyy6gdfydtjkeapx8qbx53',  // end_session
-    
-    // Mental Health Core Functions (6)
-    'tool_9601k4m0bgreekste00ccrpr98mn',  // grounding_function
-    'tool_6401k4m0bqrqfmnsh1z05jxxgc0k',  // thought_exploration_function
-    'tool_8001k4m0c0mqehsawr2nebnt0ghw',  // problem_solving_function
-    'tool_6501k4m0c0mvfpgb6be30rfgdbch',  // screening_function
-    'tool_4001k4m0cej1eg7t5g0sygqk69p9',  // psychoeducation_function
-    'tool_9101k4m0cej0en5rkgxkf3ara2gp',  // validation_function
-    
-    // Crisis Support Functions (3)
-    'tool_6401k4m0cej1eqxt0kw73nm28zgn',  // crisis_response_function
-    'tool_3101k4m0dzdcfb095rpx1f2qyqmh',  // crisis_mental_health_function
-    'tool_7001k4m0dzdffmf929y3xmp6g53c',  // domestic_violence_support_function
-    
-    // Therapeutic Content Functions (6)
-    'tool_7301k4m0cw43fsssrjaqz2k7q3p9',  // get_continuity_framework
-    'tool_2801k4m0cw4benvadghpv80kc0g9',  // get_cbt_intervention
-    'tool_2801k4m0cw4cfearaat0n0ysvgfx',  // get_dbt_skills
-    'tool_2701k4m0cw4hen6bejf8bx4h9v33',  // get_trauma_informed_approach
-    'tool_1201k4m0cw4gepnbcpbc6kdb6nx1',  // get_substance_use_support
-    'tool_1101k4m0cw4gf5gt42amet53j32f',  // get_practical_support_guidance
-    
-    // Future Planning Functions (6)
-    'tool_5501k4m0dzdefs492w4g904nbk26',  // educational_guidance_function
-    'tool_3601k4m0dzdffz4tc30k5yej2z2y',  // futures_assessment_function
-    'tool_8601k4m0dzdgerh8x4wxmfrvww4r',  // goal_planning_function
-    'tool_5701k4m0dzdjf25spfg78x7qtv36',  // pathway_exploration_function
-    'tool_8801k4m0dzddepqa77g8n3fns5e8',  // resource_connection_function
-    'tool_1301k4m0e099fkyvy8cwtp10g960',  // skill_building_function
-    
-    // Session Management Functions (2)
-    'tool_2901k4m0dd68faftazeh8vdb9a16',  // getUserHistory_function
-    'tool_2601k4m0dzbje4pb3a80pedezdsc',  // logInteractionOutcome_function
-    
-    // Support Functions (4)
-    'tool_3001k4m0dzbjey3ahbtwvdp46819',  // cultural_humility_function
-    'tool_3701k4m0dzcgfskr3de657sfk6tc',  // display_map_function
-    'tool_2101k4m0dzcgerqbx46gecxt1a0c',  // resource_feedback_function
-    'tool_7001k4m0dzcgef0vbsntwx768qsa'   // report_technical_error
-  ];
+async function getExistingV17Tools(): Promise<string[]> {
+  logV17('🔍 Fetching existing ElevenLabs tools from dashboard');
+  
+  try {
+    // Get all existing tools from ElevenLabs
+    const response = await fetch('https://api.elevenlabs.io/v1/convai/tools', {
+      method: 'GET',
+      headers: {
+        'xi-api-key': ELEVENLABS_API_KEY!,
+        'Content-Type': 'application/json'
+      }
+    });
 
-  logV17('✅ Using existing V17 tools (no creation needed)', {
-    toolCount: toolIds.length,
-    toolIds: toolIds
-  });
+    if (!response.ok) {
+      const errorText = await response.text();
+      logV17('❌ Failed to fetch existing tools', { 
+        status: response.status, 
+        error: errorText 
+      });
+      return [];
+    }
 
-  return toolIds;
+    const toolsData = await response.json();
+    const tools = toolsData.tools || [];
+    const toolIds = tools.map((tool: any) => tool.id);
+
+    logV17('✅ Existing tools fetched successfully', {
+      totalTools: tools.length,
+      toolIds: toolIds.slice(0, 5), // Log first 5 for debugging
+      allToolsCount: toolIds.length
+    });
+
+    return toolIds;
+  } catch (error) {
+    logV17('❌ Error fetching existing tools', { error });
+    return [];
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -170,8 +149,13 @@ export async function POST(request: NextRequest) {
       instructions_length: 0
     };
 
-    // NEW: Create tools using ElevenLabs tools API, then get tool IDs for agent
-    const toolIds = await createV17Tools();
+    // Get existing tools from ElevenLabs dashboard instead of creating new ones
+    const toolIds = await getExistingV17Tools();
+    
+    // If no tools were fetched, use empty array (agent will work without tools)
+    if (toolIds.length === 0) {
+      logV17('⚠️ No existing tools found - agent will work without tool calling capability');
+    }
     
     // Update the agent with our Supabase instructions using NEW 2025 API STRUCTURE
     try {
@@ -185,11 +169,11 @@ export async function POST(request: NextRequest) {
               prompt: aiPrompt.prompt_content || `You are a ${specialistType} AI assistant specialized in mental health support.`,
               first_message: "Hello! I'm here to provide mental health support. How can I help you today?",
               tool_ids: toolIds,  // NEW: Use tool IDs instead of tools array
-              tools: null  // AGGRESSIVELY NULL legacy tools array
+              tools: []  // Empty array instead of null for ElevenLabs API validation
             }
           },
           tts: voiceConfig,
-          tools: null  // ALSO null at conversation_config level
+          tools: []  // Empty array instead of null for ElevenLabs API validation
         },
         name: `RiseTwice ${specialistType} Agent`,
         tags: ["mental-health", specialistType, "risetwice"]
