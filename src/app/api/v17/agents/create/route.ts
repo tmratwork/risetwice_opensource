@@ -27,7 +27,7 @@ const supabase = createClient(
 // V17 Tools Configuration - ElevenLabs Tools API (post-July 2025)
 async function createV17Tools(): Promise<string[]> {
   // COMPLETE V17 TOOL SET - All 33 V16 Triage Functions Migrated
-  // All tools configured with proper POST schemas and parameter validation
+  // All tools already exist and are configured with proper POST schemas and parameter validation
   const toolIds = [
     // Core V17 Tools (6) - Previously available via server tools
     'tool_5401k4kyv4ztexw95bsra3ctfm12',  // get_safety_triage_protocol
@@ -77,13 +77,12 @@ async function createV17Tools(): Promise<string[]> {
     'tool_7001k4m0dzcgef0vbsntwx768qsa'   // report_technical_error
   ];
 
-  logV17('✅ Using existing V17 tools created programmatically', {
+  logV17('✅ Using existing V17 tools (no creation needed)', {
     toolCount: toolIds.length,
     toolIds: toolIds
   });
 
   return toolIds;
-
 }
 
 export async function POST(request: NextRequest) {
@@ -185,11 +184,12 @@ export async function POST(request: NextRequest) {
             prompt: {
               prompt: aiPrompt.prompt_content || `You are a ${specialistType} AI assistant specialized in mental health support.`,
               first_message: "Hello! I'm here to provide mental health support. How can I help you today?",
-              tool_ids: toolIds  // NEW: Use tool IDs instead of tools array
+              tool_ids: toolIds,  // NEW: Use tool IDs instead of tools array
+              tools: null  // AGGRESSIVELY NULL legacy tools array
             }
           },
-          tts: voiceConfig
-          // REMOVED: tools array - now deprecated
+          tts: voiceConfig,
+          tools: null  // ALSO null at conversation_config level
         },
         name: `RiseTwice ${specialistType} Agent`,
         tags: ["mental-health", specialistType, "risetwice"]
