@@ -1,128 +1,176 @@
-# V17 ElevenLabs Function Calls/Tool Calls Implementation
+# V17 ElevenLabs Tool Implementation - Complete Migration
 
 ## Overview
 
-V17 implements function/tool calls for ElevenLabs AI agents using a hybrid approach combining database-driven function definitions with webhook-based execution.
+V17 implements a complete migration of V16's triage AI functions to ElevenLabs agents using June 2025 server tools architecture with webhook-based execution and response-aware tool capabilities.
 
-## Architecture
+## Architecture Summary
 
-### 1. Function Definition Loading
+**Single Triage AI**: V17 uses only one ElevenLabs agent (triage) - no specialist handoffs
+**16 Total Functions**: All essential V16 triage functions migrated to server tools
+**June 2025 Standards**: Response-aware tools with dynamic variables and structured metadata
+**Webhook Security**: Bearer token authentication for all tool calls
 
-**Source:** `src/hooksV17/use-supabase-functions.ts`
-- Functions are loaded from Supabase `ai_prompts` table
-- Each specialist type (triage, anxiety, depression) has specific functions
-- Universal functions can be merged with specialist-specific functions
-- Uses RLS-compliant RPC function `get_ai_prompt_by_type`
+## Function Migration Status
 
-**Key Features:**
-- AI-specific functions: Loaded per specialist type
-- Universal functions: Shared across all specialists (when merge enabled)
-- Database-driven: No hardcoded function definitions
-- Type safety: Full TypeScript interface definitions
+### ✅ **16 V17 Triage Functions Implemented**
 
-### 2. Function Registration Hook
+**Therapeutic Content Functions (10):**
+- `get_safety_triage_protocol` - Safety assessment with crisis detection
+- `get_conversation_stance_guidance` - AI communication strategies  
+- `get_assessment_protocol` - 4-stage therapeutic assessment
+- `get_continuity_framework` - Session continuity management
+- `get_cbt_intervention` - CBT techniques with dynamic context
+- `get_dbt_skills` - DBT skills with distress level awareness
+- `get_trauma_informed_approach` - Trauma protocols with parts work
+- `get_substance_use_support` - Motivational interviewing techniques
+- `get_practical_support_guidance` - Resource navigation support
+- `get_acute_distress_protocol` - Crisis grounding with strict entry criteria
 
-**Source:** `src/hooksV17/use-function-registration.ts`
-- Manages function loading and registration lifecycle
-- Auto-loads functions when AI specialist changes
-- Provides both function definitions (for AI) and implementations (for execution)
-- Integration with V16 mental health functions for compatibility
+**System Functions (3):**
+- `end_session` - Enhanced session cleanup with outcome tracking
+- `getUserHistory_function` - User personalization and history
+- `logInteractionOutcome_function` - Therapeutic effectiveness tracking
 
-**Return Interface:**
-```typescript
-{
-  registeredFunctions: unknown[];
-  functionDefinitions: SupabaseFunctionDefinition[];
-  functionRegistry: SupabaseFunctionRegistry;
-  loadFunctionsForAI: (aiType: string) => Promise<SupabaseFunctionDefinition[]>;
-  isLoading: boolean;
-  error: string | null;
-}
-```
+**Resource Functions (3):**
+- `display_map_function` - Client-side map visualization trigger
+- `resource_feedback_function` - Resource quality feedback collection
+- `search_resources_unified` - Resource search with location awareness
 
-### 3. Webhook-Based Function Execution
+## Implementation Architecture
+
+### 1. Server Tools Configuration
+
+**Source:** `src/app/api/v17/agents/create/route.ts`
+- Configures ElevenLabs agent with server tools using June 2025 standards
+- Each tool configured with webhook URL and Bearer token authentication
+- Environment-aware webhook URLs (localhost for dev, production URL for live)
+- 6 core functions configured as server tools in agent
+
+### 2. Webhook Handler Implementation
 
 **Source:** `src/app/api/v17/tools/webhook/route.ts`
-- Handles function calls from ElevenLabs agents via POST webhooks
-- Routes function calls to appropriate handlers
-- Returns structured JSON responses for the AI agent
+- Handles authenticated webhook calls from ElevenLabs agent
+- Routes all 16 function calls to appropriate handlers
+- Returns June 2025 response-aware structured responses
+- Bearer token authentication using `ELEVENLABS_WEBHOOK_TOKEN`
 
-**Supported Functions:**
-- `search_knowledge_base` - Pinecone knowledge base search
-- `search_resources_unified` / `resource_search_function` - Resource database search
-- `trigger_specialist_handoff` - Specialist handoff management
-- `crisis_response_function` - Crisis intervention resources
-- `get_user_location` - Client-side location requests
+### 3. June 2025 Response Architecture
 
-**Request Format:**
+**Enhanced Tool Responses:**
+- **Dynamic Variables**: Extracted for agent context
+- **Structured Metadata**: Execution time, success tracking, version info
+- **Next Available Actions**: Context-aware suggestions for agent
+- **User Feedback Prompts**: Automatic engagement questions
+- **Error Recovery**: Intelligent fallback recommendations
+
+**Example Response:**
 ```json
 {
-  "function_name": "search_knowledge_base",
-  "parameters": {
-    "query": "anxiety coping strategies"
+  "success": true,
+  "data": {
+    "protocol": {
+      "risk_type": "suicide_ideation",
+      "risk_level": "active_assessment", 
+      "guidance": ["Safety assessment guidance..."],
+      "context_applied": true
+    },
+    "immediate_actions_required": false,
+    "crisis_resources_needed": ["988", "crisis_text_line"]
+  },
+  "metadata": {
+    "execution_time_ms": 245.67,
+    "function_name": "get_safety_triage_protocol",
+    "success": true,
+    "timestamp": "2025-09-08T03:15:30.123Z",
+    "version": "V17_June2025"
+  },
+  "dynamic_variables": [
+    {
+      "key": "current_risk_level",
+      "value": "active_assessment",
+      "extracted_from": "function_parameters",
+      "data_type": "string"
+    }
+  ],
+  "next_available_actions": [
+    "continue_conversation",
+    "assess_immediate_safety", 
+    "provide_crisis_resources"
+  ],
+  "user_feedback_prompt": "Was this safety guidance helpful and clear?",
+  "agent_context": {
+    "conversation_state": "active",
+    "safety_assessment_active": true,
+    "therapeutic_focus": "safety_first"
   }
 }
 ```
 
-**Response Format:**
-```json
-{
-  "success": true,
-  "results": [...],
-  "summary": "Found 5 relevant documents for: anxiety coping strategies"
-}
+## Agent Setup Process
+
+### 1. Agent Configuration API
+
+**Endpoint:** `POST /api/v17/agents/create`
+
+**Process:**
+1. **Load Triage Prompt**: Gets triage AI instructions from Supabase `ai_prompts` table
+2. **Configure Server Tools**: Sets up 6 core server tools with webhook authentication
+3. **Update ElevenLabs Agent**: PATCH request with tools, voice settings, and instructions
+4. **Environment Detection**: Uses correct webhook URLs for dev/production
+
+**Request:**
+```bash
+curl -X POST http://localhost:3000/api/v17/agents/create \
+-H "Content-Type: application/json" \
+-d '{"specialistType": "triage"}'
 ```
 
-## Agent Configuration
+### 2. Server Tools Configured
 
-### Agent Creation/Update
+**6 Core Tools Registered with Agent:**
+- `get_safety_triage_protocol` - Safety assessment
+- `get_conversation_stance_guidance` - Communication strategies  
+- `get_assessment_protocol` - Therapeutic assessment
+- `get_acute_distress_protocol` - Crisis grounding
+- `search_resources_unified` - Resource search
+- `end_session` - Session cleanup
 
-**Source:** `src/app/api/v17/agents/create/route.ts`
-- Updates existing ElevenLabs agent with Supabase instructions
-- Configures voice settings and AI prompts
-- Verifies agent configuration post-update
+**Each Tool Configured With:**
+- Webhook URL: `{BASE_URL}/api/v17/tools/webhook`  
+- Authentication: `Bearer {ELEVENLABS_WEBHOOK_TOKEN}`
+- Parameter validation and descriptions
+- Environment-aware URLs (localhost/production)
 
-**Configuration Process:**
-1. Load AI instructions from Supabase `ai_prompts` table
-2. Configure voice settings (model, stability, etc.)
-3. Update ElevenLabs agent via PATCH API
-4. Verify configuration matches expected values
+## Tool Execution Flow
 
-### Session Management
+### 1. Agent Tool Call
+1. **User Interaction**: User speaks/types to ElevenLabs agent
+2. **Agent Decision**: Agent determines need for function call
+3. **Webhook Request**: Agent POST to `/api/v17/tools/webhook` with authentication
+4. **Function Execution**: Webhook routes to appropriate handler
+5. **Enhanced Response**: June 2025 structured response returned
+6. **Agent Integration**: Agent uses response context to continue conversation
 
-**Source:** `src/app/api/v17/start-session/route.ts`
-- Loads specialist-specific prompts
-- Enhances prompts with context and user memory
-- Updates conversation tracking in database
-- Returns session configuration for ElevenLabs
+### 2. Authentication Flow
+```
+ElevenLabs Agent → POST /api/v17/tools/webhook
+Headers: Authorization: Bearer {ELEVENLABS_WEBHOOK_TOKEN}
+Body: {"function_name": "get_safety_triage_protocol", "parameters": {...}}
+```
 
-**Enhanced Prompt Features:**
-- Context summary integration from triage handoffs
-- User memory enhancement from profile data
-- Session reset instructions for specialist transitions
-- V17-specific metadata tracking
-
-## ElevenLabs Integration
-
-### Conversation Hook
-
-**Source:** `src/hooksV17/use-elevenlabs-conversation.ts`
-- Manages ElevenLabs conversation lifecycle
-- Handles microphone control and audio settings
-- Integrates with function registration system
-
-**Current Limitations:**
-- Client-side tool registration disabled (SDK limitation)
-- Functions executed via webhooks instead of direct SDK calls
-- Comment: "registerTool is not available in current SDK"
-
-### Function Flow
-
-1. **Load Functions:** `useFunctionRegistration` loads from Supabase
-2. **Configure Agent:** Functions included in agent prompt context
-3. **Execute Calls:** ElevenLabs calls webhook endpoint with function data
-4. **Process Response:** Webhook returns structured data to agent
-5. **Continue Conversation:** Agent uses response in ongoing dialogue
+### 3. Response Flow
+```
+Webhook Handler → Enhanced Response → ElevenLabs Agent
+{
+  "success": true,
+  "data": {...},
+  "metadata": {...},
+  "dynamic_variables": [...],
+  "next_available_actions": [...],
+  "agent_context": {...}
+}
+```
 
 ## Database Schema Dependencies
 
