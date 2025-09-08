@@ -47,7 +47,7 @@ export async function GET(request: NextRequest) {
     
     // Extract tool IDs and basic info
     const tools = toolsData.tools || [];
-    const toolIds = tools.map((tool: any) => tool.id);
+    const toolIds = tools.map((tool: { id: string }) => tool.id);
     
     logV17('✅ Tools fetched successfully', {
       totalTools: tools.length,
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       allToolsCount: toolIds.length
     });
 
-    const result: any = {
+    const result: { success: boolean; totalTools: number; toolIds: string[]; tools?: unknown[] } = {
       success: true,
       totalTools: tools.length,
       toolIds: toolIds
@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
 
     // Include detailed tool info if requested
     if (includeDetails) {
-      result.tools = tools.map((tool: any) => ({
+      result.tools = tools.map((tool: { id: string; name: string; description: string; type: string; created_at: string; updated_at: string }) => ({
         id: tool.id,
         name: tool.name,
         description: tool.description,

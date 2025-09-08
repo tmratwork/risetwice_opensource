@@ -72,7 +72,7 @@ async function getExistingV17Tools(): Promise<string[]> {
 
     const toolsData = await response.json();
     const tools = toolsData.tools || [];
-    const toolIds = tools.map((tool: any) => tool.id);
+    const toolIds = tools.map((tool: { id: string }) => tool.id);
 
     logV17('✅ Existing tools fetched successfully', {
       totalTools: tools.length,

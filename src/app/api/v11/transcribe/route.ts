@@ -68,7 +68,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     // Create FormData for OpenAI API
     const form = new FormData();
-    const blob = new Blob([buffer], { type: mimeType });
+    const blob = new Blob([new Uint8Array(buffer)], { type: mimeType });
     form.append('file', blob, 'audio.webm');
     form.append('model', 'whisper-1');
 

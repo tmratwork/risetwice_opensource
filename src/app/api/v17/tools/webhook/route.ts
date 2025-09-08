@@ -40,6 +40,7 @@ interface SafetyTriageParams {
   risk_type: string;
   risk_level: string;
   session_context?: string;
+  [key: string]: unknown;
 }
 
 interface ConversationStanceParams {
@@ -193,7 +194,7 @@ function createEnhancedResponse(
 
   if (result.success) {
     response.data = result.data;
-    response.next_available_actions = generateNextActions(functionName, result.data);
+    response.next_available_actions = generateNextActions(functionName);
     response.user_feedback_prompt = generateFeedbackPrompt(functionName);
   } else {
     response.error = result.error;
@@ -213,7 +214,7 @@ function createEnhancedResponse(
 }
 
 // Generate context-aware next actions
-function generateNextActions(functionName: string, data: unknown): string[] {
+function generateNextActions(functionName: string): string[] {
   const baseActions = ['continue_conversation', 'ask_follow_up_questions'];
   
   switch (functionName) {
@@ -1253,15 +1254,13 @@ async function handleEndSession(parameters: EndSessionParams): Promise<NextRespo
   logV17('🔚 End session requested', { user_outcome });
 
   try {
-    // Log session end in database
-    const sessionData = {
-      user_outcome: user_outcome || 'neutral',
-      session_summary: session_summary || 'Session completed',
-      ended_at: new Date().toISOString(),
-      version: 'V17'
-    };
-
     // Here you could save to database if needed
+    // const sessionData = {
+    //   user_outcome: user_outcome || 'neutral',
+    //   session_summary: session_summary || 'Session completed',
+    //   ended_at: new Date().toISOString(),
+    //   version: 'V17'
+    // };
     // await supabase.from('session_logs').insert(sessionData);
 
     return NextResponse.json({
@@ -1367,16 +1366,15 @@ async function handleLogInteractionOutcome(parameters: InteractionOutcomeParams)
   logV17('📝 Logging interaction outcome', { approach_used, effectiveness_rating });
 
   try {
-    const outcomeData = {
-      approach_used,
-      effectiveness_rating,
-      user_engagement: user_engagement || 'not_specified',
-      therapeutic_module,
-      logged_at: new Date().toISOString(),
-      version: 'V17'
-    };
-
     // Here you could save to database
+    // const outcomeData = {
+    //   approach_used,
+    //   effectiveness_rating,
+    //   user_engagement: user_engagement || 'not_specified',
+    //   therapeutic_module,
+    //   logged_at: new Date().toISOString(),
+    //   version: 'V17'
+    // };
     // await supabase.from('interaction_outcomes').insert(outcomeData);
 
     return NextResponse.json({
@@ -1441,16 +1439,15 @@ async function handleResourceFeedback(parameters: ResourceFeedbackParams): Promi
   logV17('💬 Resource feedback received', { searchId, helpful, resource_name });
 
   try {
-    const feedbackData = {
-      search_id: searchId,
-      helpful,
-      resource_name,
-      comment,
-      submitted_at: new Date().toISOString(),
-      version: 'V17'
-    };
-
     // Here you could save to database
+    // const feedbackData = {
+    //   search_id: searchId,
+    //   helpful,
+    //   resource_name,
+    //   comment,
+    //   submitted_at: new Date().toISOString(),
+    //   version: 'V17'
+    // };
     // await supabase.from('resource_feedback').insert(feedbackData);
 
     return NextResponse.json({
