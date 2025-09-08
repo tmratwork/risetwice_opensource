@@ -1,6 +1,21 @@
 // src/app/api/v17/agents/create/route.ts
 // V17 ElevenLabs Agent Configuration API
 // Creates and configures ElevenLabs agents with voice, AI instructions, and knowledge base
+//
+// 🚨🚨🚨 CRITICAL WARNING FOR FUTURE CLAUDE CODE SESSIONS 🚨🚨🚨
+// 
+// ❌ DO NOT CREATE TOOLS DYNAMICALLY IN THIS FILE!
+// ❌ DO NOT ADD fetch() calls with method: 'POST' to create tools!  
+// ❌ DO NOT modify getExistingV17Tools() to create new tools!
+//
+// ✅ ALL TOOLS ARE ALREADY CREATED IN ELEVENLABS DASHBOARD (34+ tools)
+// ✅ This file only FETCHES existing tool IDs and assigns them to agent
+// ✅ getExistingV17Tools() uses GET method to fetch existing tools
+//
+// If you see this comment and think "but we need to create tools":
+// STOP! The tools already exist. Just fetch and use them.
+//
+// 🚨🚨🚨 END CRITICAL WARNING 🚨🚨🚨
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -24,11 +39,19 @@ const supabase = createClient(
 
 // Removed legacy server tools configuration - now using ElevenLabs Tools API exclusively
 
+// ⚠️ CRITICAL: DO NOT CREATE TOOLS DYNAMICALLY!
+// ⚠️ ALL TOOLS ARE ALREADY CREATED IN ELEVENLABS DASHBOARD
+// ⚠️ THIS FUNCTION ONLY FETCHES EXISTING TOOL IDS - NEVER CREATES NEW ONES
+// ⚠️ FUTURE CLAUDE: DO NOT MODIFY THIS TO CREATE TOOLS!
+//
 // V17 Tools Configuration - ElevenLabs Tools API (post-July 2025)
+// FETCHES existing tools from dashboard - DOES NOT create new tools
 async function getExistingV17Tools(): Promise<string[]> {
   logV17('🔍 Fetching existing ElevenLabs tools from dashboard');
   
   try {
+    // ✅ CORRECT: Fetch existing tools from ElevenLabs dashboard
+    // ❌ WRONG: Creating new tools with POST requests
     // Get all existing tools from ElevenLabs
     const response = await fetch('https://api.elevenlabs.io/v1/convai/tools', {
       method: 'GET',
@@ -149,6 +172,9 @@ export async function POST(request: NextRequest) {
       instructions_length: 0
     };
 
+    // ⚠️ CRITICAL: This does NOT create tools - it fetches existing tool IDs!
+    // ⚠️ All 34+ tools are already created in ElevenLabs dashboard
+    // ⚠️ DO NOT modify this to create tools dynamically!
     // Get existing tools from ElevenLabs dashboard instead of creating new ones
     const toolIds = await getExistingV17Tools();
     

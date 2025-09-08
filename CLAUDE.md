@@ -6,6 +6,7 @@
 - **Preserve Existing Code**: DO NOT remove code or features without explicit consent from the user. Only modify what's needed to fulfill the current request.
 - **TypeScript Errors**: when fixing TypeScript errors, it's essential to preserve the functionality of the code. do not code until i paste the TS errors.
 - **WebRTC**: DO NOT CHANGE WEBRTC code, there have been breaking changes since your training.
+- **🚨 V17 ElevenLabs Tools**: DO NOT CREATE TOOLS DYNAMICALLY! All 34+ tools already exist in ElevenLabs dashboard. File `src/app/api/v17/agents/create/route.ts` only FETCHES existing tool IDs.
 
 ## Commands
 - `npm run dev` - Start development server with TurboPack (DO NOT RUN THIS COMMAND - user will handle this themselves)

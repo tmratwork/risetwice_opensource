@@ -1,5 +1,20 @@
 # V17 ElevenLabs Tool Implementation - Complete Migration Status
 
+## 🚨 CRITICAL WARNING FOR FUTURE CLAUDE CODE SESSIONS 🚨
+
+**❌ DO NOT CREATE TOOLS DYNAMICALLY!**
+**❌ DO NOT MODIFY THE CODE TO CREATE NEW TOOLS!**
+
+✅ **ALL TOOLS ARE ALREADY CREATED IN ELEVENLABS DASHBOARD (34+ tools)**
+✅ **The code fetches existing tool IDs and assigns them to the agent**
+✅ **getExistingV17Tools() uses GET method - never POST to create tools**
+
+**If you think "we need to create tools dynamically":**
+**STOP! The tools already exist. Check the ElevenLabs dashboard.**
+
+**File to NOT modify for tool creation:**
+- `src/app/api/v17/agents/create/route.ts` - Only fetches existing tools
+
 ## Overview
 
 V17 implements the migration of V16's triage AI functions to ElevenLabs agents using July 2025 breaking changes architecture. The system uses the new `tool_ids` approach instead of legacy `tools` arrays, with webhook-based execution for server tools.
