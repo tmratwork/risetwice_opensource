@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
       const updatedAgent = await updateResponse.json();
       console.log(`[V17] 🚨 FORCE LOG: PATCH SUCCESS - Voice should now be: ${voiceConfig.voice_id}`);
       console.log(`[V17] 🚨 FORCE LOG: Response voice_id: ${updatedAgent.conversation_config?.tts?.voice_id || 'NOT SET'}`);
-      console.log(`[V17] 🔧 ELEVENLABS RESPONSE TOOLS:`, JSON.stringify(updatedAgent.conversation_config?.tools || 'NO TOOLS', null, 2));
+      console.log(`[V17] 🔧 ELEVENLABS RESPONSE TOOL IDs:`, JSON.stringify(updatedAgent.conversation_config?.agent?.prompt?.tool_ids || 'NO TOOL IDS', null, 2));
       
       // Write ElevenLabs response to file for debugging
       try {
