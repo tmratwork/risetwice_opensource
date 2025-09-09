@@ -27,6 +27,7 @@ const S1Dashboard: React.FC = () => {
   const [availablePatients, setAvailablePatients] = useState<AIPatient[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [startingSession, setStartingSession] = useState<string | null>(null);
 
   useEffect(() => {
     console.log('[S1] Component mounted, starting data fetch...');
@@ -61,6 +62,36 @@ const S1Dashboard: React.FC = () => {
     } finally {
       console.log('[S1] Setting loading to false');
       setLoading(false);
+    }
+  };
+
+  const startSession = async (patientId: string) => {
+    try {
+      console.log('[S1] Starting session with patient:', patientId);
+      setStartingSession(patientId);
+      
+      // Create session
+      const response = await fetch('/api/s1/therapy-sessions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ai_patient_id: patientId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create session');
+      }
+
+      const { session } = await response.json();
+      console.log('[S1] Session created:', session);
+      
+      // For now, just show an alert
+      alert(`Session started with ${session.ai_patient_name || 'AI Patient'}!\n\nThis would normally open the chat interface.`);
+      
+    } catch (error) {
+      console.error('[S1] Error starting session:', error);
+      alert('Failed to start session. Check console for details.');
+    } finally {
+      setStartingSession(null);
     }
   };
 
@@ -197,8 +228,12 @@ const S1Dashboard: React.FC = () => {
                       <span className="text-xs text-gray-500">
                         Severity: {patient.severity_level}/10
                       </span>
-                      <button className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700">
-                        Start Session
+                      <button 
+                        onClick={() => startSession(patient.id)}
+                        disabled={startingSession === patient.id}
+                        className="bg-blue-600 text-white px-3 py-1 rounded text-sm hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {startingSession === patient.id ? 'Starting...' : 'Start Session'}
                       </button>
                     </div>
                   </div>
