@@ -20,7 +20,8 @@ export default function ChatBotV17Page() {
     startSession,
     isConnected,
     setVolume,
-    conversationInstance
+    conversationInstance,
+    isPreparing
   } = useElevenLabsConversation();
 
   // Handle conversation start after auth
@@ -169,8 +170,16 @@ export default function ChatBotV17Page() {
               className="control-button primary large-button"
               aria-label="Start a new conversation with RiseTwice AI assistant"
               onClick={handleLetsTalkClick}
+              disabled={isPreparing}
             >
-              <span className="button-text">Let&apos;s Talk</span>
+              {isPreparing ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span className="button-text">Connecting...</span>
+                </div>
+              ) : (
+                <span className="button-text">Let&apos;s Talk</span>
+              )}
             </button>
 
             {/* Spacing between Let's Talk and other elements - exact copy from V16 */}
