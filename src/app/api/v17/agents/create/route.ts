@@ -95,15 +95,18 @@ export async function POST(request: NextRequest) {
     const { 
       specialistType = 'triage', 
       voiceId = 'EmtkmiOFoQVpKRVpXH2B', // V17 specified voice by default
-      userId 
+      userId,
+      demoPromptAppend // Optional demo prompt to append to base instructions
     } = body;
     
-    console.log(`[V17] 🚨 FORCE LOG: Request body parsed - voiceId: ${voiceId}, specialistType: ${specialistType}`);
+    console.log(`[V17] 🚨 FORCE LOG: Request body parsed - voiceId: ${voiceId}, specialistType: ${specialistType}, hasDemo: ${!!demoPromptAppend}`);
 
     logV17('🤖 Creating ElevenLabs agent', {
       specialistType,
       voiceId,
-      userId: userId || 'anonymous'
+      userId: userId || 'anonymous',
+      isDemoRequest: !!demoPromptAppend,
+      demoPromptLength: demoPromptAppend?.length || 0
     });
 
     // 1. GET AI INSTRUCTIONS from Supabase (same as V16)
@@ -122,19 +125,35 @@ export async function POST(request: NextRequest) {
       }, { status: 500 });
     }
 
-    logV17('✅ AI prompt loaded', {
+    // Prepare final AI instructions (base + optional demo append)
+    let finalPromptContent = aiPrompt.prompt_content || `You are a ${specialistType} AI assistant specialized in mental health support.`;
+    
+    // Append demo prompt if provided
+    if (demoPromptAppend) {
+      finalPromptContent += demoPromptAppend;
+      logV17('✅ Demo prompt appended to base instructions', {
+        originalLength: aiPrompt.prompt_content?.length || 0,
+        appendLength: demoPromptAppend.length,
+        finalLength: finalPromptContent.length
+      });
+    }
+
+    logV17('✅ AI prompt loaded and processed', {
       specialistType,
-      promptLength: aiPrompt.prompt_content?.length || 0,
-      functionsCount: aiPrompt.functions?.length || 0
+      basePromptLength: aiPrompt.prompt_content?.length || 0,
+      finalPromptLength: finalPromptContent.length,
+      functionsCount: aiPrompt.functions?.length || 0,
+      isDemoRequest: !!demoPromptAppend
     });
 
     // Log the actual prompt being used (truncated for readability)
     if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
-      console.log(`[V17] 📝 AI Instructions for ${specialistType}:`, {
-        promptPreview: aiPrompt.prompt_content?.substring(0, 500) + '...',
-        fullPromptLength: aiPrompt.prompt_content?.length || 0,
+      console.log(`[V17] 📝 AI Instructions for ${specialistType}${demoPromptAppend ? ' (with demo append)' : ''}:`, {
+        promptPreview: finalPromptContent.substring(0, 500) + '...',
+        fullPromptLength: finalPromptContent.length,
         functionNames: aiPrompt.functions?.map((f: { name: string }) => f.name) || [],
-        lastUpdated: aiPrompt.updated_at
+        lastUpdated: aiPrompt.updated_at,
+        isDemoRequest: !!demoPromptAppend
       });
     }
 
@@ -192,7 +211,7 @@ export async function POST(request: NextRequest) {
         conversation_config: {
           agent: {
             prompt: {
-              prompt: aiPrompt.prompt_content || `You are a ${specialistType} AI assistant specialized in mental health support.`,
+              prompt: finalPromptContent,
               first_message: "Hello! I'm here to provide mental health support. How can I help you today?",
               tool_ids: toolIds,  // NEW: Use tool IDs instead of tools array
               tools: []  // Empty array instead of null for ElevenLabs API validation
@@ -241,8 +260,8 @@ export async function POST(request: NextRequest) {
       
       // Write ElevenLabs response to file for debugging
       try {
-        const { writeFileSync } = await import('fs');
-        writeFileSync('/tmp/v17-elevenlabs-response.json', JSON.stringify(updatedAgent, null, 2));
+        const fsModule = await import('fs');
+        fsModule.writeFileSync('/tmp/v17-elevenlabs-response.json', JSON.stringify(updatedAgent, null, 2));
       } catch (e) {
         console.log('[V17] Could not write debug response file:', e);
       }

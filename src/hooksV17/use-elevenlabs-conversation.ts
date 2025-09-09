@@ -207,14 +207,17 @@ export function useElevenLabsConversation() {
   //   }
   // }, [conversation, store.isConnected]);
 
-  // Start session with specific specialist agent
-  const startSession = useCallback(async (specialistType: string = 'triage') => {
+  // Start session with specific specialist agent (with optional demo parameters)
+  const startSession = useCallback(async (specialistType: string = 'triage', demoVoiceId?: string, demoPromptAppend?: string) => {
     try {
       setIsPreparing(true);
       
       logV17('🚀 Starting ElevenLabs session', {
         specialistType,
-        userId: user?.uid || 'anonymous'
+        userId: user?.uid || 'anonymous',
+        isDemoRequest: !!(demoVoiceId || demoPromptAppend),
+        demoVoiceId,
+        demoPromptLength: demoPromptAppend?.length || 0
       });
 
       // 1. Create or get agent for specialist
@@ -224,7 +227,8 @@ export function useElevenLabsConversation() {
         body: JSON.stringify({
           specialistType,
           userId: user?.uid || null,
-          voiceId: 'EmtkmiOFoQVpKRVpXH2B' // V17 specified voice ID
+          voiceId: demoVoiceId || 'EmtkmiOFoQVpKRVpXH2B', // Use demo voice or V17 default
+          demoPromptAppend // Pass demo prompt append if provided
         })
       });
 

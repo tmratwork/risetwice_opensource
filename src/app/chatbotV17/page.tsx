@@ -9,6 +9,7 @@ import { useElevenLabsStore } from '@/stores/elevenlabs-store';
 import { useElevenLabsConversation } from '@/hooksV17/use-elevenlabs-conversation';
 import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
+import { DemoButtons } from './components/DemoButtons';
 
 export default function ChatBotV17Page() {
   const { user } = useAuth();
@@ -52,6 +53,35 @@ export default function ChatBotV17Page() {
       handleLetsTalk();
     }
   }, [user, handleLetsTalk]);
+
+  // Handle demo button clicks (Dr Mattu, Dr Judy)
+  const handleDemoStart = useCallback((voiceId: string, promptAppend: string, doctorName: string, forceStart = false) => {
+    const startDemo = async () => {
+      console.log(`[V17] Starting demo conversation with ${doctorName}`, { voiceId, promptAppendLength: promptAppend.length });
+      try {
+        // Create conversation if needed
+        if (!store.conversationId) {
+          await store.createConversation();
+        }
+
+        // Start session with demo parameters
+        await startSession('triage', voiceId, promptAppend);
+        console.log(`[V17] ✅ ${doctorName} demo conversation started successfully`);
+      } catch (error) {
+        console.error(`[V17] ❌ Failed to start ${doctorName} demo conversation:`, error);
+      }
+    };
+
+    if (!user && !forceStart) {
+      // User is not signed in - show sign-in dialog, then start demo
+      setIsSignInDialogOpen(true);
+      // Store demo params for after sign in
+      (window as any).__pendingDemo = { voiceId, promptAppend, doctorName };
+    } else {
+      // User is signed in OR forceStart is true - start demo immediately
+      startDemo();
+    }
+  }, [user, store, startSession]);
 
   // Handle text message input
   const handleInputChange = useCallback((value: string) => {
@@ -166,6 +196,10 @@ export default function ChatBotV17Page() {
         {/* Start button overlay - positioned as sibling to conversation-container, just like V16 */}
         {!isConnected && (
           <div className="start-button-overlay flex flex-col items-center">
+            
+            {/* Demo Buttons */}
+            <DemoButtons onDemoStart={handleDemoStart} isPreparing={isPreparing} />
+            
             <button
               className="control-button primary large-button"
               aria-label="Start a new conversation with RiseTwice AI assistant"
@@ -326,14 +360,34 @@ export default function ChatBotV17Page() {
       {/* Sign In Dialog - exact copy from V16 */}
       <SignInDialog
         isOpen={isSignInDialogOpen}
-        onClose={() => setIsSignInDialogOpen(false)}
+        onClose={() => {
+          setIsSignInDialogOpen(false);
+          // Clear pending demo if user cancels sign-in
+          delete (window as any).__pendingDemo;
+        }}
         onSignedIn={() => {
           setIsSignInDialogOpen(false);
-          handleLetsTalk();
+          // Check if there's a pending demo
+          const pendingDemo = (window as any).__pendingDemo;
+          if (pendingDemo) {
+            console.log('[V17] Executing pending demo after sign-in:', pendingDemo.doctorName);
+            handleDemoStart(pendingDemo.voiceId, pendingDemo.promptAppend, pendingDemo.doctorName, true);
+            delete (window as any).__pendingDemo;
+          } else {
+            handleLetsTalk();
+          }
         }}
         onContinueWithoutSignIn={() => {
           setIsSignInDialogOpen(false);
-          handleLetsTalk();
+          // Check if there's a pending demo
+          const pendingDemo = (window as any).__pendingDemo;
+          if (pendingDemo) {
+            console.log('[V17] Executing pending demo without sign-in:', pendingDemo.doctorName);
+            handleDemoStart(pendingDemo.voiceId, pendingDemo.promptAppend, pendingDemo.doctorName, true);
+            delete (window as any).__pendingDemo;
+          } else {
+            handleLetsTalk();
+          }
         }}
       />
     </div>
