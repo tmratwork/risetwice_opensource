@@ -11,6 +11,20 @@ import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
 import { DemoButtons } from './components/DemoButtons';
 
+// Type for pending demo data
+interface PendingDemo {
+  voiceId: string;
+  promptAppend: string;
+  doctorName: string;
+}
+
+// Extend window interface to include pending demo
+declare global {
+  interface Window {
+    __pendingDemo?: PendingDemo;
+  }
+}
+
 export default function ChatBotV17Page() {
   const { user } = useAuth();
   const [isSignInDialogOpen, setIsSignInDialogOpen] = useState(false);
@@ -76,7 +90,7 @@ export default function ChatBotV17Page() {
       // User is not signed in - show sign-in dialog, then start demo
       setIsSignInDialogOpen(true);
       // Store demo params for after sign in
-      (window as any).__pendingDemo = { voiceId, promptAppend, doctorName };
+      window.__pendingDemo = { voiceId, promptAppend, doctorName };
     } else {
       // User is signed in OR forceStart is true - start demo immediately
       startDemo();
@@ -363,16 +377,16 @@ export default function ChatBotV17Page() {
         onClose={() => {
           setIsSignInDialogOpen(false);
           // Clear pending demo if user cancels sign-in
-          delete (window as any).__pendingDemo;
+          delete window.__pendingDemo;
         }}
         onSignedIn={() => {
           setIsSignInDialogOpen(false);
           // Check if there's a pending demo
-          const pendingDemo = (window as any).__pendingDemo;
+          const pendingDemo = window.__pendingDemo;
           if (pendingDemo) {
             console.log('[V17] Executing pending demo after sign-in:', pendingDemo.doctorName);
             handleDemoStart(pendingDemo.voiceId, pendingDemo.promptAppend, pendingDemo.doctorName, true);
-            delete (window as any).__pendingDemo;
+            delete window.__pendingDemo;
           } else {
             handleLetsTalk();
           }
@@ -380,11 +394,11 @@ export default function ChatBotV17Page() {
         onContinueWithoutSignIn={() => {
           setIsSignInDialogOpen(false);
           // Check if there's a pending demo
-          const pendingDemo = (window as any).__pendingDemo;
+          const pendingDemo = window.__pendingDemo;
           if (pendingDemo) {
             console.log('[V17] Executing pending demo without sign-in:', pendingDemo.doctorName);
             handleDemoStart(pendingDemo.voiceId, pendingDemo.promptAppend, pendingDemo.doctorName, true);
-            delete (window as any).__pendingDemo;
+            delete window.__pendingDemo;
           } else {
             handleLetsTalk();
           }
