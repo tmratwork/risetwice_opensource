@@ -67,8 +67,7 @@ export async function POST(request: NextRequest) {
     const aiPatientFeedback = await generateAIPatientFeedback(
       session_id, 
       therapeutic_alliance_score,
-      technique_effectiveness_score,
-      supabase
+      technique_effectiveness_score
     );
 
     // Update session with completion data
@@ -121,7 +120,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function generateSessionSummary(sessionId: string, supabase: ReturnType<typeof createClient>) {
+async function generateSessionSummary(sessionId: string, supabase: typeof supabaseAdmin) {
   try {
     // Get session messages to analyze
     const { data: messages } = await supabase
@@ -135,12 +134,12 @@ async function generateSessionSummary(sessionId: string, supabase: ReturnType<ty
     }
 
     // Simple summary generation (in production, this would use OpenAI)
-    const therapistMessages = messages.filter(m => m.role === 'therapist').length;
-    const patientMessages = messages.filter(m => m.role === 'ai_patient').length;
+    const therapistMessages = messages.filter((m: { role: string }) => m.role === 'therapist').length;
+    const patientMessages = messages.filter((m: { role: string }) => m.role === 'ai_patient').length;
     const totalMessages = messages.length;
 
     const emotionalTones = messages
-      .map(m => m.emotional_tone)
+      .map((m: { emotional_tone?: string }) => m.emotional_tone)
       .filter(Boolean);
 
     const uniqueTones = [...new Set(emotionalTones)].join(', ');
@@ -155,7 +154,8 @@ async function generateSessionSummary(sessionId: string, supabase: ReturnType<ty
 
 async function generateAIPatientFeedback(
   _sessionId: string, 
-  allianceScore?: number 
+  allianceScore?: number,
+  techniqueScore?: number
 ) {
   try {
     // In production, this would analyze the therapist's techniques and provide AI feedback
@@ -183,7 +183,7 @@ async function generateAIPatientFeedback(
   }
 }
 
-async function updateTherapistStats(userId: string, supabase: ReturnType<typeof createClient>) {
+async function updateTherapistStats(userId: string, supabase: typeof supabaseAdmin) {
   try {
     // Get current stats
     const { data: profile } = await supabase
@@ -206,8 +206,8 @@ async function updateTherapistStats(userId: string, supabase: ReturnType<typeof 
 
     let newAverageScore = null;
     if (recentSessions && recentSessions.length > 0) {
-      const scores = recentSessions.map(s => s.therapeutic_alliance_score);
-      newAverageScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+      const scores = recentSessions.map((s: { therapeutic_alliance_score: number }) => s.therapeutic_alliance_score);
+      newAverageScore = scores.reduce((a: number, b: number) => a + b, 0) / scores.length;
     }
 
     // Update profile stats

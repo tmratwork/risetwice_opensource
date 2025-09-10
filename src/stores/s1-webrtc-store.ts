@@ -3,10 +3,8 @@
 // Based on V16 architecture but adapted for S1 (therapist practicing with AI patients)
 
 import { create } from 'zustand';
-import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
 import { ConnectionManager } from '@/hooksV15/webrtc/connection-manager';
 import { ComprehensiveMessageHandler, type MessageHandlerCallbacks } from '@/hooksV15/webrtc/comprehensive-message-handler';
-import audioService from '@/hooksV15/audio/audio-service';
 import type { ConnectionConfig } from '@/hooksV15/types';
 
 // S1 conversation message interface
@@ -237,30 +235,6 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
           }
         },
 
-        // Add user input handling (missing from original implementation)
-        onInputAudioTranscriptionCompleted: (msg: Record<string, unknown>) => {
-          const transcript = msg.transcript as string;
-          const itemId = msg.item_id as string;
-          
-          console.log('[S1] User input transcript completed:', { transcriptLength: transcript?.length, itemId });
-          
-          const currentState = get();
-          
-          // S1: Mark that therapist has spoken when we receive voice input
-          if (!currentState.therapistHasSpokenFirst) {
-            console.log('[S1] ✅ Therapist spoke via voice - enabling AI responses');
-            set({ therapistHasSpokenFirst: true });
-          }
-          
-          if (transcript && currentState.transcriptCallback) {
-            currentState.transcriptCallback({
-              id: itemId,
-              data: transcript,
-              metadata: { isFinal: true, role: 'therapist' }
-            });
-          }
-        },
-
         onAudioDelta: (msg: Record<string, unknown>) => {
           // Handle audio chunks for playback (copy from V16)
           const delta = msg.delta as string;
@@ -273,7 +247,7 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
           }
         },
 
-        onAudioDone: (msg: Record<string, unknown>) => {
+        onAudioDone: () => {
           console.log('[S1] Audio done - AI finished speaking');
           
           // Clear thinking state when AI finishes generating audio (copy from V16)
@@ -283,9 +257,9 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
           });
         },
 
-        onFunctionCall: () => {
+        onFunctionCall: async (msg: Record<string, unknown>) => {
           // S1 doesn't use function calls - AI patients don't need tools
-          console.log('[S1] Function call received (but S1 doesn\'t use functions)');
+          console.log('[S1] Function call received (but S1 doesn\'t use functions):', msg);
         },
 
         onError: (error: Error) => {

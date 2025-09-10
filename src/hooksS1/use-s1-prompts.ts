@@ -7,8 +7,8 @@ export interface S1AIPrompt {
   id: string;
   prompt_type: string;
   prompt_content: string;
-  voice_settings?: any;
-  metadata?: any;
+  voice_settings?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
   is_active: boolean;
   created_at: string;
   updated_at: string;

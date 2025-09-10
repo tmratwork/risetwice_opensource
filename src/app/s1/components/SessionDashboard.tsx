@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
 import SessionInterface from './SessionInterface';
 
@@ -67,17 +67,7 @@ const SessionDashboard: React.FC<Props> = ({
   const [showSessionInterface, setShowSessionInterface] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  useEffect(() => {
-    if (activeSession) {
-      setShowSessionInterface(true);
-    }
-  }, [activeSession]);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -111,7 +101,17 @@ const SessionDashboard: React.FC<Props> = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  useEffect(() => {
+    if (activeSession) {
+      setShowSessionInterface(true);
+    }
+  }, [activeSession]);
 
   const startNewSession = async (aiPatientId: string) => {
     try {
@@ -176,7 +176,6 @@ const SessionDashboard: React.FC<Props> = ({
   if (showSessionInterface && activeSession) {
     return (
       <SessionInterface
-        user={user}
         sessionId={activeSession.id}
         onSessionEnd={handleSessionEnd}
       />

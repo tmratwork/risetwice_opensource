@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
 
 interface CaseStudy {
@@ -29,7 +29,12 @@ const CaseStudyLibrary: React.FC<Props> = ({ user }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedCaseStudy, setSelectedCaseStudy] = useState<CaseStudy | null>(null);
-  const [detailedCaseStudy, setDetailedCaseStudy] = useState<any>(null);
+  const [detailedCaseStudy, setDetailedCaseStudy] = useState<CaseStudy & {
+    therapeutic_challenges?: string[];
+    successful_interventions?: string[];
+    therapist_performance_analysis?: string;
+    alternative_approaches_suggested?: string[];
+  } | null>(null);
   const [loadingDetails, setLoadingDetails] = useState(false);
   const [filters, setFilters] = useState({
     published: 'all', // 'all', 'published', 'mine'
@@ -38,11 +43,7 @@ const CaseStudyLibrary: React.FC<Props> = ({ user }) => {
     concern: ''
   });
 
-  useEffect(() => {
-    fetchCaseStudies();
-  }, [filters]);
-
-  const fetchCaseStudies = async () => {
+  const fetchCaseStudies = useCallback(async () => {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams();
@@ -93,7 +94,11 @@ const CaseStudyLibrary: React.FC<Props> = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, filters]);
+
+  useEffect(() => {
+    fetchCaseStudies();
+  }, [fetchCaseStudies]);
 
   const fetchCaseStudyDetails = async (id: string) => {
     try {

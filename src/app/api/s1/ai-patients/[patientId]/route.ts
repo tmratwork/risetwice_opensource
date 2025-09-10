@@ -3,15 +3,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-interface RouteContext {
-  params: {
-    patientId: string;
-  };
-}
-
-export async function GET(request: NextRequest, { params }: RouteContext) {
+export async function GET(
+  request: NextRequest,
+  context: { params: Promise<{ patientId: string }> }
+) {
   try {
-    const { patientId } = params;
+    const { patientId } = await context.params;
 
     if (!patientId) {
       return NextResponse.json(

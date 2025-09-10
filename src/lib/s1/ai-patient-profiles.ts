@@ -226,7 +226,7 @@ export class AIPatientPersonality {
   private patterns: BehavioralPatterns;
   private config: SessionConfig;
   private presentation: PsychologicalPresentation;
-  private sessionHistory: any[] = [];
+  private sessionHistory: Array<Record<string, unknown>> = [];
 
   constructor(
     traits: PersonalityTraits,
@@ -241,9 +241,7 @@ export class AIPatientPersonality {
   }
 
   generateResponse(
-    therapistMessage: string,
-    sessionContext: any,
-    messageHistory: any[] = []
+    therapistMessage: string
   ): {
     content: string;
     emotional_tone: string;
@@ -254,14 +252,13 @@ export class AIPatientPersonality {
     const analysis = this.analyzeTherapistInput(therapistMessage);
     
     // Determine emotional state based on personality and triggers
-    const emotionalState = this.calculateEmotionalState(analysis, sessionContext);
+    const emotionalState = this.calculateEmotionalState(analysis);
     
     // Generate response based on behavioral patterns
     const response = this.constructResponse(
       therapistMessage,
       emotionalState,
-      analysis,
-      sessionContext
+      analysis
     );
 
     return {
@@ -272,7 +269,15 @@ export class AIPatientPersonality {
     };
   }
 
-  private analyzeTherapistInput(message: string): any {
+  private analyzeTherapistInput(message: string): {
+    is_question: boolean;
+    is_validation: boolean;
+    is_challenge: boolean;
+    is_suggestion: boolean;
+    contains_triggers: boolean;
+    technique_used: string;
+    emotional_content: string[];
+  } {
     const lowerMessage = message.toLowerCase();
     
     return {
@@ -301,7 +306,19 @@ export class AIPatientPersonality {
     return emotions.filter(emotion => message.includes(emotion));
   }
 
-  private calculateEmotionalState(analysis: any, sessionContext: any): any {
+  private calculateEmotionalState(analysis: {
+    is_question: boolean;
+    is_validation: boolean;
+    is_challenge: boolean;
+    is_suggestion: boolean;
+    contains_triggers: boolean;
+    technique_used: string;
+    emotional_content: string[];
+  }): {
+    primary_emotion: string;
+    intensity: number;
+    secondary_emotions: string[];
+  } {
     let baseEmotion = this.presentation.emotional_states[0] || 'neutral';
     let intensity = this.presentation.severity_level / 10;
 
@@ -326,10 +343,25 @@ export class AIPatientPersonality {
 
   private constructResponse(
     therapistMessage: string,
-    emotionalState: any,
-    analysis: any,
-    sessionContext: any
-  ): any {
+    emotionalState: {
+      primary_emotion: string;
+      intensity: number;
+      secondary_emotions: string[];
+    },
+    analysis: {
+      is_question: boolean;
+      is_validation: boolean;
+      is_challenge: boolean;
+      is_suggestion: boolean;
+      contains_triggers: boolean;
+      technique_used: string;
+      emotional_content: string[];
+    }
+  ): {
+    content: string;
+    reasoning: string;
+    behavioral_notes: string[];
+  } {
     const responses = this.getResponseTemplates();
     let responseTemplate = responses[emotionalState.primary_emotion] || responses.default;
     
@@ -338,7 +370,7 @@ export class AIPatientPersonality {
       responseTemplate = responseTemplate.slice(0, 1); // Take first response only
     }
 
-    const content = this.personalizeResponse(responseTemplate, analysis, sessionContext);
+    const content = this.personalizeResponse(responseTemplate);
     
     return {
       content: content,
@@ -377,7 +409,7 @@ export class AIPatientPersonality {
     };
   }
 
-  private personalizeResponse(templates: string[], analysis: any, sessionContext: any): string {
+  private personalizeResponse(templates: string[]): string {
     // Select template based on personality traits
     let selectedTemplate = templates[0];
     
@@ -388,7 +420,19 @@ export class AIPatientPersonality {
     return selectedTemplate;
   }
 
-  private generateBehavioralNotes(analysis: any, emotionalState: any): string[] {
+  private generateBehavioralNotes(analysis: {
+    is_question: boolean;
+    is_validation: boolean;
+    is_challenge: boolean;
+    is_suggestion: boolean;
+    contains_triggers: boolean;
+    technique_used: string;
+    emotional_content: string[];
+  }, emotionalState: {
+    primary_emotion: string;
+    intensity: number;
+    secondary_emotions: string[];
+  }): string[] {
     const notes: string[] = [];
     
     if (analysis.contains_triggers) {
@@ -407,7 +451,10 @@ export class AIPatientPersonality {
   }
 
   // Method to update personality based on session experience
-  updatePersonality(sessionOutcome: any): void {
+  updatePersonality(sessionOutcome: {
+    therapeutic_alliance_score: number;
+    technique_effectiveness_score: number;
+  }): void {
     if (sessionOutcome.therapeutic_alliance_score > 7 && this.config.learns_from_therapist) {
       this.traits.trust_willingness = Math.min(100, this.traits.trust_willingness + 5);
     }
@@ -418,7 +465,13 @@ export class AIPatientPersonality {
   }
 
   // Export current state for persistence
-  exportState(): any {
+  exportState(): {
+    traits: PersonalityTraits;
+    patterns: BehavioralPatterns;
+    config: SessionConfig;
+    presentation: PsychologicalPresentation;
+    sessionHistory: Array<Record<string, unknown>>;
+  } {
     return {
       traits: this.traits,
       patterns: this.patterns,
@@ -430,7 +483,20 @@ export class AIPatientPersonality {
 }
 
 // Factory function to create AI patients from templates
-export function createAIPatientFromTemplate(templateKey: keyof typeof AI_PATIENT_TEMPLATES): any {
+export function createAIPatientFromTemplate(templateKey: keyof typeof AI_PATIENT_TEMPLATES): {
+  name: string;
+  age: number;
+  gender: string;
+  difficulty_level: string;
+  primary_concern: string;
+  secondary_concerns: string[];
+  severity_level: number;
+  personality_traits: PersonalityTraits;
+  behavioral_patterns: BehavioralPatterns;
+  session_config: SessionConfig;
+  background_story: string;
+  personality_instance: AIPatientPersonality;
+} {
   const template = AI_PATIENT_TEMPLATES[templateKey];
   
   const personality = new AIPatientPersonality(

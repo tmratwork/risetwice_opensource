@@ -2,7 +2,7 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { User } from 'firebase/auth';
 
 interface AIPatient {
@@ -13,7 +13,7 @@ interface AIPatient {
   primary_concern: string;
   secondary_concerns: string[];
   severity_level: number;
-  personality_traits: Record<string, any>;
+  personality_traits: Record<string, unknown>;
   background_story?: string;
   therapeutic_goals: string[];
   difficulty_level: string;
@@ -36,11 +36,7 @@ const AIPatientLibrary: React.FC<Props> = ({ user }) => {
     severity_max: 10
   });
 
-  useEffect(() => {
-    fetchPatients();
-  }, [filters]);
-
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     try {
       setLoading(true);
       const queryParams = new URLSearchParams();
@@ -74,7 +70,11 @@ const AIPatientLibrary: React.FC<Props> = ({ user }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, filters]);
+
+  useEffect(() => {
+    fetchPatients();
+  }, [fetchPatients]);
 
   const handleFilterChange = (field: string, value: string | number) => {
     setFilters(prev => ({
@@ -371,7 +371,7 @@ const AIPatientLibrary: React.FC<Props> = ({ user }) => {
                       <div key={trait} className="text-sm">
                         <div className="flex justify-between">
                           <span className="text-gray-600 capitalize">{trait.replace('_', ' ')}:</span>
-                          <span className="font-medium">{value}</span>
+                          <span className="font-medium">{String(value)}</span>
                         </div>
                       </div>
                     ))}

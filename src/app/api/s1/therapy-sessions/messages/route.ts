@@ -165,7 +165,7 @@ export async function POST(request: NextRequest) {
     // If this is an AI patient message, we might want to generate it based on therapist input
     if (role === 'ai_patient' && content === '[GENERATE_RESPONSE]') {
       // Generate AI patient response based on therapist's last message and patient profile
-      const aiResponse = await generateAIPatientResponse(session_id, session, supabase);
+      const aiResponse = await generateAIPatientResponse(session_id, session as SessionWithPatient, supabase);
       messageData.content = aiResponse.content;
       messageData.emotional_tone = aiResponse.emotional_tone;
       messageData.ai_response_reasoning = aiResponse.reasoning;
@@ -230,7 +230,19 @@ function analyzeTherapeuticTechniques(content: string): Record<string, boolean> 
   return techniques;
 }
 
-async function generateAIPatientResponse(sessionId: string, session: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
+interface AIPatientData {
+  primary_concern: string;
+  personality_traits: Record<string, unknown>;
+  behavioral_patterns: Record<string, unknown>;
+  session_config: Record<string, unknown>;
+  severity_level: number;
+}
+
+interface SessionWithPatient extends Record<string, unknown> {
+  s1_ai_patients: AIPatientData[];
+}
+
+async function generateAIPatientResponse(sessionId: string, session: SessionWithPatient, supabase: typeof supabaseAdmin) {
   try {
     // Get recent therapist messages for context
     const { data: recentMessages } = await supabase
@@ -240,8 +252,8 @@ async function generateAIPatientResponse(sessionId: string, session: Record<stri
       .order('created_at', { ascending: false })
       .limit(3);
 
-    const lastTherapistMessage = recentMessages?.find(m => m.role === 'therapist')?.content || '';
-    const aiPatient = session.s1_ai_patients;
+    const lastTherapistMessage = recentMessages?.find((m: { role: string; content: string }) => m.role === 'therapist')?.content || '';
+    const aiPatient = session.s1_ai_patients[0];
     
     // Simple response generation based on patient profile and therapist input
     // In production, this would use OpenAI with detailed prompts
@@ -250,7 +262,7 @@ async function generateAIPatientResponse(sessionId: string, session: Record<stri
     let emotionalTone = 'neutral';
     let reasoning = '';
 
-    if (aiPatient.primary_concern === 'anxiety') {
+    if (aiPatient && aiPatient.primary_concern === 'anxiety') {
       if (lastTherapistMessage.toLowerCase().includes('feel')) {
         response = "I feel... worried a lot of the time. Like something bad is going to happen even when everything seems okay.";
         emotionalTone = 'anxious';
@@ -260,7 +272,7 @@ async function generateAIPatientResponse(sessionId: string, session: Record<stri
         emotionalTone = 'worried';
         reasoning = 'General anxiety response showing persistent worry';
       }
-    } else if (aiPatient.primary_concern === 'depression') {
+    } else if (aiPatient && aiPatient.primary_concern === 'depression') {
       if (lastTherapistMessage.toLowerCase().includes('feel')) {
         response = "I feel... empty, I guess. Like nothing really matters anymore.";
         emotionalTone = 'sad';

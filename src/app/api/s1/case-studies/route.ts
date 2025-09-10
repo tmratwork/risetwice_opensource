@@ -30,7 +30,7 @@ interface Session {
   technique_effectiveness_score: number;
   ai_patient_feedback: string;
   duration_minutes: number;
-  s1_ai_patients: AIPatient;
+  s1_ai_patients: AIPatient[];
 }
 
 interface SessionMessage {
@@ -249,7 +249,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function generateCaseStudyContent(session: Session, messages: SessionMessage[]): Promise<CaseStudyContent> {
-  const aiPatient = session.s1_ai_patients;
+  const aiPatient = session.s1_ai_patients[0];
   
   // Anonymize patient profile
   const anonymized_patient_profile = {
@@ -431,12 +431,21 @@ function determineEducationalLevel(session: Session): string {
   }
 }
 
-async function updateTherapistCaseStudyStats(userId: string, supabase: ReturnType<typeof supabaseAdmin>) {
+async function updateTherapistCaseStudyStats(userId: string, supabase: typeof supabaseAdmin) {
   try {
+    // Get current count first
+    const { data: profile } = await supabase
+      .from('s1_therapist_profiles')
+      .select('total_case_studies_generated')
+      .eq('user_id', userId)
+      .single();
+
+    const currentCount = profile?.total_case_studies_generated || 0;
+    
     await supabase
       .from('s1_therapist_profiles')
       .update({
-        total_case_studies_generated: supabase.raw('total_case_studies_generated + 1')
+        total_case_studies_generated: currentCount + 1
       })
       .eq('user_id', userId);
   } catch (error) {

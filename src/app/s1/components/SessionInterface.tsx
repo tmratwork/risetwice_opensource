@@ -3,20 +3,27 @@
 
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useS1WebRTCStore } from '@/stores/s1-webrtc-store';
 import { useS1Prompts } from '@/hooksS1/use-s1-prompts';
 import type { ConnectionConfig } from '@/hooksV15/types';
 
+interface SessionData {
+  ai_patient_id: string;
+  ai_patient_name: string;
+  primary_concern?: string;
+  patient_type?: string;
+}
+
 interface Props {
   sessionId: string;
-  sessionData?: any; // The full session object from API
+  sessionData?: SessionData; // The full session object from API
   onSessionEnd: () => void;
 }
 
 const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessionData, onSessionEnd }) => {
   const [sessionTimer, setSessionTimer] = useState(0);
-  const [sessionData, setSessionData] = useState<any>(null);
+  const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [connecting, setConnecting] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -45,30 +52,45 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
   // S1 Prompts Hook
   const { loadPatientPrompt, loading: promptLoading } = useS1Prompts();
 
-  useEffect(() => {
-    console.log('[S1] Session interface mounted for session:', sessionId);
-    startTimer();
-    initializeSession();
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      disconnect();
-    };
-  }, [sessionId, disconnect]); // Include disconnect to satisfy linting
-
-  useEffect(() => {
-    scrollToBottom();
-  }, [conversation]);
-
   const startTimer = () => {
     timerRef.current = setInterval(() => {
       setSessionTimer(prev => prev + 1);
     }, 1000);
   };
 
-  const initializeSession = async () => {
+  const setupMessageHandling = useCallback(() => {
+    // Set up transcript callback for real-time message handling
+    setTranscriptCallback(({ id, data, metadata }) => {
+      // Determine if this is the final transcript or streaming
+      const isFinal = metadata?.isFinal === true;
+      
+      // Extract the role from metadata like V16 does
+      const metadataRole = (metadata as { role?: string })?.role || "assistant";
+      
+      // For S1 role reversal: user=therapist, assistant=ai_patient
+      // Also check if ID contains "user-" prefix to catch cases where metadata is wrong
+      const isUserMessage = metadataRole === 'user' || id.includes('user-');
+      const role = isUserMessage ? 'therapist' : 'ai_patient';
+
+      // Only log final transcripts, not streaming deltas (reduces log spam)
+      if (isFinal) {
+        console.log('[S1] Final transcript:', { id, textLength: data?.length, role });
+        
+        // Final message - add to conversation
+        addConversationMessage({
+          id: `${role}_${id}`,
+          role,
+          text: data,
+          timestamp: new Date().toISOString(),
+          isFinal: true,
+          status: 'final',
+          emotional_tone: metadata?.emotional_tone as string
+        });
+      }
+    });
+  }, [setTranscriptCallback, addConversationMessage]);
+
+  const initializeSession = useCallback(async () => {
     // Prevent double initialization in React Strict Mode
     if (initializingRef.current) {
       console.log('[S1] Session already initializing, skipping...');
@@ -159,39 +181,24 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
       setConnecting(false);
       initializingRef.current = false; // Reset flag on completion or error
     }
-  };
+  }, [sessionId, passedSessionData, loadPatientPrompt, preInitialize, setS1Session, connect, setupMessageHandling]);
 
-  const setupMessageHandling = () => {
-    // Set up transcript callback for real-time message handling
-    setTranscriptCallback(({ id, data, metadata }) => {
-      // Determine if this is the final transcript or streaming
-      const isFinal = metadata?.isFinal === true;
-      
-      // Extract the role from metadata like V16 does
-      const metadataRole = (metadata as { role?: string })?.role || "assistant";
-      
-      // For S1 role reversal: user=therapist, assistant=ai_patient
-      // Also check if ID contains "user-" prefix to catch cases where metadata is wrong
-      const isUserMessage = metadataRole === 'user' || id.includes('user-');
-      const role = isUserMessage ? 'therapist' : 'ai_patient';
+  useEffect(() => {
+    console.log('[S1] Session interface mounted for session:', sessionId);
+    startTimer();
+    initializeSession();
 
-      // Only log final transcripts, not streaming deltas (reduces log spam)
-      if (isFinal) {
-        console.log('[S1] Final transcript:', { id, textLength: data?.length, role });
-        
-        // Final message - add to conversation
-        addConversationMessage({
-          id: `${role}_${id}`,
-          role,
-          text: data,
-          timestamp: new Date().toISOString(),
-          isFinal: true,
-          status: 'final',
-          emotional_tone: metadata?.emotional_tone as string
-        });
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
       }
-    });
-  };
+      disconnect();
+    };
+  }, [sessionId, disconnect, initializeSession]); // Include initializeSession dependency
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversation]);
 
   const handleSendMessage = async () => {
     if (!therapistMessage.trim() || !isConnected) return;

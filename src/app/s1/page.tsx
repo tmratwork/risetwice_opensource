@@ -29,7 +29,7 @@ const S1Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [startingSession, setStartingSession] = useState<string | null>(null);
-  const [activeSession, setActiveSession] = useState<any>(null);
+  const [activeSession, setActiveSession] = useState<{ id: string; ai_patient_id: string; ai_patient_name: string } | null>(null);
 
   useEffect(() => {
     console.log('[S1] Component mounted, starting data fetch...');
