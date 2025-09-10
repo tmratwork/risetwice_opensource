@@ -162,7 +162,9 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
         isPreparing: true, 
         connectionState: 'connecting',
         conversation: [], // Clear conversation history at start like V16
-        therapistMessage: '' // Clear any typed message
+        therapistMessage: '', // Clear any typed message
+        isMuted: true, // Reset mic to muted state for new session
+        isAudioOutputMuted: false // Reset speaker to unmuted state for new session
       });
       
       console.log('[S1] Connecting with config:', {

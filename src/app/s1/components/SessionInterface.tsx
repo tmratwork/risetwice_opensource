@@ -10,10 +10,11 @@ import type { ConnectionConfig } from '@/hooksV15/types';
 
 interface Props {
   sessionId: string;
+  sessionData?: any; // The full session object from API
   onSessionEnd: () => void;
 }
 
-const SessionInterface: React.FC<Props> = ({ sessionId, onSessionEnd }) => {
+const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessionData, onSessionEnd }) => {
   const [sessionTimer, setSessionTimer] = useState(0);
   const [sessionData, setSessionData] = useState<any>(null);
   const [connecting, setConnecting] = useState(false);
@@ -79,25 +80,52 @@ const SessionInterface: React.FC<Props> = ({ sessionId, onSessionEnd }) => {
       setConnecting(true);
       console.log('[S1] Initializing therapy session...');
 
-      // Mock session data (in real app, fetch from API using sessionId)
-      const mockSessionData = {
-        ai_patient_name: 'Sarah M.',
-        primary_concern: 'anxiety',
-        patient_type: 'anxiety_patient'
+      // Use the passed session data instead of fetching
+      if (!passedSessionData) {
+        throw new Error('No session data provided');
+      }
+      
+      console.log('[S1] Using passed session data:', passedSessionData);
+      
+      // We need to get the actual patient data to determine primary_concern
+      const patientResponse = await fetch(`/api/s1/ai-patients/${passedSessionData.ai_patient_id}`);
+      if (!patientResponse.ok) {
+        throw new Error('Failed to fetch patient data');
+      }
+      
+      const { patient } = await patientResponse.json();
+      console.log('[S1] Patient data loaded:', patient);
+      
+      // Map primary_concern to patient_type for prompt loading
+      const concernToType: Record<string, string> = {
+        'anxiety': 'anxiety_patient',
+        'depression': 'depression_patient', 
+        'trauma': 'trauma_patient' // This will need to be created in database
       };
-      setSessionData(mockSessionData);
+      
+      const patientType = concernToType[patient.primary_concern] || 'anxiety_patient';
+      console.log('[S1] Mapped concern to type:', { primary_concern: patient.primary_concern, patient_type: patientType });
+      
+      // Map session data to expected format
+      const sessionData = {
+        ai_patient_id: passedSessionData.ai_patient_id,
+        ai_patient_name: passedSessionData.ai_patient_name,
+        primary_concern: patient.primary_concern,
+        patient_type: patientType
+      };
+      setSessionData(sessionData);
 
-      // Set S1 session in store - use the actual session ID from props
+      // Set S1 session in store - use the actual session data
       setS1Session({
         sessionId: sessionId, // This comes from the parent component after session creation
-        aiPatientId: mockSessionData.ai_patient_id || 'patient_anxiety_1',
-        aiPatientName: mockSessionData.ai_patient_name,
-        primaryConcern: mockSessionData.primary_concern,
+        aiPatientId: sessionData.ai_patient_id,
+        aiPatientName: sessionData.ai_patient_name,
+        primaryConcern: sessionData.primary_concern,
         sessionStatus: 'active'
       });
 
       // Load AI patient prompts from S1 database
-      const patientPrompt = await loadPatientPrompt(mockSessionData.patient_type);
+      const patientPrompt = await loadPatientPrompt(sessionData.patient_type);
       
       if (!patientPrompt) {
         throw new Error('Could not load AI patient prompts');

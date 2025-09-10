@@ -104,6 +104,7 @@ const S1Dashboard: React.FC = () => {
     return (
       <SessionInterface
         sessionId={activeSession.id}
+        sessionData={activeSession}
         onSessionEnd={() => setActiveSession(null)}
       />
     );
