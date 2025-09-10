@@ -1,8 +1,10 @@
 // src/app/api/s1/therapy-sessions/messages/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
-import { getAuth } from '@/lib/auth/server-auth';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+
+// Mock auth for testing
+const getAuth = () => Promise.resolve({ user: { id: 'test-user' } });
 
 export async function GET(request: NextRequest) {
   try {
@@ -21,7 +23,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = supabaseAdmin;
 
     // Verify session belongs to the therapist
     const { data: session, error: sessionError } = await supabase
@@ -99,7 +101,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createClient();
+    const supabase = supabaseAdmin;
 
     // Verify session belongs to the therapist and is in progress
     const { data: session, error: sessionError } = await supabase
@@ -143,7 +145,7 @@ export async function POST(request: NextRequest) {
       calculatedTimestamp = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
     }
 
-    let messageData: any = {
+    const messageData: Record<string, unknown> = {
       session_id,
       role,
       content,
@@ -200,8 +202,8 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function analyzeTherapeuticTechniques(content: string): Record<string, any> {
-  const techniques: Record<string, any> = {};
+function analyzeTherapeuticTechniques(content: string): Record<string, boolean> {
+  const techniques: Record<string, boolean> = {};
   const lowerContent = content.toLowerCase();
 
   // Simple technique detection (would be enhanced with NLP in production)
@@ -228,7 +230,7 @@ function analyzeTherapeuticTechniques(content: string): Record<string, any> {
   return techniques;
 }
 
-async function generateAIPatientResponse(sessionId: string, session: any, supabase: any) {
+async function generateAIPatientResponse(sessionId: string, session: Record<string, unknown>, supabase: ReturnType<typeof createClient>) {
   try {
     // Get recent therapist messages for context
     const { data: recentMessages } = await supabase

@@ -1,9 +1,9 @@
 // src/app/api/s1/therapist-profile/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+// No server imports needed for testing
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     // For testing - return a mock profile
     return NextResponse.json({ 
@@ -26,17 +26,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const {
-      license_type,
-      license_number,
-      years_experience,
-      primary_modalities,
-      specialization_areas,
-      competency_level,
-      training_program,
-      supervisor_id,
-      preferred_patient_types,
-      learning_goals,
-      notification_preferences
+      competency_level
     } = body;
 
     if (!competency_level) {

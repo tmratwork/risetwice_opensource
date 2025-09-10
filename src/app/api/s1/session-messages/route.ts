@@ -1,7 +1,7 @@
 // src/app/api/s1/session-messages/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
+// No server imports needed for testing
 
 export async function POST(request: NextRequest) {
   try {
