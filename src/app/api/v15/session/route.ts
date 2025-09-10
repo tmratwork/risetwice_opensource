@@ -45,6 +45,18 @@ export async function POST(req: Request) {
       instructions: config.instructions || "You are a helpful AI companion for mental health support and educational assistance.",
       tool_choice: config.tool_choice || "auto",
       tools: config.tools,
+      // CRITICAL: Add microphone input configuration for voice input
+      input_audio_format: "pcm16",
+      output_audio_format: "pcm16",
+      input_audio_transcription: {
+        model: "whisper-1"
+      },
+      turn_detection: {
+        type: "server_vad",
+        threshold: 0.5,
+        prefix_padding_ms: 300,
+        silence_duration_ms: 200
+      }
     };
 
     // Log payload instructions to file instead of console to avoid truncation

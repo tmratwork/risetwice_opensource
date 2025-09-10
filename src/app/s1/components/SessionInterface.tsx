@@ -1,73 +1,65 @@
 // src/app/s1/components/SessionInterface.tsx
+// S1 Therapy Session Interface with Real WebRTC Chat
 
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { User } from 'firebase/auth';
-
-interface Message {
-  id: string;
-  role: 'therapist' | 'ai_patient';
-  content: string;
-  timestamp_in_session: string;
-  emotional_tone?: string;
-  therapeutic_techniques?: Record<string, boolean>;
-  ai_response_reasoning?: string;
-  created_at: string;
-}
-
-interface SessionData {
-  id: string;
-  ai_patient_id: string;
-  started_at: string;
-  s1_ai_patients: {
-    name: string;
-    primary_concern: string;
-    personality_traits: Record<string, any>;
-    background_story?: string;
-  };
-}
+import { useS1WebRTCStore } from '@/stores/s1-webrtc-store';
+import { useS1Prompts } from '@/hooksS1/use-s1-prompts';
+import type { ConnectionConfig } from '@/hooksV15/types';
 
 interface Props {
-  user: User;
   sessionId: string;
   onSessionEnd: () => void;
 }
 
-const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) => {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [sessionData, setSessionData] = useState<SessionData | null>(null);
-  const [currentMessage, setCurrentMessage] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const SessionInterface: React.FC<Props> = ({ sessionId, onSessionEnd }) => {
   const [sessionTimer, setSessionTimer] = useState(0);
+  const [sessionData, setSessionData] = useState<any>(null);
+  const [connecting, setConnecting] = useState(false);
   
-  // Session ending states
-  const [showEndDialog, setShowEndDialog] = useState(false);
-  const [therapistNotes, setTherapistNotes] = useState('');
-  const [allianceScore, setAllianceScore] = useState<number>(5);
-  const [techniqueScore, setTechniqueScore] = useState<number>(5);
-  const [ending, setEnding] = useState(false);
-
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const initializingRef = useRef<boolean>(false);
+
+  // S1 WebRTC Store
+  const conversation = useS1WebRTCStore(state => state.conversation);
+  const therapistMessage = useS1WebRTCStore(state => state.therapistMessage);
+  const isConnected = useS1WebRTCStore(state => state.isConnected);
+  const isThinking = useS1WebRTCStore(state => state.isThinking);
+  const isMuted = useS1WebRTCStore(state => state.isMuted);
+  const isAudioOutputMuted = useS1WebRTCStore(state => state.isAudioOutputMuted);
+  const sendMessage = useS1WebRTCStore(state => state.sendMessage);
+  const updateTherapistMessage = useS1WebRTCStore(state => state.updateTherapistMessage);
+  const clearTherapistMessage = useS1WebRTCStore(state => state.clearTherapistMessage);
+  const addConversationMessage = useS1WebRTCStore(state => state.addConversationMessage);
+  const setS1Session = useS1WebRTCStore(state => state.setS1Session);
+  const connect = useS1WebRTCStore(state => state.connect);
+  const disconnect = useS1WebRTCStore(state => state.disconnect);
+  const preInitialize = useS1WebRTCStore(state => state.preInitialize);
+  const setTranscriptCallback = useS1WebRTCStore(state => state.setTranscriptCallback);
+  const toggleMute = useS1WebRTCStore(state => state.toggleMute);
+  const toggleAudioOutputMute = useS1WebRTCStore(state => state.toggleAudioOutputMute);
+
+  // S1 Prompts Hook
+  const { loadPatientPrompt, loading: promptLoading } = useS1Prompts();
 
   useEffect(() => {
-    fetchSessionData();
-    fetchMessages();
+    console.log('[S1] Session interface mounted for session:', sessionId);
     startTimer();
+    initializeSession();
 
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      disconnect();
     };
-  }, []);
+  }, [sessionId, disconnect]); // Include disconnect to satisfy linting
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [conversation]);
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
@@ -75,148 +67,147 @@ const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) =>
     }, 1000);
   };
 
-  const fetchSessionData = async () => {
-    try {
-      const response = await fetch(`/api/s1/therapy-sessions?session_id=${sessionId}`, {
-        headers: {
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        }
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.sessions && data.sessions.length > 0) {
-          setSessionData(data.sessions[0]);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching session data:', error);
-      setError('Failed to load session data');
+  const initializeSession = async () => {
+    // Prevent double initialization in React Strict Mode
+    if (initializingRef.current) {
+      console.log('[S1] Session already initializing, skipping...');
+      return;
     }
-  };
 
-  const fetchMessages = async () => {
     try {
-      setLoading(true);
-      const response = await fetch(`/api/s1/therapy-sessions/messages?session_id=${sessionId}`, {
-        headers: {
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        }
+      initializingRef.current = true;
+      setConnecting(true);
+      console.log('[S1] Initializing therapy session...');
+
+      // Mock session data (in real app, fetch from API using sessionId)
+      const mockSessionData = {
+        ai_patient_name: 'Sarah M.',
+        primary_concern: 'anxiety',
+        patient_type: 'anxiety_patient'
+      };
+      setSessionData(mockSessionData);
+
+      // Set S1 session in store - use the actual session ID from props
+      setS1Session({
+        sessionId: sessionId, // This comes from the parent component after session creation
+        aiPatientId: mockSessionData.ai_patient_id || 'patient_anxiety_1',
+        aiPatientName: mockSessionData.ai_patient_name,
+        primaryConcern: mockSessionData.primary_concern,
+        sessionStatus: 'active'
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        setMessages(data.messages || []);
+      // Load AI patient prompts from S1 database
+      const patientPrompt = await loadPatientPrompt(mockSessionData.patient_type);
+      
+      if (!patientPrompt) {
+        throw new Error('Could not load AI patient prompts');
       }
+
+      // Create WebRTC configuration for AI patient
+      const connectionConfig: ConnectionConfig = {
+        instructions: patientPrompt.prompt_content,
+        voice: 'alloy', // Same voice as V16 for consistency
+        tools: [], // No tools needed for AI patients
+        tool_choice: 'none',
+        greetingInstructions: '' // S1: Allow auto-greeting - user wants to see/hear it
+      };
+
+      // Pre-initialize WebRTC with AI patient configuration
+      await preInitialize(connectionConfig);
+
+      // Set up message handling
+      setupMessageHandling();
+
+      // Connect to WebRTC - let OpenAI Realtime API handle microphone access automatically
+      console.log('[S1] Connecting to WebRTC with microphone input enabled...');
+      await connect();
+
+      // In S1, the therapist should start the conversation
+      // No auto-generated welcome message from AI patient
+
     } catch (error) {
-      console.error('Error fetching messages:', error);
-      setError('Failed to load messages');
+      console.error('[S1] Error initializing session:', error);
     } finally {
-      setLoading(false);
+      setConnecting(false);
+      initializingRef.current = false; // Reset flag on completion or error
     }
   };
 
-  const sendMessage = async () => {
-    if (!currentMessage.trim() || sending) return;
+  const setupMessageHandling = () => {
+    // Set up transcript callback for real-time message handling
+    setTranscriptCallback(({ id, data, metadata }) => {
+      // Determine if this is the final transcript or streaming
+      const isFinal = metadata?.isFinal === true;
+      
+      // Extract the role from metadata like V16 does
+      const metadataRole = (metadata as { role?: string })?.role || "assistant";
+      
+      // For S1 role reversal: user=therapist, assistant=ai_patient
+      // Also check if ID contains "user-" prefix to catch cases where metadata is wrong
+      const isUserMessage = metadataRole === 'user' || id.includes('user-');
+      const role = isUserMessage ? 'therapist' : 'ai_patient';
 
-    setSending(true);
-    setError(null);
-
-    try {
-      // Send therapist message
-      const therapistResponse = await fetch('/api/s1/therapy-sessions/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          role: 'therapist',
-          content: currentMessage
-        })
-      });
-
-      if (!therapistResponse.ok) {
-        throw new Error('Failed to send message');
+      // Only log final transcripts, not streaming deltas (reduces log spam)
+      if (isFinal) {
+        console.log('[S1] Final transcript:', { id, textLength: data?.length, role });
+        
+        // Final message - add to conversation
+        addConversationMessage({
+          id: `${role}_${id}`,
+          role,
+          text: data,
+          timestamp: new Date().toISOString(),
+          isFinal: true,
+          status: 'final',
+          emotional_tone: metadata?.emotional_tone as string
+        });
       }
+    });
+  };
 
-      const { message: therapistMessage } = await therapistResponse.json();
-      setMessages(prev => [...prev, therapistMessage]);
-      setCurrentMessage('');
+  const handleSendMessage = async () => {
+    if (!therapistMessage.trim() || !isConnected) return;
 
-      // Generate AI patient response
-      const aiResponse = await fetch('/api/s1/therapy-sessions/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          role: 'ai_patient',
-          content: '[GENERATE_RESPONSE]'
-        })
-      });
+    console.log('[S1] Therapist sending message:', therapistMessage);
 
-      if (aiResponse.ok) {
-        const { message: aiMessage } = await aiResponse.json();
-        setMessages(prev => [...prev, aiMessage]);
-      }
+    // Add therapist message to conversation immediately
+    addConversationMessage({
+      id: 'therapist_' + Date.now(),
+      role: 'therapist',
+      text: therapistMessage,
+      timestamp: new Date().toISOString(),
+      isFinal: true,
+      status: 'final'
+    });
 
-    } catch (error) {
-      console.error('Error sending message:', error);
-      setError('Failed to send message');
-    } finally {
-      setSending(false);
+    // Send message through WebRTC
+    const success = sendMessage(therapistMessage);
+    
+    if (success) {
+      clearTherapistMessage();
+    } else {
+      console.error('[S1] Failed to send message through WebRTC');
     }
   };
+
+  // Remove fake AI response generation - using real WebRTC now
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      sendMessage();
+      handleSendMessage();
     }
   };
 
   const endSession = async () => {
-    setEnding(true);
-    setError(null);
-
-    try {
-      const response = await fetch('/api/s1/therapy-sessions/end', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${await user.getIdToken()}`
-        },
-        body: JSON.stringify({
-          session_id: sessionId,
-          therapist_notes: therapistNotes,
-          therapeutic_alliance_score: allianceScore,
-          technique_effectiveness_score: techniqueScore
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to end session');
-      }
-
-      const { session, case_study_ready } = await response.json();
-      
-      // Show success message
-      alert(case_study_ready 
-        ? 'Session completed successfully! Case study has been generated.'
-        : 'Session completed successfully!'
-      );
-
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+    }
+    
+    const confirmed = confirm('Are you sure you want to end this session?');
+    if (confirmed) {
+      await disconnect();
       onSessionEnd();
-
-    } catch (error) {
-      console.error('Error ending session:', error);
-      setError('Failed to end session');
-    } finally {
-      setEnding(false);
     }
   };
 
@@ -230,10 +221,16 @@ const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) =>
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (loading) {
+  // Show loading state while connecting
+  if (connecting || promptLoading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col h-screen bg-gray-50 items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">
+            {connecting ? 'Connecting to AI Patient...' : 'Loading patient profile...'}
+          </p>
+        </div>
       </div>
     );
   }
@@ -246,16 +243,21 @@ const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) =>
           <div className="flex items-center space-x-4">
             <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center">
               <span className="text-blue-600 font-medium">
-                {sessionData?.s1_ai_patients.name?.[0] || 'P'}
+                {sessionData?.ai_patient_name?.[0] || 'P'}
               </span>
             </div>
             <div>
               <h2 className="text-lg font-medium text-gray-900">
-                {sessionData?.s1_ai_patients.name || 'AI Patient'}
+                {sessionData?.ai_patient_name || 'AI Patient'}
               </h2>
               <p className="text-sm text-gray-500 capitalize">
-                {sessionData?.s1_ai_patients.primary_concern?.replace('_', ' ') || 'Session'}
+                {sessionData?.primary_concern?.replace('_', ' ') || 'Session'}
               </p>
+            </div>
+            <div className={`px-2 py-1 text-xs rounded-full ${
+              isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+            }`}>
+              {isConnected ? 'Connected' : 'Disconnected'}
             </div>
           </div>
           
@@ -268,7 +270,7 @@ const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) =>
             </div>
             
             <button
-              onClick={() => setShowEndDialog(true)}
+              onClick={endSession}
               className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 text-sm"
             >
               End Session
@@ -277,15 +279,9 @@ const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) =>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-50 border-l-4 border-red-400 p-4 mx-6 mt-4">
-          <p className="text-red-700">{error}</p>
-        </div>
-      )}
-
       {/* Messages Area */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
-        {messages.map((message) => (
+        {conversation.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.role === 'therapist' ? 'justify-end' : 'justify-start'}`}
@@ -297,10 +293,10 @@ const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) =>
                   : 'bg-white text-gray-900 shadow-sm border'
               }`}
             >
-              <p className="text-sm">{message.content}</p>
+              <p className="text-sm">{message.text}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="text-xs opacity-75">
-                  {message.timestamp_in_session}
+                  {new Date(message.timestamp).toLocaleTimeString()}
                 </span>
                 {message.emotional_tone && (
                   <span className="text-xs opacity-75 capitalize">
@@ -308,115 +304,96 @@ const SessionInterface: React.FC<Props> = ({ user, sessionId, onSessionEnd }) =>
                   </span>
                 )}
               </div>
-              
-              {/* Show AI reasoning for debugging */}
-              {message.ai_response_reasoning && process.env.NODE_ENV === 'development' && (
-                <div className="mt-2 text-xs opacity-60 border-t pt-2">
-                  Reasoning: {message.ai_response_reasoning}
-                </div>
-              )}
             </div>
           </div>
         ))}
+        
+        {isThinking && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 text-gray-500 px-4 py-3 rounded-lg text-sm">
+              AI Patient is thinking...
+            </div>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
       {/* Input Area */}
       <div className="bg-white border-t border-gray-200 px-6 py-4">
         <div className="flex items-end space-x-3">
+          {/* Audio Controls (copied from V16) */}
+          <div className="flex items-center space-x-2">
+            {/* Speaker Mute Button */}
+            <button
+              type="button"
+              onClick={toggleAudioOutputMute}
+              className={`p-2 rounded-md border ${isAudioOutputMuted ? 'bg-red-100 border-red-300 text-red-600' : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'}`}
+              aria-label={isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
+              title={isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
+            >
+              {isAudioOutputMuted ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" />
+                  <path d="M11 5L6 9H2v6h4l3 3V16" stroke="currentColor" strokeWidth="2" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M11 5L6 9H2v6h4l3 3V5z" stroke="currentColor" strokeWidth="2" />
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              )}
+            </button>
+
+            {/* Microphone Mute Button */}
+            <button
+              type="button"
+              onClick={toggleMute}
+              className={`p-2 rounded-md border ${isMuted ? 'bg-red-100 border-red-300 text-red-600' : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200'}`}
+              aria-label={isMuted ? "Unmute microphone" : "Mute microphone"}
+              title={isMuted ? "Unmute microphone" : "Mute microphone"}
+            >
+              {isMuted ? (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeWidth="2" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 19v4" stroke="currentColor" strokeWidth="2" />
+                  <path d="M8 23h8" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              ) : (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" stroke="currentColor" strokeWidth="2" />
+                  <path d="M19 10v2a7 7 0 0 1-14 0v-2" stroke="currentColor" strokeWidth="2" />
+                  <path d="M12 19v4" stroke="currentColor" strokeWidth="2" />
+                  <path d="M8 23h8" stroke="currentColor" strokeWidth="2" />
+                </svg>
+              )}
+            </button>
+          </div>
+
           <div className="flex-1">
             <textarea
-              value={currentMessage}
-              onChange={(e) => setCurrentMessage(e.target.value)}
+              value={therapistMessage}
+              onChange={(e) => updateTherapistMessage(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Type your therapeutic response..."
-              disabled={sending}
+              disabled={!isConnected}
               className="w-full px-3 py-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
               rows={2}
             />
           </div>
           <button
-            onClick={sendMessage}
-            disabled={!currentMessage.trim() || sending}
+            onClick={handleSendMessage}
+            disabled={!therapistMessage.trim() || !isConnected}
             className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {sending ? 'Sending...' : 'Send'}
+            {!isConnected ? 'Connecting...' : 'Send'}
           </button>
         </div>
       </div>
-
-      {/* End Session Dialog */}
-      {showEndDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h3 className="text-lg font-medium text-gray-900">End Session</h3>
-            </div>
-            
-            <div className="px-6 py-4 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Session Notes
-                </label>
-                <textarea
-                  value={therapistNotes}
-                  onChange={(e) => setTherapistNotes(e.target.value)}
-                  placeholder="Brief notes about the session..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Therapeutic Alliance Score (1-10)
-                </label>
-                <select
-                  value={allianceScore}
-                  onChange={(e) => setAllianceScore(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                    <option key={num} value={num}>{num}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Technique Effectiveness Score (1-10)
-                </label>
-                <select
-                  value={techniqueScore}
-                  onChange={(e) => setTechniqueScore(parseInt(e.target.value))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
-                    <option key={num} value={num}>{num}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
-              <button
-                onClick={() => setShowEndDialog(false)}
-                disabled={ending}
-                className="px-4 py-2 text-gray-700 hover:text-gray-900 disabled:opacity-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={endSession}
-                disabled={ending}
-                className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50"
-              >
-                {ending ? 'Ending...' : 'End Session'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

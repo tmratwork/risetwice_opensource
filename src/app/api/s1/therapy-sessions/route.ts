@@ -35,17 +35,23 @@ export async function POST(request: NextRequest) {
 
     console.log('[S1] AI patient found:', aiPatient.name);
 
-    // For testing - create a mock session
+    // For now, create a mock session since we don't have auth users
+    // TODO: Once authentication is set up, create real sessions in database
+    const mockSessionId = crypto.randomUUID();
+    
     const mockSession = {
-      id: `session_${Date.now()}`,
+      id: mockSessionId,
       ai_patient_id: ai_patient_id,
       ai_patient_name: aiPatient.name,
       session_number: 1,
+      session_type: 'practice',
       status: 'scheduled',
-      created_at: new Date().toISOString()
+      started_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     };
 
-    console.log('[S1] Mock session created:', mockSession);
+    console.log('[S1] Mock session created with UUID:', mockSessionId);
 
     return NextResponse.json({ session: mockSession }, { status: 201 });
 

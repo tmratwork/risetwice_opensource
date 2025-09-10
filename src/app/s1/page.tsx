@@ -4,6 +4,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import SessionInterface from './components/SessionInterface';
 
 // Types
 interface TherapistProfile {
@@ -28,6 +29,7 @@ const S1Dashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [startingSession, setStartingSession] = useState<string | null>(null);
+  const [activeSession, setActiveSession] = useState<any>(null);
 
   useEffect(() => {
     console.log('[S1] Component mounted, starting data fetch...');
@@ -84,8 +86,8 @@ const S1Dashboard: React.FC = () => {
       const { session } = await response.json();
       console.log('[S1] Session created:', session);
       
-      // For now, just show an alert
-      alert(`Session started with ${session.ai_patient_name || 'AI Patient'}!\n\nThis would normally open the chat interface.`);
+      // Open the chat interface
+      setActiveSession(session);
       
     } catch (error) {
       console.error('[S1] Error starting session:', error);
@@ -96,6 +98,16 @@ const S1Dashboard: React.FC = () => {
   };
 
   console.log('[S1] Render - loading:', loading, 'error:', error, 'profile:', !!therapistProfile);
+
+  // If we have an active session, show the chat interface
+  if (activeSession) {
+    return (
+      <SessionInterface
+        sessionId={activeSession.id}
+        onSessionEnd={() => setActiveSession(null)}
+      />
+    );
+  }
 
   if (loading) {
     return (

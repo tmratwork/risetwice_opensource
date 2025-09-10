@@ -365,12 +365,14 @@ export class ComprehensiveMessageHandler {
       console.log('[V15-TRANSCRIPT-DEBUG] User audio transcription delta:', { delta, itemId });
     }
     
-    // Enhanced triage logging for user message streaming
-    console.log('[triageAI] ===== USER MESSAGE STREAMING =====');
-    console.log('[triageAI] User message delta:', delta);
-    console.log('[triageAI] Item ID:', itemId);
-    console.log('[triageAI] Delta length:', delta?.length || 0);
-    console.log('[triageAI] Message type: streaming user input');
+    // Enhanced triage logging for user message streaming (conditional to reduce verbosity)
+    if (process.env.NEXT_PUBLIC_ENABLE_STREAMING_LOGS === 'true') {
+      console.log('[triageAI] ===== USER MESSAGE STREAMING =====');
+      console.log('[triageAI] User message delta:', delta);
+      console.log('[triageAI] Item ID:', itemId);
+      console.log('[triageAI] Delta length:', delta?.length || 0);
+      console.log('[triageAI] Message type: streaming user input');
+    }
     
     audioLogger.debug('webrtc', 'input_audio_transcription_delta', {
       itemId: itemId,
