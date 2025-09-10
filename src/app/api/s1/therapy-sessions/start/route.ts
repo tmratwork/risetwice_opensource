@@ -3,12 +3,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// Mock auth for testing
-const getAuth = () => Promise.resolve({ user: { id: 'test-user' } });
+// Extract user from Firebase token (following V16 pattern)
+const getAuth = (request: NextRequest) => {
+  const authHeader = request.headers.get('authorization');
+  
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    throw new Error('No authorization header found');
+  }
+
+  try {
+    const token = authHeader.substring(7); // Remove 'Bearer '
+    const tokenParts = token.split('.');
+    if (tokenParts.length !== 3) {
+      throw new Error('Invalid token format');
+    }
+    
+    const payload = JSON.parse(atob(tokenParts[1]));
+    const userId = payload.sub || payload.user_id; // Firebase UID
+    
+    if (!userId) {
+      throw new Error('No user ID found in token');
+    }
+    
+    return Promise.resolve({ user: { id: userId } });
+  } catch (error) {
+    throw new Error('Invalid token');
+  }
+};
 
 export async function POST(request: NextRequest) {
   try {
-    const { user } = await getAuth();
+    const { user } = await getAuth(request);
     if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

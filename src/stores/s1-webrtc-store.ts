@@ -534,18 +534,45 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
     }
 
     try {
-      await fetch('/api/s1/session-messages', {
+      // Get therapist user ID (following V16 pattern)
+      let therapistUserId: string | null = null;
+      if (typeof localStorage !== 'undefined') {
+        therapistUserId = localStorage.getItem('s1UserId');
+      }
+
+      console.log('[S1] Saving message to database:', {
+        sessionId: state.s1Session.sessionId,
+        role: message.role,
+        contentLength: message.text.length,
+        therapistUserId: therapistUserId || 'anonymous',
+        hasEmotionalTone: !!message.emotional_tone
+      });
+
+      const response = await fetch('/api/s1/session-messages', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           session_id: state.s1Session.sessionId,
           role: message.role,
           content: message.text,
-          emotional_tone: message.emotional_tone
+          emotional_tone: message.emotional_tone,
+          therapist_user_id: therapistUserId // Pass therapist ID for session tracking
         })
       });
+
+      if (!response.ok) {
+        console.error('[S1] HTTP error saving message:', response.status, response.statusText);
+        const errorText = await response.text();
+        console.error('[S1] Error response body:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log('[S1] ✅ Message saved to database:', result);
+
     } catch (error) {
       console.error('[S1] Failed to save message:', error);
+      // Don't throw - allow conversation to continue even if persistence fails
     }
   },
 

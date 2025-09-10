@@ -4,6 +4,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/auth-context';
 import SessionInterface from './components/SessionInterface';
 
 // Types
@@ -24,6 +25,7 @@ interface AIPatient {
 }
 
 const S1Dashboard: React.FC = () => {
+  const { user, loading: authLoading, firebaseAvailable } = useAuth();
   const [therapistProfile, setTherapistProfile] = useState<TherapistProfile | null>(null);
   const [availablePatients, setAvailablePatients] = useState<AIPatient[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,10 +74,22 @@ const S1Dashboard: React.FC = () => {
       console.log('[S1] Starting session with patient:', patientId);
       setStartingSession(patientId);
       
-      // Create session
+      // Check authentication
+      if (!user || !firebaseAvailable) {
+        throw new Error('Authentication required. Please sign in to create therapy sessions.');
+      }
+
+      // Get Firebase ID token
+      const idToken = await user.getIdToken();
+      console.log('[S1] Got Firebase ID token for session creation');
+      
+      // Create session with authentication
       const response = await fetch('/api/s1/therapy-sessions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
         body: JSON.stringify({ ai_patient_id: patientId })
       });
 
@@ -97,7 +111,41 @@ const S1Dashboard: React.FC = () => {
     }
   };
 
-  console.log('[S1] Render - loading:', loading, 'error:', error, 'profile:', !!therapistProfile);
+  console.log('[S1] Render - loading:', loading, 'error:', error, 'profile:', !!therapistProfile, 'authLoading:', authLoading, 'user:', !!user);
+
+  // Show loading while authentication is initializing
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if not authenticated
+  if (!user || !firebaseAvailable) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center bg-white p-8 rounded-lg shadow-md max-w-md">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h2>
+          <p className="text-gray-600 mb-6">
+            You need to sign in to access S1 Therapy Training sessions.
+          </p>
+          <p className="text-sm text-blue-600">
+            Please use the "Sign In" button in the top navigation.
+          </p>
+          {!firebaseAvailable && (
+            <p className="text-sm text-orange-600 mt-2">
+              Firebase authentication is currently unavailable.
+            </p>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // If we have an active session, show the chat interface
   if (activeSession) {
