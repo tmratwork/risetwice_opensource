@@ -158,7 +158,12 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
     }
 
     try {
-      set({ isPreparing: true, connectionState: 'connecting' });
+      set({ 
+        isPreparing: true, 
+        connectionState: 'connecting',
+        conversation: [], // Clear conversation history at start like V16
+        therapistMessage: '' // Clear any typed message
+      });
       
       console.log('[S1] Connecting with config:', {
         hasInstructions: !!state.storedConnectionConfig.instructions,
@@ -447,6 +452,8 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
         isConnected: false, 
         connectionState: 'disconnected',
         hasActiveConversation: false,
+        conversation: [], // Clear conversation history like V16
+        therapistMessage: '', // Clear any typed message
         connectionManager: null,
         messageHandler: null,
         therapistHasSpokenFirst: false // Reset for next session
