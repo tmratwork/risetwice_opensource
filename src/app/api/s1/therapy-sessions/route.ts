@@ -3,6 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
+// Note: Following V16 pattern - use Firebase UIDs directly as text, no conversion needed
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -47,29 +49,28 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // For now, we'll extract a user ID from the token or use fallback
-    // TODO: Properly verify Firebase ID token when fully integrated
+    // Extract Firebase UID from token (following V16 pattern)
+    // V16 uses Firebase UIDs directly as text - no conversion needed
     let therapistUserId: string;
     
     try {
       // Simple token processing for now - in production this should verify the Firebase JWT
       const token = authHeader.substring(7); // Remove 'Bearer '
       
-      // For now, decode the token to get user info (in production, use Firebase Admin SDK)
-      // Firebase ID tokens contain the user's UID in the 'sub' field
+      // Decode the token to get Firebase UID (same as V16)
       const tokenParts = token.split('.');
       if (tokenParts.length !== 3) {
         throw new Error('Invalid token format');
       }
       
       const payload = JSON.parse(atob(tokenParts[1]));
-      therapistUserId = payload.sub || payload.user_id; // Firebase UID
+      therapistUserId = payload.sub || payload.user_id; // Firebase UID directly
       
       if (!therapistUserId) {
         throw new Error('No user ID found in token');
       }
       
-      console.log('[S1] Extracted therapist ID from Firebase token:', therapistUserId);
+      console.log('[S1] Using Firebase UID directly:', therapistUserId);
     } catch (error) {
       console.error('[S1] Token processing failed:', error);
       return NextResponse.json({ 
@@ -78,9 +79,7 @@ export async function POST(request: NextRequest) {
       }, { status: 401 });
     }
 
-    // First, ensure the therapist exists in auth.users by trying to create the session
-    // If it fails due to foreign key constraint, we'll provide a helpful error
-    console.log('[S1] Creating session in database for authenticated therapist');
+    console.log('[S1] Creating session in database for Firebase user:', therapistUserId);
 
     const { data: newSession, error: createError } = await supabaseAdmin
       .from('s1_therapy_sessions')
@@ -112,14 +111,13 @@ export async function POST(request: NextRequest) {
     if (createError) {
       console.error('[S1] Failed to create session:', createError);
       
-      // Handle foreign key constraint violation for therapist_id
-      if (createError.code === '23503' && createError.message?.includes('therapist_id_fkey')) {
+      // Provide helpful error message for database constraint issues
+      if (createError.code === '22P02') {
         return NextResponse.json({ 
-          error: 'User not found in authentication system',
-          details: 'The therapist account needs to be properly created in the authentication system. Please ensure you are signed in with a valid Firebase account.',
-          authRequired: true,
-          therapistId: therapistUserId
-        }, { status: 403 });
+          error: 'Database schema mismatch',
+          details: 'The therapist_id column needs to be changed from UUID to TEXT to support Firebase UIDs. Please run the database migration.',
+          suggestion: 'ALTER TABLE s1_therapy_sessions ALTER COLUMN therapist_id TYPE text;'
+        }, { status: 500 });
       }
       
       return NextResponse.json({ 

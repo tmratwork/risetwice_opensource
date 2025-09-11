@@ -3,6 +3,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
+// Following V16 pattern - use Firebase UIDs directly as text
+
 // Extract user from Firebase token (following V16 pattern)
 const getAuth = (request: NextRequest) => {
   const authHeader = request.headers.get('authorization');
@@ -19,13 +21,14 @@ const getAuth = (request: NextRequest) => {
     }
     
     const payload = JSON.parse(atob(tokenParts[1]));
-    const userId = payload.sub || payload.user_id; // Firebase UID
+    const firebaseUid = payload.sub || payload.user_id; // Firebase UID
     
-    if (!userId) {
+    if (!firebaseUid) {
       throw new Error('No user ID found in token');
     }
     
-    return Promise.resolve({ user: { id: userId } });
+    // Use Firebase UID directly (following V16 pattern)
+    return Promise.resolve({ user: { id: firebaseUid } });
   } catch (error) {
     throw new Error('Invalid token');
   }
