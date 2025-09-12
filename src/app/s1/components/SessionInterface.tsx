@@ -602,6 +602,8 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
             </button>
           </div>
 
+          {/* Text input temporarily hidden - voice-only mode for S1 therapy sessions */}
+          {/* 
           <div className="flex-1">
             <textarea
               value={therapistMessage}
@@ -620,6 +622,7 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           >
             {!isConnected ? 'Connecting...' : 'Send'}
           </button>
+          */}
         </div>
       </div>
     </div>
