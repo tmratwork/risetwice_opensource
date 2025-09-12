@@ -30,7 +30,6 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
   const [isRecordingSession, setIsRecordingSession] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<string>('Recording ready - unmute mic to start');
-  const [hasRecordedAudio, setHasRecordedAudio] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -237,7 +236,6 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           
           micStreamRef.current = stream;
           audioChunksRef.current = []; // Clear previous chunks
-          setHasRecordedAudio(false); // Reset audio flag
           
           // Create MediaRecorder using the SAME stream as WebRTC
           const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
@@ -257,7 +255,6 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           
           mediaRecorder.onstop = () => {
             console.log('[S1] Recording session ended. Total chunks:', audioChunksRef.current.length);
-            setHasRecordedAudio(audioChunksRef.current.length > 0);
             setIsRecordingSession(false);
           };
           
@@ -276,13 +273,13 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           
         } catch (error) {
           console.error('[S1] Failed to initialize recording session:', error);
-          setRecordingStatus('Recording failed to initialize: ' + error.message);
+          setRecordingStatus('Recording failed to initialize: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
       }
     };
     
     startRecordingSession();
-  }, [isConnected, isRecordingSession]);
+  }, [isConnected, isRecordingSession, isMuted]);
 
   useEffect(() => {
     scrollToBottom();
@@ -394,7 +391,6 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           
           // Clear chunks from memory
           audioChunksRef.current = [];
-          setHasRecordedAudio(false);
           
           // Hide status after 5 seconds
           setTimeout(() => setRecordingStatus(''), 5000);
@@ -410,65 +406,6 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
     }
   }, [isRecordingSession, sessionId]);
   
-  const uploadVoiceForCloning = useCallback(async () => {
-    if (audioChunksRef.current.length === 0) {
-      setRecordingStatus('No audio recorded');
-      return;
-    }
-    
-    try {
-      setIsUploading(true);
-      setRecordingStatus('Preparing audio for upload...');
-      
-      // Combine all chunks into single blob
-      const audioBlob = new Blob(audioChunksRef.current, { 
-        type: 'audio/webm' 
-      });
-      
-      console.log('[S1] Uploading voice recording:', {
-        size: audioBlob.size,
-        type: audioBlob.type,
-        chunks: audioChunksRef.current.length
-      });
-      
-      // Create FormData for upload
-      const formData = new FormData();
-      formData.append('audio', audioBlob, `therapist-voice-${sessionId}-${Date.now()}.webm`);
-      formData.append('session_id', sessionId);
-      formData.append('purpose', 'voice_cloning');
-      
-      setRecordingStatus('Uploading audio...');
-      
-      // Upload to server
-      const response = await fetch('/api/s1/voice-upload', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.statusText}`);
-      }
-      
-      const result = await response.json();
-      console.log('[S1] Voice upload successful:', result);
-      
-      setRecordingStatus('✅ Voice uploaded successfully for cloning!');
-      
-      // Clear chunks from memory
-      audioChunksRef.current = [];
-      setHasRecordedAudio(false);
-      
-      // Hide status after 3 seconds
-      setTimeout(() => setRecordingStatus(''), 3000);
-      
-    } catch (error) {
-      console.error('[S1] Voice upload failed:', error);
-      setRecordingStatus('❌ Upload failed. Please try again.');
-      setTimeout(() => setRecordingStatus(''), 5000);
-    } finally {
-      setIsUploading(false);
-    }
-  }, [sessionId]);
 
   const endSession = async () => {
     // End recording session if active

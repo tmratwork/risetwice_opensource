@@ -135,7 +135,7 @@ const S1Dashboard: React.FC = () => {
             You need to sign in to access S1 Therapy Training sessions.
           </p>
           <p className="text-sm text-blue-600">
-            Please use the "Sign In" button in the top navigation.
+            Please use the &quot;Sign In&quot; button in the top navigation.
           </p>
           {!firebaseAvailable && (
             <p className="text-sm text-orange-600 mt-2">

@@ -132,7 +132,7 @@ export async function POST(request: NextRequest) {
     const sessionResponse = {
       id: newSession.id,
       ai_patient_id: newSession.ai_patient_id,
-      ai_patient_name: newSession.s1_ai_patients.name,
+      ai_patient_name: (newSession.s1_ai_patients as { id: string; name: string; primary_concern: string }[])[0]?.name,
       session_number: newSession.session_number,
       session_type: newSession.session_type,
       status: newSession.status,

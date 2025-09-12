@@ -29,7 +29,7 @@ const getAuth = (request: NextRequest) => {
     
     // Use Firebase UID directly (following V16 pattern)
     return Promise.resolve({ user: { id: firebaseUid } });
-  } catch (error) {
+  } catch {
     throw new Error('Invalid token');
   }
 };
