@@ -26,9 +26,20 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
   const [sessionData, setSessionData] = useState<SessionData | null>(null);
   const [connecting, setConnecting] = useState(false);
   
+  // Voice recording state
+  const [isRecordingSession, setIsRecordingSession] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [recordingStatus, setRecordingStatus] = useState<string>('Recording ready - unmute mic to start');
+  const [hasRecordedAudio, setHasRecordedAudio] = useState(false);
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const initializingRef = useRef<boolean>(false);
+  
+  // Voice recording refs
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const micStreamRef = useRef<MediaStream | null>(null);
 
   // S1 WebRTC Store
   const conversation = useS1WebRTCStore(state => state.conversation);
@@ -196,9 +207,92 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
     };
   }, [sessionId, disconnect, initializeSession]); // Include initializeSession dependency
 
+  // Auto-start recording session when WebRTC connects
+  useEffect(() => {
+    const startRecordingSession = async () => {
+      if (isConnected && !isRecordingSession) {
+        console.log('[S1] WebRTC connected - initializing recording session');
+        
+        try {
+          // Wait a moment to ensure WebRTC connection is established
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          // Get the SAME stream that WebRTC is using from connection manager
+          const connectionManager = useS1WebRTCStore.getState().connectionManager;
+          if (!connectionManager) {
+            throw new Error('ConnectionManager not available');
+          }
+          
+          const stream = connectionManager.getAudioInputStream();
+          if (!stream) {
+            throw new Error('WebRTC audio stream not available');
+          }
+          
+          console.log('[S1] Using WebRTC audio stream for recording:', {
+            streamId: stream.id,
+            active: stream.active,
+            audioTracks: stream.getAudioTracks().length
+          });
+          
+          micStreamRef.current = stream;
+          audioChunksRef.current = []; // Clear previous chunks
+          setHasRecordedAudio(false); // Reset audio flag
+          
+          // Create MediaRecorder using the SAME stream as WebRTC
+          const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+            ? 'audio/webm;codecs=opus' 
+            : 'audio/webm';
+            
+          const mediaRecorder = new MediaRecorder(stream, { mimeType });
+          mediaRecorderRef.current = mediaRecorder;
+          
+          // Collect ALL audio chunks - this captures the exact same audio WebRTC uses
+          mediaRecorder.ondataavailable = (event) => {
+            if (event.data.size > 0) {
+              audioChunksRef.current.push(event.data);
+              console.log('[S1] Audio chunk collected:', event.data.size, 'bytes (from WebRTC stream)');
+            }
+          };
+          
+          mediaRecorder.onstop = () => {
+            console.log('[S1] Recording session ended. Total chunks:', audioChunksRef.current.length);
+            setHasRecordedAudio(audioChunksRef.current.length > 0);
+            setIsRecordingSession(false);
+          };
+          
+          // Start recording session (captures same audio as WebRTC conversation)
+          mediaRecorder.start(5000); // 5-second chunks for better debugging
+          setIsRecordingSession(true);
+          setRecordingStatus('🎤 Recording voice from WebRTC stream');
+          
+          console.log('[S1] ✅ Recording session started using WebRTC stream:', {
+            mimeType,
+            streamId: stream.id,
+            streamActive: stream.active,
+            audioTracks: stream.getAudioTracks().length,
+            chunkInterval: 5000
+          });
+          
+        } catch (error) {
+          console.error('[S1] Failed to initialize recording session:', error);
+          setRecordingStatus('Recording failed to initialize: ' + error.message);
+        }
+      }
+    };
+    
+    startRecordingSession();
+  }, [isConnected, isRecordingSession]);
+
   useEffect(() => {
     scrollToBottom();
   }, [conversation]);
+
+  // Update recording status when mic mute state changes
+  useEffect(() => {
+    if (isRecordingSession) {
+      setRecordingStatus(isMuted ? '🔇 Recording active (capturing silence during mute)' : '🎤 Recording active');
+    }
+  }, [isMuted, isRecordingSession]);
 
   const handleSendMessage = async () => {
     if (!therapistMessage.trim() || !isConnected) return;
@@ -234,7 +328,153 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
     }
   };
 
+  // Voice recording functions - now automatic based on session state
+  
+  const endRecordingSession = useCallback(async () => {
+    if (mediaRecorderRef.current && isRecordingSession) {
+      console.log('[S1] Ending recording session');
+      mediaRecorderRef.current.stop();
+      
+      // Don't stop the microphone stream - it belongs to WebRTC
+      // Just clear our reference to it
+      micStreamRef.current = null;
+      
+      setRecordingStatus('Recording session ended. Auto-uploading voice...');
+      
+      // Auto-upload after a short delay to ensure MediaRecorder has finished
+      setTimeout(async () => {
+        if (audioChunksRef.current.length === 0) {
+          console.log('[S1] ❌ No audio chunks captured during session');
+          setRecordingStatus('No voice recorded during session.');
+          return;
+        }
+        
+        console.log('[S1] 🎤 Audio chunks captured, starting upload:', {
+          totalChunks: audioChunksRef.current.length,
+          totalSize: audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)
+        });
+        
+        try {
+          setIsUploading(true);
+          setRecordingStatus('Uploading voice to cloud...');
+          
+          // Combine all chunks into single blob
+          const audioBlob = new Blob(audioChunksRef.current, { 
+            type: 'audio/webm' 
+          });
+          
+          console.log('[S1] 📤 Auto-uploading voice recording:', {
+            size: audioBlob.size,
+            type: audioBlob.type,
+            chunks: audioChunksRef.current.length,
+            sessionId: sessionId
+          });
+          
+          // Create FormData for upload
+          const formData = new FormData();
+          formData.append('audio', audioBlob, `therapist-voice-${sessionId}-${Date.now()}.webm`);
+          formData.append('session_id', sessionId);
+          formData.append('purpose', 'voice_cloning');
+          
+          // Upload to server
+          const response = await fetch('/api/s1/voice-upload', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!response.ok) {
+            throw new Error(`Upload failed: ${response.statusText}`);
+          }
+          
+          const result = await response.json();
+          console.log('[S1] Voice auto-upload successful:', result);
+          
+          setRecordingStatus('✅ Voice uploaded successfully for cloning!');
+          
+          // Clear chunks from memory
+          audioChunksRef.current = [];
+          setHasRecordedAudio(false);
+          
+          // Hide status after 5 seconds
+          setTimeout(() => setRecordingStatus(''), 5000);
+          
+        } catch (error) {
+          console.error('[S1] Voice auto-upload failed:', error);
+          setRecordingStatus('❌ Upload failed. Session ended but voice not saved.');
+          setTimeout(() => setRecordingStatus(''), 8000);
+        } finally {
+          setIsUploading(false);
+        }
+      }, 1000);
+    }
+  }, [isRecordingSession, sessionId]);
+  
+  const uploadVoiceForCloning = useCallback(async () => {
+    if (audioChunksRef.current.length === 0) {
+      setRecordingStatus('No audio recorded');
+      return;
+    }
+    
+    try {
+      setIsUploading(true);
+      setRecordingStatus('Preparing audio for upload...');
+      
+      // Combine all chunks into single blob
+      const audioBlob = new Blob(audioChunksRef.current, { 
+        type: 'audio/webm' 
+      });
+      
+      console.log('[S1] Uploading voice recording:', {
+        size: audioBlob.size,
+        type: audioBlob.type,
+        chunks: audioChunksRef.current.length
+      });
+      
+      // Create FormData for upload
+      const formData = new FormData();
+      formData.append('audio', audioBlob, `therapist-voice-${sessionId}-${Date.now()}.webm`);
+      formData.append('session_id', sessionId);
+      formData.append('purpose', 'voice_cloning');
+      
+      setRecordingStatus('Uploading audio...');
+      
+      // Upload to server
+      const response = await fetch('/api/s1/voice-upload', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Upload failed: ${response.statusText}`);
+      }
+      
+      const result = await response.json();
+      console.log('[S1] Voice upload successful:', result);
+      
+      setRecordingStatus('✅ Voice uploaded successfully for cloning!');
+      
+      // Clear chunks from memory
+      audioChunksRef.current = [];
+      setHasRecordedAudio(false);
+      
+      // Hide status after 3 seconds
+      setTimeout(() => setRecordingStatus(''), 3000);
+      
+    } catch (error) {
+      console.error('[S1] Voice upload failed:', error);
+      setRecordingStatus('❌ Upload failed. Please try again.');
+      setTimeout(() => setRecordingStatus(''), 5000);
+    } finally {
+      setIsUploading(false);
+    }
+  }, [sessionId]);
+
   const endSession = async () => {
+    // End recording session if active
+    if (isRecordingSession) {
+      endRecordingSession();
+    }
+    
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
@@ -297,6 +537,16 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           </div>
           
           <div className="flex items-center space-x-4">
+            {/* Voice Recording Status - Show during session and upload */}
+            {recordingStatus && (isRecordingSession || isUploading || recordingStatus.includes('✅') || recordingStatus.includes('❌')) && (
+              <div className="text-right">
+                <div className="text-xs text-gray-600 max-w-40 text-right">
+                  {recordingStatus}
+                </div>
+              </div>
+            )}
+            
+            
             <div className="text-right">
               <div className="text-sm font-medium text-gray-900">
                 {formatTime(sessionTimer)}
@@ -413,7 +663,7 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
             <textarea
               value={therapistMessage}
               onChange={(e) => updateTherapistMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
+              onKeyDown={handleKeyPress}
               placeholder="Type your therapeutic response..."
               disabled={!isConnected}
               className="w-full px-3 py-2 border border-gray-300 rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
