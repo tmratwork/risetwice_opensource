@@ -220,7 +220,8 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           // Get the SAME stream that WebRTC is using from connection manager
           const connectionManager = useS1WebRTCStore.getState().connectionManager;
           if (!connectionManager) {
-            throw new Error('ConnectionManager not available');
+            console.log('[S1] ConnectionManager not available - session may have ended');
+            return; // Exit gracefully instead of throwing error
           }
           
           const stream = connectionManager.getAudioInputStream();
@@ -263,7 +264,7 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           // Start recording session (captures same audio as WebRTC conversation)
           mediaRecorder.start(5000); // 5-second chunks for better debugging
           setIsRecordingSession(true);
-          setRecordingStatus('🎤 Recording voice from WebRTC stream');
+          setRecordingStatus(isMuted ? 'Recording Muted' : 'Recording');
           
           console.log('[S1] ✅ Recording session started using WebRTC stream:', {
             mimeType,
@@ -290,7 +291,7 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
   // Update recording status when mic mute state changes
   useEffect(() => {
     if (isRecordingSession) {
-      setRecordingStatus(isMuted ? '🔇 Recording active (capturing silence during mute)' : '🎤 Recording active');
+      setRecordingStatus(isMuted ? 'Recording Muted' : 'Recording');
     }
   }, [isMuted, isRecordingSession]);
 
@@ -539,8 +540,13 @@ const SessionInterface: React.FC<Props> = ({ sessionId, sessionData: passedSessi
           <div className="flex items-center space-x-4">
             {/* Voice Recording Status - Show during session and upload */}
             {recordingStatus && (isRecordingSession || isUploading || recordingStatus.includes('✅') || recordingStatus.includes('❌')) && (
-              <div className="text-right">
-                <div className="text-xs text-gray-600 max-w-40 text-right">
+              <div className="flex items-center space-x-2">
+                {isRecordingSession && (
+                  <div className={`w-2 h-2 rounded-full ${
+                    isMuted ? 'bg-gray-800' : 'bg-red-600 animate-pulse'
+                  }`} />
+                )}
+                <div className="text-xs text-gray-600">
                   {recordingStatus}
                 </div>
               </div>
