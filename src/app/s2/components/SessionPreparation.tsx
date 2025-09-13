@@ -120,35 +120,15 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-gray-900">🌱 RiseTwice</span>
-            </div>
-            <nav className="flex space-x-8">
-              <a href="#" className="text-gray-500 hover:text-gray-900">Dashboard</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">Clients</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">Resources</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">Billing</a>
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm">👤</span>
-              </div>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Progress Indicator */}
-      <div className="bg-white border-b">
+      <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium text-gray-500">Step 4 of 5</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 3 of 9</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '80%' }}></div>
+            <div className="bg-green-500 h-2 rounded-full" style={{ width: '33%' }}></div>
           </div>
         </div>
       </div>
@@ -156,7 +136,7 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-16">
         <div className="text-center max-w-2xl">
-          <h1 className="text-4xl font-bold text-gray-900 mb-6">
+          <h1 className="text-4xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
             Preparing for your clinical session
           </h1>
 
@@ -198,7 +178,8 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
               </div>
               <button
                 onClick={retryGeneration}
-                className="px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                className="control-button primary"
+                style={{ backgroundColor: '#dc2626' }}
               >
                 Try Again
               </button>
@@ -219,7 +200,7 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
                 </div>
               </div>
 
-              <p className="text-gray-600 mb-8">
+              <p className="mb-8" style={{ color: 'var(--text-secondary)' }}>
                 Your session will last approximately 50 minutes. Please 
                 ensure you have a stable internet connection and a quiet 
                 environment.
@@ -227,7 +208,7 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
 
               <button
                 onClick={onNext}
-                className="px-8 py-4 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                className="control-button primary large-button"
                 disabled={isGenerating}
               >
                 Begin Session
@@ -244,7 +225,8 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
             <div className="mt-8">
               <button
                 onClick={onBack}
-                className="text-gray-500 hover:text-gray-700 transition-colors"
+                className="control-button"
+                style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
               >
                 ← Back to customization
               </button>

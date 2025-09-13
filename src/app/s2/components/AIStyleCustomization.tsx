@@ -135,45 +135,25 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
   // Show loading while fetching existing style config
   if (loadingStyle) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your AI style configuration...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading your AI style configuration...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-gray-900">🌱 RiseTwice Therapy Match</span>
-            </div>
-            <nav className="flex space-x-8">
-              <a href="#" className="text-gray-500 hover:text-gray-900">Dashboard</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">Clients</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">Billing</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">Resources</a>
-              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                <span className="text-sm">👤</span>
-              </div>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Progress Indicator */}
-      <div className="bg-white border-b">
+      <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium text-gray-500">Step 3 of 5</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 5 of 9</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '60%' }}></div>
+            <div className="bg-green-500 h-2 rounded-full" style={{ width: '56%' }}></div>
           </div>
         </div>
       </div>
@@ -181,10 +161,10 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
             Customize Your AI&apos;s Style
           </h1>
-          <p className="text-gray-600 max-w-2xl mx-auto">
+          <p className="max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
             Tailor the AI to match your therapeutic approach and communication preferences.
           </p>
         </div>
@@ -396,18 +376,15 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
         <div className="flex justify-between items-center mt-8">
           <button
             onClick={onBack}
-            className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+            className="control-button"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
           >
             Back
           </button>
           <button
             onClick={handleNext}
             disabled={!canProceed || isSubmitting}
-            className={`px-8 py-3 rounded-lg font-medium transition-colors flex items-center ${
-              canProceed && !isSubmitting
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            className={`control-button primary ${(!canProceed || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {isSubmitting ? (
               <>

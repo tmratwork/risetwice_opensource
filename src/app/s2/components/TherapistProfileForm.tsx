@@ -149,40 +149,22 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   // Show loading while fetching existing profile
   if (loadingProfile) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your profile...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading your profile...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-gray-900">🌱 RiseTwice</span>
-            </div>
-            <nav className="flex space-x-8">
-              <a href="#" className="text-gray-500 hover:text-gray-900">For Therapists</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">For Clients</a>
-              <button className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">
-                Get Started
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Progress Bar */}
-      <div className="bg-white border-b">
+      <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium text-gray-500">Step 1 of 5</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 1 of 7</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div className="bg-green-500 h-2 rounded-full" style={{ width: '20%' }}></div>
@@ -193,10 +175,10 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 py-8">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
             Tell us about yourself
           </h1>
-          <p className="text-gray-600">
+          <p style={{ color: 'var(--text-secondary)' }}>
             Let&apos;s start with some basic information. This will help us create your
             provider profile.
           </p>
@@ -217,7 +199,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Full Name */}
           <div>
-            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700 mb-2">
+            <label htmlFor="fullName" className="block text-sm font-medium mb-2" style={{ color: 'var(--text-primary)' }}>
               Full Name
             </label>
             <input
@@ -249,15 +231,13 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               }`}
             >
               <option value="">Select your title</option>
-              <option value="Dr.">Dr.</option>
-              <option value="LCSW">LCSW</option>
-              <option value="LMFT">LMFT</option>
-              <option value="LPC">LPC</option>
-              <option value="LPCC">LPCC</option>
-              <option value="PhD">PhD</option>
-              <option value="PsyD">PsyD</option>
-              <option value="MA">MA</option>
-              <option value="MS">MS</option>
+              <option value="Psychiatrist">Psychiatrist</option>
+              <option value="Psychologist">Psychologist</option>
+              <option value="Clinical Social Work/Therapist">Clinical Social Work/Therapist</option>
+              <option value="Marriage & Family Therapist">Marriage & Family Therapist</option>
+              <option value="Nurse Practitioner">Nurse Practitioner</option>
+              <option value="Physician Assistant/Associate">Physician Assistant/Associate</option>
+              <option value="Other">Other (type in textbox)</option>
             </select>
             {errors.title && (
               <p className="mt-1 text-sm text-red-600">{errors.title}</p>
@@ -279,12 +259,15 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               }`}
               size={4}
             >
-              <option value="PhD in Psychology">PhD in Psychology</option>
-              <option value="PsyD in Clinical Psychology">PsyD in Clinical Psychology</option>
-              <option value="MA in Counseling Psychology">MA in Counseling Psychology</option>
-              <option value="MS in Clinical Mental Health">MS in Clinical Mental Health</option>
-              <option value="MSW - Master of Social Work">MSW - Master of Social Work</option>
-              <option value="MA in Marriage and Family Therapy">MA in Marriage and Family Therapy</option>
+              <option value="MD">MD</option>
+              <option value="DO">DO</option>
+              <option value="PhD">PhD</option>
+              <option value="PsyD">PsyD</option>
+              <option value="LCSW">LCSW</option>
+              <option value="LMFT">LMFT</option>
+              <option value="NP">NP</option>
+              <option value="PA">PA</option>
+              <option value="Other">Other (type in textbox)</option>
             </select>
             <p className="mt-1 text-sm text-gray-500">Hold Ctrl/Cmd to select multiple degrees</p>
             {errors.degrees && (
@@ -361,18 +344,15 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
             <button
               type="button"
               onClick={onBack}
-              className="px-6 py-3 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
+              className="control-button"
+              style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
             >
               Back
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-8 py-3 rounded-lg transition-colors flex items-center ${
-                isSubmitting
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : 'bg-green-600 text-white hover:bg-green-700'
-              }`}
+              className={`control-button primary ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isSubmitting ? (
                 <>

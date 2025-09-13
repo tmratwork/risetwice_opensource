@@ -8,12 +8,15 @@ import { useAuth } from '@/contexts/auth-context';
 import WelcomeScreen from './components/WelcomeScreen';
 import TherapistProfileForm from './components/TherapistProfileForm';
 import PatientDescriptionForm from './components/PatientDescriptionForm';
-import AIStyleCustomization from './components/AIStyleCustomization';
 import SessionPreparation from './components/SessionPreparation';
 import SessionInterface from './components/SessionInterface';
+import AIStyleCustomization from './components/AIStyleCustomization';
+import LicenseVerification from './components/LicenseVerification';
+import CompleteProfile from './components/CompleteProfile';
+import OnboardingComplete from './components/OnboardingComplete';
 
 // Flow steps
-type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'preparation' | 'session';
+type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
 
 // Types
 interface TherapistProfile {
@@ -44,10 +47,37 @@ interface AIStyle {
   };
 }
 
+interface LicenseVerificationData {
+  licenseType: string;
+  licenseNumber: string;
+  stateOfLicensure: string;
+}
+
+interface CompleteProfileData {
+  profilePhoto?: string;
+  personalStatement: string;
+  mentalHealthSpecialties: string[];
+  treatmentApproaches: string[];
+  ageRangesTreated: string[];
+  practiceDetails: {
+    practiceType: string;
+    sessionLength: string;
+    availabilityHours: string;
+    emergencyProtocol: string;
+  };
+  insuranceInformation: {
+    acceptsInsurance: boolean;
+    insurancePlans: string[];
+    outOfNetworkSupported: boolean;
+  };
+}
+
 interface SessionData {
   therapistProfile: TherapistProfile;
   patientDescription: PatientDescription;
   aiStyle: AIStyle;
+  licenseVerification: LicenseVerificationData;
+  completeProfile: CompleteProfileData;
   generatedScenario?: string;
   scenarioId?: string;
 }
@@ -78,16 +108,38 @@ const S2CaseSimulation: React.FC = () => {
         tone: 50,
         energyLevel: 50
       }
+    },
+    licenseVerification: {
+      licenseType: '',
+      licenseNumber: '',
+      stateOfLicensure: ''
+    },
+    completeProfile: {
+      personalStatement: '',
+      mentalHealthSpecialties: [],
+      treatmentApproaches: [],
+      ageRangesTreated: [],
+      practiceDetails: {
+        practiceType: '',
+        sessionLength: '',
+        availabilityHours: '',
+        emergencyProtocol: ''
+      },
+      insuranceInformation: {
+        acceptsInsurance: false,
+        insurancePlans: [],
+        outOfNetworkSupported: false
+      }
     }
   });
 
   // Show loading while authentication is initializing
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Initializing authentication...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Initializing authentication...</p>
         </div>
       </div>
     );
@@ -96,10 +148,10 @@ const S2CaseSimulation: React.FC = () => {
   // Show sign-in prompt if not authenticated
   if (!user || !firebaseAvailable) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center bg-white p-8 rounded-lg shadow-md max-w-md">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Authentication Required</h2>
-          <p className="text-gray-600 mb-6">
+      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+        <div className="text-center p-8 rounded-lg shadow-md max-w-md" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+          <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Authentication Required</h2>
+          <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
             You need to sign in to access S2 Case Simulation.
           </p>
           <p className="text-sm text-blue-600">
@@ -124,13 +176,22 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('patient-description');
         break;
       case 'patient-description':
-        setCurrentStep('ai-style');
-        break;
-      case 'ai-style':
         setCurrentStep('preparation');
         break;
       case 'preparation':
         setCurrentStep('session');
+        break;
+      case 'session':
+        setCurrentStep('ai-style');
+        break;
+      case 'ai-style':
+        setCurrentStep('license-verification');
+        break;
+      case 'license-verification':
+        setCurrentStep('complete-profile');
+        break;
+      case 'complete-profile':
+        setCurrentStep('onboarding-complete');
         break;
     }
   };
@@ -143,14 +204,23 @@ const S2CaseSimulation: React.FC = () => {
       case 'patient-description':
         setCurrentStep('profile');
         break;
-      case 'ai-style':
-        setCurrentStep('patient-description');
-        break;
       case 'preparation':
-        setCurrentStep('ai-style');
+        setCurrentStep('patient-description');
         break;
       case 'session':
         setCurrentStep('preparation');
+        break;
+      case 'ai-style':
+        setCurrentStep('session');
+        break;
+      case 'license-verification':
+        setCurrentStep('ai-style');
+        break;
+      case 'complete-profile':
+        setCurrentStep('license-verification');
+        break;
+      case 'onboarding-complete':
+        setCurrentStep('complete-profile');
         break;
     }
   };
@@ -173,6 +243,20 @@ const S2CaseSimulation: React.FC = () => {
     setSessionData(prev => ({
       ...prev,
       aiStyle: { ...prev.aiStyle, ...style }
+    }));
+  };
+
+  const updateLicenseVerification = (license: Partial<LicenseVerificationData>) => {
+    setSessionData(prev => ({
+      ...prev,
+      licenseVerification: { ...prev.licenseVerification, ...license }
+    }));
+  };
+
+  const updateCompleteProfile = (profile: Partial<CompleteProfileData>) => {
+    setSessionData(prev => ({
+      ...prev,
+      completeProfile: { ...prev.completeProfile, ...profile }
     }));
   };
 
@@ -205,16 +289,6 @@ const S2CaseSimulation: React.FC = () => {
         />
       );
       
-    case 'ai-style':
-      return (
-        <AIStyleCustomization
-          style={sessionData.aiStyle}
-          onUpdate={updateAIStyle}
-          onNext={handleNext}
-          onBack={handleBack}
-        />
-      );
-      
     case 'preparation':
       return (
         <SessionPreparation
@@ -229,7 +303,45 @@ const S2CaseSimulation: React.FC = () => {
       return (
         <SessionInterface
           sessionData={sessionData}
-          onEndSession={() => setCurrentStep('welcome')}
+          onEndSession={handleNext}
+        />
+      );
+      
+    case 'ai-style':
+      return (
+        <AIStyleCustomization
+          style={sessionData.aiStyle}
+          onUpdate={updateAIStyle}
+          onNext={handleNext}
+          onBack={handleBack}
+        />
+      );
+      
+    case 'license-verification':
+      return (
+        <LicenseVerification
+          licenseData={sessionData.licenseVerification}
+          onUpdate={updateLicenseVerification}
+          onNext={handleNext}
+          onSkip={handleNext}
+          onBack={handleBack}
+        />
+      );
+      
+    case 'complete-profile':
+      return (
+        <CompleteProfile
+          profileData={sessionData.completeProfile}
+          onUpdate={updateCompleteProfile}
+          onNext={handleNext}
+          onBack={handleBack}
+        />
+      );
+      
+    case 'onboarding-complete':
+      return (
+        <OnboardingComplete
+          onBack={handleBack}
         />
       );
       

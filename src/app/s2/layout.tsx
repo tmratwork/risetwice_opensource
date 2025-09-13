@@ -1,12 +1,17 @@
 // src/app/s2/layout.tsx
 // S2 Case Simulation Layout
 
-import type { Metadata } from 'next';
+"use client";
 
-export const metadata: Metadata = {
-  title: 'S2 Case Simulation - RiseTwice',
-  description: 'AI-powered therapy case simulation and practice platform',
-};
+import type { Metadata } from 'next';
+import { AuthProvider } from '@/contexts/auth-context';
+import { ThemeProvider } from '@/contexts/theme-context';
+import { ClientHeader } from '@/components/client-header';
+// Import V16 CSS styles to match chatbotV17 appearance
+import '../chatbotV16/chatbotV16.css';
+
+// Note: metadata export removed due to "use client" directive
+// This will need to be handled differently if SEO metadata is required
 
 export default function S2Layout({
   children,
@@ -14,8 +19,25 @@ export default function S2Layout({
   children: React.ReactNode;
 }) {
   return (
-    <>
-      {children}
-    </>
+    <AuthProvider>
+      <ThemeProvider>
+        <div className="v16-layout-root">
+          {/* Header Row - exact same as chatbotV17 */}
+          <div className="header-row">
+            <ClientHeader />
+          </div>
+
+          {/* Main Content Row - exact same as chatbotV17 */}
+          <div className="main-content-row">
+            {children}
+          </div>
+
+          {/* Footer Row - empty for S2 but maintaining structure */}
+          <div className="footer-row">
+            {/* S2 doesn't need footer nav, but keeping the row for consistent layout */}
+          </div>
+        </div>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }

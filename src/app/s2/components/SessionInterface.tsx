@@ -570,10 +570,10 @@ Stay in character as the patient throughout the session. Respond naturally to th
   // Loading state
   if (connecting || !isConnected) {
     return (
-      <div className="flex flex-col h-screen bg-gray-50 items-center justify-center">
+      <div className="flex flex-col h-screen items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">
+          <p style={{ color: 'var(--text-secondary)' }}>
             {connecting ? 'Connecting to AI Patient...' : 'Preparing your case simulation...'}
           </p>
         </div>
@@ -582,20 +582,20 @@ Stay in character as the patient throughout the session. Respond naturally to th
   }
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50">
+    <div className="flex flex-col h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Session Header - Clean styling like mockup */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white border-b border-gray-200 px-6 py-4 pt-12">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-4">
             <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
               <span className="text-green-700 font-medium">🌱</span>
             </div>
             <div>
-              <h2 className="text-lg font-medium text-gray-900">
+              <h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
                 RiseTwice Case Simulation
               </h2>
-              <p className="text-sm text-gray-500">
-                Step 5 of 5 - AI Patient Session
+              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                Step 4 of 9 - AI Patient Session
               </p>
             </div>
             <div className={`px-2 py-1 text-xs rounded-full ${
@@ -631,7 +631,8 @@ Stay in character as the patient throughout the session. Respond naturally to th
             
             <button
               onClick={endSession}
-              className="bg-red-100 text-red-700 px-4 py-2 rounded-lg hover:bg-red-200 transition-colors flex items-center"
+              className="control-button"
+              style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}
             >
               <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

@@ -108,42 +108,22 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
   // Show loading while fetching existing description
   if (loadingDescription) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your patient description...</p>
+          <p style={{ color: 'var(--text-secondary)' }}>Loading your patient description...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <span className="text-2xl font-bold text-gray-900">🌱 RiseTwice</span>
-            </div>
-            <nav className="flex space-x-8">
-              <a href="#" className="text-gray-500 hover:text-gray-900">Find a therapist</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">For therapists</a>
-              <a href="#" className="text-gray-500 hover:text-gray-900">Crisis support</a>
-              <a href="#" className="text-gray-900 font-medium">Log in</a>
-              <button className="bg-gray-700 text-white px-4 py-2 rounded-lg hover:bg-gray-800 transition-colors">
-                Join as a therapist
-              </button>
-            </nav>
-          </div>
-        </div>
-      </header>
-
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Progress Indicator */}
-      <div className="bg-white border-b">
+      <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium text-gray-500">Step 2 of 5</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 2 of 7</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div className="bg-green-500 h-2 rounded-full" style={{ width: '40%' }}></div>
@@ -154,11 +134,13 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-16">
         <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Describe Your Ideal Patient
+          <h1 className="text-4xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
+            Build Your Personalized Clinical Scenario
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Help us understand who you work with best.
+          <p className="text-lg max-w-4xl mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
+            Describe your 'ideal' patient—the person you're able to help the most and are a best match for. 
+            This can include age ranges, gender, what life stage they are in, the biggest mental health 
+            challenges they may be facing, and any other details you can imagine.
           </p>
         </div>
 
@@ -189,8 +171,9 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
 
           <div className="bg-gray-50 rounded-lg p-4 mb-8">
             <p className="text-sm text-gray-700">
-              <strong>This information will be used to generate a patient scenario for you to respond to,</strong> helping us match 
-              you with suitable clients.
+              We will use this information to construct a personalized clinical case scenario for you to deliver care to. 
+              Our technology analyzes this session to capture your unique vocal tone, speaking patterns and logic to create 
+              a realistic voice clone for your AI Preview.
             </p>
           </div>
 
@@ -198,11 +181,7 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
             <button
               onClick={handleSubmit}
               disabled={description.length < 50 || isSubmitting}
-              className={`px-8 py-4 rounded-lg font-medium transition-colors flex items-center mx-auto ${
-                description.length >= 50 && !isSubmitting
-                  ? 'bg-green-600 text-white hover:bg-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
+              className={`control-button primary mx-auto ${(description.length < 50 || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isSubmitting ? (
                 <>
@@ -220,7 +199,8 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
         <div className="mt-8 text-center">
           <button
             onClick={onBack}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="control-button"
+            style={{ backgroundColor: 'var(--bg-secondary)', color: 'var(--text-primary)' }}
           >
             ← Back to previous step
           </button>
