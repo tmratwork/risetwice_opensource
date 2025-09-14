@@ -73,7 +73,7 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
 
     try {
       console.log('[S2] Generating scenario with data:', sessionData);
-      
+
       const response = await fetch('/api/s2/generate-scenario', {
         method: 'POST',
         headers: {
@@ -92,21 +92,21 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
       }
 
       const data = await response.json();
-      
+
       if (data.success && data.scenario) {
         setScenario(data.scenario);
-        
+
         // Update parent sessionData with scenario and scenarioId
         onUpdateSessionData({
           generatedScenario: data.scenario,
           scenarioId: data.scenarioId
         });
-        
+
         console.log('[S2] ✅ Scenario generated and saved successfully:', data.scenarioId);
       } else {
         throw new Error(data.error || 'Invalid response format');
       }
-      
+
     } catch (err) {
       setError('Failed to generate scenario. Please try again.');
       console.error('[S2] Scenario generation error:', err);
@@ -201,8 +201,8 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
               </div>
 
               <p className="mb-8" style={{ color: 'var(--text-secondary)' }}>
-                Your session will last approximately 50 minutes. Please 
-                ensure you have a stable internet connection and a quiet 
+                Sessions auto-end after 20 minutes. Please
+                ensure you have a stable internet connection and a quiet
                 environment.
               </p>
 

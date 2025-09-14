@@ -60,16 +60,17 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const [conversation, setConversation] = useState<Message[]>([]);
   const [therapistMessage, setTherapistMessage] = useState('');
   const [s2SessionId, setS2SessionId] = useState<string>('');
-  
+  const [sessionAutoEnded, setSessionAutoEnded] = useState(false);
+
   // Voice recording state (copied from S1)
   const [isRecordingSession, setIsRecordingSession] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<string>('Recording ready - unmute mic to start');
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const initializingRef = useRef<boolean>(false);
-  
+
   // Voice recording refs (copied from S1)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -94,7 +95,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
     const secs = seconds % 60;
-    
+
     if (hours > 0) {
       return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     }
@@ -107,7 +108,21 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
-      setSessionTimer(prev => prev + 1);
+      setSessionTimer(prev => {
+        const newTime = prev + 1;
+        // Auto-end session after 20 minutes (1200 seconds)
+        if (newTime >= 1200) {
+          console.log('[S2] ⏰ 20-minute session limit reached - showing end session overlay');
+          setSessionAutoEnded(true);
+          // Don't call endSession() automatically - wait for user to click "Continue"
+          if (timerRef.current) {
+            clearInterval(timerRef.current);
+            timerRef.current = null;
+          }
+          return newTime; // Return the final time
+        }
+        return newTime;
+      });
     }, 1000);
   };
 
@@ -158,9 +173,9 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
           isFinal: true,
           status: 'final'
         };
-        
+
         setConversation(prev => [...prev, newMessage]);
-        
+
         // Save message to database
         saveMessageToDatabase(newMessage);
       }
@@ -170,7 +185,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const generateAIPersonalityPrompt = useCallback(() => {
     const { therapeuticModalities, communicationStyle } = sessionData.aiStyle;
     const { description } = sessionData.patientDescription;
-    
+
     // Convert numbers to descriptive terms
     const getModalityLevel = (value: number) => {
       if (value >= 70) return 'heavily emphasize';
@@ -178,7 +193,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
       if (value >= 20) return 'lightly incorporate';
       return 'minimally use';
     };
-    
+
     const getStyleDescription = (value: number, lowLabel: string, highLabel: string) => {
       if (value >= 80) return `very ${highLabel.toLowerCase()}`;
       if (value >= 60) return `moderately ${highLabel.toLowerCase()}`;
@@ -218,7 +233,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
     try {
       console.log('[S2] Creating S2 session in database...');
-      
+
       const response = await fetch('/api/s2/session', {
         method: 'POST',
         headers: {
@@ -232,7 +247,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
       });
 
       const data = await response.json();
-      
+
       if (data.success && data.session) {
         console.log('[S2] ✅ S2 session created successfully:', data.session.id);
         setS2SessionId(data.session.id);
@@ -240,7 +255,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
       } else {
         throw new Error(data.error || 'Failed to create session');
       }
-      
+
     } catch (error) {
       console.error('[S2] Error creating S2 session:', error);
       return null;
@@ -325,40 +340,40 @@ Stay in character as the patient throughout the session. Respond naturally to th
     const startRecordingSession = async () => {
       if (isConnected && !isRecordingSession) {
         console.log('[S2] WebRTC connected - initializing recording session');
-        
+
         try {
           // Wait a moment to ensure WebRTC connection is established
           await new Promise(resolve => setTimeout(resolve, 1000));
-          
+
           // Get the SAME stream that WebRTC is using from connection manager
           const connectionManager = useS1WebRTCStore.getState().connectionManager;
           if (!connectionManager) {
             console.log('[S2] ConnectionManager not available - session may have ended');
             return; // Exit gracefully instead of throwing error
           }
-          
+
           const stream = connectionManager.getAudioInputStream();
           if (!stream) {
             throw new Error('WebRTC audio stream not available');
           }
-          
+
           console.log('[S2] Using WebRTC audio stream for recording:', {
             streamId: stream.id,
             active: stream.active,
             audioTracks: stream.getAudioTracks().length
           });
-          
+
           micStreamRef.current = stream;
           audioChunksRef.current = []; // Clear previous chunks
-          
+
           // Create MediaRecorder using the SAME stream as WebRTC
-          const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
-            ? 'audio/webm;codecs=opus' 
+          const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+            ? 'audio/webm;codecs=opus'
             : 'audio/webm';
-            
+
           const mediaRecorder = new MediaRecorder(stream, { mimeType });
           mediaRecorderRef.current = mediaRecorder;
-          
+
           // Collect ALL audio chunks - this captures the exact same audio WebRTC uses
           mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
@@ -366,17 +381,17 @@ Stay in character as the patient throughout the session. Respond naturally to th
               console.log('[S2] Audio chunk collected:', event.data.size, 'bytes (from WebRTC stream)');
             }
           };
-          
+
           mediaRecorder.onstop = () => {
             console.log('[S2] Recording session ended. Total chunks:', audioChunksRef.current.length);
             setIsRecordingSession(false);
           };
-          
+
           // Start recording session (captures same audio as WebRTC conversation)
           mediaRecorder.start(5000); // 5-second chunks for better debugging
           setIsRecordingSession(true);
           setRecordingStatus(isMuted ? 'Recording Muted' : 'Recording');
-          
+
           console.log('[S2] ✅ Recording session started using WebRTC stream:', {
             mimeType,
             streamId: stream.id,
@@ -384,14 +399,14 @@ Stay in character as the patient throughout the session. Respond naturally to th
             audioTracks: stream.getAudioTracks().length,
             chunkInterval: 5000
           });
-          
+
         } catch (error) {
           console.error('[S2] Failed to initialize recording session:', error);
           setRecordingStatus('Recording failed to initialize: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
       }
     };
-    
+
     startRecordingSession();
   }, [isConnected, isRecordingSession, isMuted]);
 
@@ -420,15 +435,15 @@ Stay in character as the patient throughout the session. Respond naturally to th
       isFinal: true,
       status: 'final'
     };
-    
+
     setConversation(prev => [...prev, newMessage]);
-    
+
     // Save message to database
     saveMessageToDatabase(newMessage);
 
     // Send message through WebRTC
     const success = sendMessage(therapistMessage);
-    
+
     if (success) {
       setTherapistMessage('');
     } else {
@@ -448,13 +463,13 @@ Stay in character as the patient throughout the session. Respond naturally to th
     if (mediaRecorderRef.current && isRecordingSession) {
       console.log('[S2] Ending recording session');
       mediaRecorderRef.current.stop();
-      
+
       // Don't stop the microphone stream - it belongs to WebRTC
       // Just clear our reference to it
       micStreamRef.current = null;
-      
+
       setRecordingStatus('Recording session ended. Auto-uploading voice...');
-      
+
       // Auto-upload after a short delay to ensure MediaRecorder has finished
       setTimeout(async () => {
         if (audioChunksRef.current.length === 0) {
@@ -462,55 +477,55 @@ Stay in character as the patient throughout the session. Respond naturally to th
           setRecordingStatus('No voice recorded during session.');
           return;
         }
-        
+
         console.log('[S2] 🎤 Audio chunks captured, starting upload:', {
           totalChunks: audioChunksRef.current.length,
           totalSize: audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)
         });
-        
+
         try {
           setIsUploading(true);
           setRecordingStatus('Uploading voice to cloud...');
-          
+
           // Combine all chunks into single blob
-          const audioBlob = new Blob(audioChunksRef.current, { 
-            type: 'audio/webm' 
+          const audioBlob = new Blob(audioChunksRef.current, {
+            type: 'audio/webm'
           });
-          
+
           console.log('[S2] 📤 Auto-uploading voice recording:', {
             size: audioBlob.size,
             type: audioBlob.type,
             chunks: audioChunksRef.current.length,
             sessionId: s2SessionId
           });
-          
+
           // Create FormData for upload
           const formData = new FormData();
           formData.append('audio', audioBlob, `s2-therapist-voice-${s2SessionId}-${Date.now()}.webm`);
           formData.append('session_id', s2SessionId);
           formData.append('purpose', 'voice_recording');
-          
+
           // Upload to S2 server
           const response = await fetch('/api/s2/voice-upload', {
             method: 'POST',
             body: formData
           });
-          
+
           if (!response.ok) {
             throw new Error(`Upload failed: ${response.statusText}`);
           }
-          
+
           const result = await response.json();
           console.log('[S2] Voice auto-upload successful:', result);
-          
+
           setRecordingStatus('✅ Voice uploaded successfully!');
-          
+
           // Clear chunks from memory
           audioChunksRef.current = [];
-          
+
           // Hide status after 5 seconds
           setTimeout(() => setRecordingStatus(''), 5000);
-          
+
         } catch (error) {
           console.error('[S2] Voice auto-upload failed:', error);
           setRecordingStatus('❌ Upload failed. Session ended but voice not saved.');
@@ -524,17 +539,17 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
   const endSession = async () => {
     console.log('[S2] Ending case simulation session');
-    
+
     // End recording session if active (copied from S1)
     if (isRecordingSession) {
       endRecordingSession();
     }
-    
+
     // Update session status in database
     if (s2SessionId && user?.uid) {
       try {
         console.log('[S2] Updating session status to completed...');
-        
+
         const response = await fetch('/api/s2/session', {
           method: 'PUT',
           headers: {
@@ -558,11 +573,11 @@ Stay in character as the patient throughout the session. Respond naturally to th
         console.error('[S2] Error ending session in database:', error);
       }
     }
-    
+
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    
+
     disconnect();
     onEndSession();
   };
@@ -598,28 +613,26 @@ Stay in character as the patient throughout the session. Respond naturally to th
                 Step 7 of 8 - AI Patient Session
               </p>
             </div>
-            <div className={`px-2 py-1 text-xs rounded-full ${
-              isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-            }`}>
+            <div className={`px-2 py-1 text-xs rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+              }`}>
               {isConnected ? 'Connected' : 'Disconnected'}
             </div>
           </div>
-          
+
           <div className="flex items-center space-x-4">
             {/* Voice Recording Status - Show during session and upload (copied from S1) */}
             {recordingStatus && (isRecordingSession || isUploading || recordingStatus.includes('✅') || recordingStatus.includes('❌')) && (
               <div className="flex items-center space-x-2">
                 {isRecordingSession && (
-                  <div className={`w-2 h-2 rounded-full ${
-                    isMuted ? 'bg-gray-400' : 'bg-red-600 animate-pulse'
-                  }`} />
+                  <div className={`w-2 h-2 rounded-full ${isMuted ? 'bg-gray-400' : 'bg-red-600 animate-pulse'
+                    }`} />
                 )}
                 <div className="text-xs text-gray-600">
                   {recordingStatus}
                 </div>
               </div>
             )}
-            
+
             <div className="text-right">
               <div className="text-sm font-medium text-gray-900 flex items-center">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -628,7 +641,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
                 {formatTime(sessionTimer)}
               </div>
             </div>
-            
+
             <button
               onClick={endSession}
               className="control-button"
@@ -670,13 +683,12 @@ Stay in character as the patient throughout the session. Respond naturally to th
                     </div>
                   </div>
                 )}
-                
+
                 <div
-                  className={`px-4 py-3 rounded-lg ${
-                    message.role === 'therapist'
-                      ? 'bg-green-600 text-white'
-                      : 'bg-white border border-gray-200 text-gray-900'
-                  }`}
+                  className={`px-4 py-3 rounded-lg ${message.role === 'therapist'
+                    ? 'bg-green-600 text-white'
+                    : 'bg-white border border-gray-200 text-gray-900'
+                    }`}
                 >
                   <p className="text-sm leading-relaxed whitespace-pre-wrap">
                     {message.text}
@@ -724,11 +736,10 @@ Stay in character as the patient throughout the session. Respond naturally to th
         <div className="flex items-center space-x-4">
           <button
             onClick={toggleMute}
-            className={`p-3 rounded-full transition-colors ${
-              isMuted 
-                ? 'bg-red-100 text-red-700 hover:bg-red-200' 
-                : 'bg-green-100 text-green-700 hover:bg-green-200'
-            }`}
+            className={`p-3 rounded-full transition-colors ${isMuted
+              ? 'bg-red-100 text-red-700 hover:bg-red-200'
+              : 'bg-green-100 text-green-700 hover:bg-green-200'
+              }`}
             title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -755,16 +766,48 @@ Stay in character as the patient throughout the session. Respond naturally to th
           <button
             onClick={handleSendMessage}
             disabled={!therapistMessage.trim() || !isConnected}
-            className={`px-6 py-3 rounded-lg font-medium transition-colors ${
-              therapistMessage.trim() && isConnected
-                ? 'bg-green-600 text-white hover:bg-green-700'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-            }`}
+            className={`px-6 py-3 rounded-lg font-medium transition-colors ${therapistMessage.trim() && isConnected
+              ? 'bg-green-600 text-white hover:bg-green-700'
+              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
           >
             Send
           </button>
         </div>
       </div>
+
+      {/* Session Auto-End Overlay */}
+      {sessionAutoEnded && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-8 max-w-md mx-4 text-center">
+            <div className="mb-4">
+              <div className="h-16 w-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Session has ended
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Next step is to refine your Personalized AI Preview
+              </p>
+              <button
+                onClick={async () => {
+                  console.log('[S2] User clicked Continue - ending session and proceeding to next step');
+                  // First end the session properly (cleanup WebRTC, save to database, etc.)
+                  await endSession();
+                  // Then hide overlay and proceed to next step
+                  setSessionAutoEnded(false);
+                }}
+                className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+              >
+                Continue to Next Step
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
