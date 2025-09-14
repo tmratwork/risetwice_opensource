@@ -73,6 +73,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
     };
 
     loadExistingProfile();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]); // Remove onUpdate from dependencies to prevent infinite loop
 
   const validateForm = () => {
@@ -276,8 +277,8 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               <option value="PhD">PhD</option>
               <option value="PsyD">PsyD</option>
               <option value="MSW">MSW - Master of Social Work</option>
-              <option value="MA">MA - Master's in Psychology/Counseling</option>
-              <option value="MS">MS - Master's in Clinical Psychology</option>
+              <option value="MA">MA - Master&apos;s in Psychology/Counseling</option>
+              <option value="MS">MS - Master&apos;s in Clinical Psychology</option>
               <option value="LCSW">LCSW</option>
               <option value="LMFT">LMFT</option>
               <option value="LPC">LPC - Licensed Professional Counselor</option>
