@@ -45,7 +45,7 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
     };
 
     loadExistingDescription();
-  }, [user?.uid]); // Remove onUpdate from dependencies to prevent infinite loop
+  }, [user?.uid, onUpdate]);
 
   const validateForm = () => {
     if (!description.trim() || description.trim().length < 50) {
@@ -138,7 +138,7 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
             Build Your Personalized Clinical Scenario
           </h1>
           <p className="text-lg max-w-4xl mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Describe your 'ideal' patient—the person you're able to help the most and are a best match for. 
+            Describe your &apos;ideal&apos; patient—the person you&apos;re able to help the most and are a best match for. 
             This can include age ranges, gender, what life stage they are in, the biggest mental health 
             challenges they may be facing, and any other details you can imagine.
           </p>

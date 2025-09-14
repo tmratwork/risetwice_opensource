@@ -17,15 +17,14 @@ interface LicenseVerificationProps {
   onUpdate: (data: Partial<LicenseVerificationData>) => void;
   onNext: () => void;
   onSkip: () => void;
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 const LicenseVerification: React.FC<LicenseVerificationProps> = ({
   licenseData,
   onUpdate,
   onNext,
-  onSkip,
-  onBack
+  onSkip
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -57,7 +56,7 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
     };
 
     loadExistingData();
-  }, [user?.uid]);
+  }, [user?.uid, onUpdate]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -86,10 +85,10 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
     }
 
     setIsSubmitting(true);
-    
+
     try {
       console.log('[S2] Saving license verification data...');
-      
+
       const response = await fetch('/api/s2/license-verification', {
         method: 'POST',
         headers: {
@@ -114,8 +113,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
 
     } catch (error) {
       console.error('[S2] Error saving license verification data:', error);
-      setErrors({ 
-        general: error instanceof Error ? error.message : 'Failed to save license data. Please try again.' 
+      setErrors({
+        general: error instanceof Error ? error.message : 'Failed to save license data. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
@@ -175,8 +174,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
             License Verification (Optional)
           </h1>
           <p className="text-lg max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            To build trust on the platform, we verify professional licenses against official databases. 
-            You can complete this now or do it later from your profile dashboard. Verified providers 
+            To build trust on the platform, we verify professional licenses against official databases.
+            You can complete this now or do it later from your profile dashboard. Verified providers
             obtain a green checkmark next to their name.
           </p>
         </div>
@@ -203,9 +202,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
               id="licenseType"
               value={licenseData.licenseType}
               onChange={(e) => handleInputChange('licenseType', e.target.value)}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                errors.licenseType ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.licenseType ? 'border-red-300' : 'border-gray-300'
+                }`}
             >
               <option value="">Select license type</option>
               <option value="LCSW">LCSW - Licensed Clinical Social Worker</option>
@@ -232,9 +230,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
               value={licenseData.licenseNumber}
               onChange={(e) => handleInputChange('licenseNumber', e.target.value)}
               placeholder="e.g. 12345"
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                errors.licenseNumber ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.licenseNumber ? 'border-red-300' : 'border-gray-300'
+                }`}
             />
             {errors.licenseNumber && (
               <p className="mt-1 text-sm text-red-600">{errors.licenseNumber}</p>
@@ -250,9 +247,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
               id="stateOfLicensure"
               value={licenseData.stateOfLicensure}
               onChange={(e) => handleInputChange('stateOfLicensure', e.target.value)}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                errors.stateOfLicensure ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.stateOfLicensure ? 'border-red-300' : 'border-gray-300'
+                }`}
             >
               <option value="">Select state</option>
               {states.map(state => (

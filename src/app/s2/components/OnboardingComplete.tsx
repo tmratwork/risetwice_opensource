@@ -5,7 +5,6 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/contexts/auth-context';
 
 interface OnboardingCompleteProps {
   onBack: () => void;
@@ -15,7 +14,6 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
   onBack
 }) => {
   const router = useRouter();
-  const { user } = useAuth();
   const [isNavigating, setIsNavigating] = useState(false);
 
   const handleViewProfile = () => {

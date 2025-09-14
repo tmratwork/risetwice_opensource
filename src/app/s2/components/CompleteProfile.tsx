@@ -4,6 +4,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 
 interface CompleteProfileData {
@@ -77,7 +78,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     };
 
     loadExistingProfile();
-  }, [user?.uid]);
+  }, [user?.uid, onUpdate]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -148,12 +149,12 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     }
   };
 
-  const handleInputChange = (field: string, value: any) => {
+  const handleInputChange = (field: string, value: string | boolean | string[]) => {
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       onUpdate({
         [parent]: {
-          ...(profileData as any)[parent],
+          ...((profileData as CompleteProfileData)[parent as keyof CompleteProfileData] as Record<string, unknown>),
           [child]: value
         }
       });
@@ -172,19 +173,20 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
-      currentValues = ((profileData as any)[parent]?.[child] || []) as string[];
+      const parentObj = (profileData as CompleteProfileData)[parent as keyof CompleteProfileData] as Record<string, unknown>;
+      currentValues = (parentObj?.[child] || []) as string[];
       const newValues = checked 
         ? [...currentValues, value]
         : currentValues.filter((v: string) => v !== value);
       
       onUpdate({
         [parent]: {
-          ...(profileData as any)[parent],
+          ...((profileData as CompleteProfileData)[parent as keyof CompleteProfileData] as Record<string, unknown>),
           [child]: newValues
         }
       });
     } else {
-      currentValues = (profileData as any)[field] || [];
+      currentValues = ((profileData as CompleteProfileData)[field as keyof CompleteProfileData] || []) as string[];
       const newValues = checked 
         ? [...currentValues, value]
         : currentValues.filter((v: string) => v !== value);
@@ -254,9 +256,11 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             </h2>
             <div className="flex items-center space-x-4">
               {profileData.profilePhoto ? (
-                <img 
+                <Image 
                   src={profileData.profilePhoto} 
                   alt="Profile" 
+                  width={80}
+                  height={80}
                   className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
                 />
               ) : (

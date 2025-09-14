@@ -3,7 +3,6 @@
 
 "use client";
 
-import type { Metadata } from 'next';
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/contexts/theme-context';
 import { ClientHeader } from '@/components/client-header';
