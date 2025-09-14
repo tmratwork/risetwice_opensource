@@ -595,7 +595,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
                 RiseTwice Case Simulation
               </h2>
               <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Step 4 of 9 - AI Patient Session
+                Step 7 of 8 - AI Patient Session
               </p>
             </div>
             <div className={`px-2 py-1 text-xs rounded-full ${

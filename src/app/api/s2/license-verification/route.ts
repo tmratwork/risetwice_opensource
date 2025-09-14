@@ -30,17 +30,23 @@ export async function POST(request: NextRequest) {
 
     console.log('[S2] Creating/updating license verification for user:', data.userId);
 
-    // Upsert license verification (create or update)
+    // First, deactivate any existing active license verification for this user
+    await supabase
+      .from('s2_license_verifications')
+      .update({ is_active: false })
+      .eq('user_id', data.userId)
+      .eq('is_active', true);
+
+    // Insert new license verification
     const { data: licenseData, error } = await supabase
       .from('s2_license_verifications')
-      .upsert({
+      .insert({
         user_id: data.userId,
         license_type: data.licenseType,
         license_number: data.licenseNumber,
         state_of_licensure: data.stateOfLicensure,
-        verification_status: 'pending'
-      }, {
-        onConflict: 'user_id'
+        verification_status: 'pending',
+        is_active: true
       })
       .select()
       .single();

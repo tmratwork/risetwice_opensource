@@ -164,10 +164,10 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
       <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-2xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 1 of 7</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 1 of 8</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '20%' }}></div>
+            <div className="bg-green-500 h-2 rounded-full" style={{ width: '13%' }}></div>
           </div>
         </div>
       </div>

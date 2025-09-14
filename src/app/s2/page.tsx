@@ -176,12 +176,6 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('patient-description');
         break;
       case 'patient-description':
-        setCurrentStep('preparation');
-        break;
-      case 'preparation':
-        setCurrentStep('session');
-        break;
-      case 'session':
         setCurrentStep('ai-style');
         break;
       case 'ai-style':
@@ -191,6 +185,12 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('complete-profile');
         break;
       case 'complete-profile':
+        setCurrentStep('preparation');
+        break;
+      case 'preparation':
+        setCurrentStep('session');
+        break;
+      case 'session':
         setCurrentStep('onboarding-complete');
         break;
     }
@@ -204,14 +204,8 @@ const S2CaseSimulation: React.FC = () => {
       case 'patient-description':
         setCurrentStep('profile');
         break;
-      case 'preparation':
-        setCurrentStep('patient-description');
-        break;
-      case 'session':
-        setCurrentStep('preparation');
-        break;
       case 'ai-style':
-        setCurrentStep('session');
+        setCurrentStep('patient-description');
         break;
       case 'license-verification':
         setCurrentStep('ai-style');
@@ -219,8 +213,14 @@ const S2CaseSimulation: React.FC = () => {
       case 'complete-profile':
         setCurrentStep('license-verification');
         break;
-      case 'onboarding-complete':
+      case 'preparation':
         setCurrentStep('complete-profile');
+        break;
+      case 'session':
+        setCurrentStep('preparation');
+        break;
+      case 'onboarding-complete':
+        setCurrentStep('session');
         break;
     }
   };
@@ -289,24 +289,6 @@ const S2CaseSimulation: React.FC = () => {
         />
       );
       
-    case 'preparation':
-      return (
-        <SessionPreparation
-          sessionData={sessionData}
-          onNext={handleNext}
-          onBack={handleBack}
-          onUpdateSessionData={updateSessionData}
-        />
-      );
-      
-    case 'session':
-      return (
-        <SessionInterface
-          sessionData={sessionData}
-          onEndSession={handleNext}
-        />
-      );
-      
     case 'ai-style':
       return (
         <AIStyleCustomization
@@ -335,6 +317,24 @@ const S2CaseSimulation: React.FC = () => {
           onUpdate={updateCompleteProfile}
           onNext={handleNext}
           onBack={handleBack}
+        />
+      );
+      
+    case 'preparation':
+      return (
+        <SessionPreparation
+          sessionData={sessionData}
+          onNext={handleNext}
+          onBack={handleBack}
+          onUpdateSessionData={updateSessionData}
+        />
+      );
+      
+    case 'session':
+      return (
+        <SessionInterface
+          sessionData={sessionData}
+          onEndSession={handleNext}
         />
       );
       

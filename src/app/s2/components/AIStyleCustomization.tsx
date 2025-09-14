@@ -150,10 +150,10 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
       <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-6xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 5 of 9</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 3 of 8</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '56%' }}></div>
+            <div className="bg-green-500 h-2 rounded-full" style={{ width: '38%' }}></div>
           </div>
         </div>
       </div>

@@ -123,10 +123,10 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
       <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 2 of 7</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 2 of 8</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '40%' }}></div>
+            <div className="bg-green-500 h-2 rounded-full" style={{ width: '25%' }}></div>
           </div>
         </div>
       </div>

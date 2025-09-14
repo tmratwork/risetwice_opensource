@@ -53,10 +53,17 @@ export async function POST(request: NextRequest) {
 
     console.log('[S2] Creating/updating complete profile for user:', data.userId);
 
-    // Upsert complete profile (create or update)
+    // First, deactivate any existing active complete profile for this user
+    await supabase
+      .from('s2_complete_profiles')
+      .update({ is_active: false })
+      .eq('user_id', data.userId)
+      .eq('is_active', true);
+
+    // Insert new complete profile
     const { data: profileData, error } = await supabase
       .from('s2_complete_profiles')
-      .upsert({
+      .insert({
         user_id: data.userId,
         profile_photo_url: data.profilePhoto || null,
         personal_statement: data.personalStatement,
@@ -70,9 +77,8 @@ export async function POST(request: NextRequest) {
         accepts_insurance: data.insuranceInformation.acceptsInsurance,
         insurance_plans: data.insuranceInformation.insurancePlans,
         out_of_network_supported: data.insuranceInformation.outOfNetworkSupported,
+        is_active: true,
         completion_date: new Date().toISOString()
-      }, {
-        onConflict: 'user_id'
       })
       .select()
       .single();

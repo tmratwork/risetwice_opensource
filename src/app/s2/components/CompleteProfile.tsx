@@ -55,12 +55,17 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
         if (data.success && data.completeProfile) {
           console.log('[S2] Loaded existing complete profile:', data.completeProfile);
           onUpdate({
-            profilePhoto: data.completeProfile.profilePhoto,
+            profilePhoto: data.completeProfile.profilePhoto || '',
             personalStatement: data.completeProfile.personalStatement,
             mentalHealthSpecialties: data.completeProfile.mentalHealthSpecialties,
             treatmentApproaches: data.completeProfile.treatmentApproaches,
             ageRangesTreated: data.completeProfile.ageRangesTreated,
-            practiceDetails: data.completeProfile.practiceDetails,
+            practiceDetails: {
+              practiceType: data.completeProfile.practiceDetails.practiceType || '',
+              sessionLength: data.completeProfile.practiceDetails.sessionLength || '',
+              availabilityHours: data.completeProfile.practiceDetails.availabilityHours || '',
+              emergencyProtocol: data.completeProfile.practiceDetails.emergencyProtocol || ''
+            },
             insuranceInformation: data.completeProfile.insuranceInformation
           });
         }
@@ -163,12 +168,29 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   };
 
   const handleMultiSelectChange = (field: string, value: string, checked: boolean) => {
-    const currentValues = (profileData as any)[field] || [];
-    const newValues = checked 
-      ? [...currentValues, value]
-      : currentValues.filter((v: string) => v !== value);
+    let currentValues: string[] = [];
     
-    onUpdate({ [field]: newValues });
+    if (field.includes('.')) {
+      const [parent, child] = field.split('.');
+      currentValues = ((profileData as any)[parent]?.[child] || []) as string[];
+      const newValues = checked 
+        ? [...currentValues, value]
+        : currentValues.filter((v: string) => v !== value);
+      
+      onUpdate({
+        [parent]: {
+          ...(profileData as any)[parent],
+          [child]: newValues
+        }
+      });
+    } else {
+      currentValues = (profileData as any)[field] || [];
+      const newValues = checked 
+        ? [...currentValues, value]
+        : currentValues.filter((v: string) => v !== value);
+      
+      onUpdate({ [field]: newValues });
+    }
     
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -193,10 +215,10 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
         <div className="max-w-4xl mx-auto px-4 py-6">
           <div className="text-center mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 7 of 9</span>
+            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 5 of 8</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '78%' }}></div>
+            <div className="bg-green-500 h-2 rounded-full" style={{ width: '63%' }}></div>
           </div>
         </div>
       </div>
@@ -251,8 +273,10 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) {
-                      // Handle file upload logic here
                       console.log('[S2] Profile photo selected:', file.name);
+                      // Create a URL for the uploaded file to display immediately
+                      const imageUrl = URL.createObjectURL(file);
+                      handleInputChange('profilePhoto', imageUrl);
                     }
                   }}
                   className="hidden"
