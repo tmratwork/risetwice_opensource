@@ -176,15 +176,15 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('patient-description');
         break;
       case 'patient-description':
+        setCurrentStep('complete-profile');
+        break;
+      case 'complete-profile':
         setCurrentStep('ai-style');
         break;
       case 'ai-style':
         setCurrentStep('license-verification');
         break;
       case 'license-verification':
-        setCurrentStep('complete-profile');
-        break;
-      case 'complete-profile':
         setCurrentStep('preparation');
         break;
       case 'preparation':
@@ -204,17 +204,17 @@ const S2CaseSimulation: React.FC = () => {
       case 'patient-description':
         setCurrentStep('profile');
         break;
-      case 'ai-style':
+      case 'complete-profile':
         setCurrentStep('patient-description');
+        break;
+      case 'ai-style':
+        setCurrentStep('complete-profile');
         break;
       case 'license-verification':
         setCurrentStep('ai-style');
         break;
-      case 'complete-profile':
-        setCurrentStep('license-verification');
-        break;
       case 'preparation':
-        setCurrentStep('complete-profile');
+        setCurrentStep('license-verification');
         break;
       case 'session':
         setCurrentStep('preparation');
@@ -228,8 +228,8 @@ const S2CaseSimulation: React.FC = () => {
   const handleStepNavigation = (targetStep: FlowStep) => {
     // Only allow navigation to previous steps
     const stepOrder: FlowStep[] = [
-      'welcome', 'profile', 'patient-description', 'ai-style', 
-      'license-verification', 'complete-profile', 'preparation', 'session', 'onboarding-complete'
+      'welcome', 'profile', 'patient-description', 'complete-profile', 'ai-style', 
+      'license-verification', 'preparation', 'session', 'onboarding-complete'
     ];
     
     const currentIndex = stepOrder.indexOf(currentStep);
