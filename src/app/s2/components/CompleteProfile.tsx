@@ -81,7 +81,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     };
 
     loadExistingProfile();
-  }, [user?.uid, onUpdate]);
+  }, [user?.uid]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};

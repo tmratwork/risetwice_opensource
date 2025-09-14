@@ -59,7 +59,7 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
     };
 
     loadExistingData();
-  }, [user?.uid, onUpdate]);
+  }, [user?.uid]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};

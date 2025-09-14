@@ -48,7 +48,7 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
     };
 
     loadExistingDescription();
-  }, [user?.uid, onUpdate]);
+  }, [user?.uid]);
 
   const validateForm = () => {
     if (!description.trim() || description.trim().length < 50) {

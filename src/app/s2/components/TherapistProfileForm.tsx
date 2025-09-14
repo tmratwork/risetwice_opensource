@@ -11,6 +11,7 @@ interface TherapistProfile {
   fullName: string;
   title: string;
   degrees: string[];
+  otherDegree?: string;
   primaryLocation: string;
   offersOnline: boolean;
   phoneNumber?: string;
@@ -36,6 +37,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [otherDegreeInput, setOtherDegreeInput] = useState('');
 
   // Load existing profile on mount
   useEffect(() => {
@@ -48,10 +50,15 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
 
         if (data.success && data.profile) {
           console.log('[S2] Loaded existing profile:', data.profile);
+          // Set otherDegreeInput state if otherDegree exists
+          if (data.profile.otherDegree) {
+            setOtherDegreeInput(data.profile.otherDegree);
+          }
           onUpdate({
             fullName: data.profile.fullName,
             title: data.profile.title,
             degrees: data.profile.degrees,
+            otherDegree: data.profile.otherDegree,
             primaryLocation: data.profile.primaryLocation,
             offersOnline: data.profile.offersOnline,
             phoneNumber: data.profile.phoneNumber,
@@ -81,6 +88,11 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
 
     if (profile.degrees.length === 0) {
       newErrors.degrees = 'At least one degree is required';
+    }
+    
+    // If "Other" is selected, validate that custom degree is provided
+    if (profile.degrees.includes('Other') && !otherDegreeInput.trim()) {
+      newErrors.degrees = 'Please specify your custom degree/credential';
     }
 
     if (!profile.primaryLocation.trim()) {
@@ -115,6 +127,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           fullName: profile.fullName,
           title: profile.title,
           degrees: profile.degrees,
+          otherDegree: profile.otherDegree,
           primaryLocation: profile.primaryLocation,
           offersOnline: profile.offersOnline,
           phoneNumber: profile.phoneNumber,
@@ -262,15 +275,49 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               <option value="DO">DO</option>
               <option value="PhD">PhD</option>
               <option value="PsyD">PsyD</option>
+              <option value="MSW">MSW - Master of Social Work</option>
+              <option value="MA">MA - Master's in Psychology/Counseling</option>
+              <option value="MS">MS - Master's in Clinical Psychology</option>
               <option value="LCSW">LCSW</option>
               <option value="LMFT">LMFT</option>
-              <option value="NP">NP</option>
+              <option value="LPC">LPC - Licensed Professional Counselor</option>
+              <option value="LPCC">LPCC - Licensed Professional Clinical Counselor</option>
+              <option value="LMHC">LMHC - Licensed Mental Health Counselor</option>
+              <option value="LCPC">LCPC - Licensed Clinical Professional Counselor</option>
+              <option value="LCAS">LCAS - Licensed Clinical Addiction Specialist</option>
+              <option value="LCADC">LCADC - Licensed Clinical Addiction Counselor</option>
+              <option value="BCBA">BCBA - Board Certified Behavior Analyst</option>
+              <option value="LCAT">LCAT - Licensed Creative Arts Therapist</option>
+              <option value="LPAT">LPAT - Licensed Professional Art Therapist</option>
+              <option value="RN">RN - Registered Nurse</option>
+              <option value="NP">NP - Nurse Practitioner</option>
+              <option value="PMHNP">PMHNP - Psychiatric Mental Health Nurse Practitioner</option>
               <option value="PA">PA</option>
               <option value="Other">Other (type in textbox)</option>
             </select>
             <p className="mt-1 text-sm text-gray-500">Hold Ctrl/Cmd to select multiple degrees</p>
             {errors.degrees && (
               <p className="mt-1 text-sm text-red-600">{errors.degrees}</p>
+            )}
+            
+            {/* Other Degree Input - Show when "Other" is selected */}
+            {profile.degrees.includes('Other') && (
+              <div className="mt-3">
+                <label htmlFor="otherDegree" className="block text-sm font-medium text-gray-700 mb-2">
+                  Please specify your other degree/credential:
+                </label>
+                <input
+                  type="text"
+                  id="otherDegree"
+                  value={otherDegreeInput}
+                  onChange={(e) => {
+                    setOtherDegreeInput(e.target.value);
+                    handleInputChange('otherDegree', e.target.value);
+                  }}
+                  placeholder="e.g., LMHP, LCMHC, etc."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
             )}
           </div>
 
