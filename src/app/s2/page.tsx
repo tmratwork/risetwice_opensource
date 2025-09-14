@@ -225,6 +225,22 @@ const S2CaseSimulation: React.FC = () => {
     }
   };
 
+  const handleStepNavigation = (targetStep: FlowStep) => {
+    // Only allow navigation to previous steps
+    const stepOrder: FlowStep[] = [
+      'welcome', 'profile', 'patient-description', 'ai-style', 
+      'license-verification', 'complete-profile', 'preparation', 'session', 'onboarding-complete'
+    ];
+    
+    const currentIndex = stepOrder.indexOf(currentStep);
+    const targetIndex = stepOrder.indexOf(targetStep);
+    
+    // Only allow navigation backward (to previous steps)
+    if (targetIndex < currentIndex) {
+      setCurrentStep(targetStep);
+    }
+  };
+
   const updateTherapistProfile = (profile: Partial<TherapistProfile>) => {
     setSessionData(prev => ({
       ...prev,
@@ -276,6 +292,7 @@ const S2CaseSimulation: React.FC = () => {
           onUpdate={updateTherapistProfile}
           onNext={handleNext}
           onBack={handleBack}
+          onStepNavigation={handleStepNavigation}
         />
       );
       
@@ -286,6 +303,7 @@ const S2CaseSimulation: React.FC = () => {
           onUpdate={updatePatientDescription}
           onNext={handleNext}
           onBack={handleBack}
+          onStepNavigation={handleStepNavigation}
         />
       );
       
@@ -296,6 +314,7 @@ const S2CaseSimulation: React.FC = () => {
           onUpdate={updateAIStyle}
           onNext={handleNext}
           onBack={handleBack}
+          onStepNavigation={handleStepNavigation}
         />
       );
       
@@ -307,6 +326,7 @@ const S2CaseSimulation: React.FC = () => {
           onNext={handleNext}
           onSkip={handleNext}
           onBack={handleBack}
+          onStepNavigation={handleStepNavigation}
         />
       );
       
@@ -317,6 +337,7 @@ const S2CaseSimulation: React.FC = () => {
           onUpdate={updateCompleteProfile}
           onNext={handleNext}
           onBack={handleBack}
+          onStepNavigation={handleStepNavigation}
         />
       );
       
@@ -327,6 +348,7 @@ const S2CaseSimulation: React.FC = () => {
           onNext={handleNext}
           onBack={handleBack}
           onUpdateSessionData={updateSessionData}
+          onStepNavigation={handleStepNavigation}
         />
       );
       

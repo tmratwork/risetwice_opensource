@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import StepNavigator from './StepNavigator';
 
 interface LicenseVerificationData {
   licenseType: string;
@@ -18,13 +19,15 @@ interface LicenseVerificationProps {
   onNext: () => void;
   onSkip: () => void;
   onBack?: () => void;
+  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
 }
 
 const LicenseVerification: React.FC<LicenseVerificationProps> = ({
   licenseData,
   onUpdate,
   onNext,
-  onSkip
+  onSkip,
+  onStepNavigation
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -155,17 +158,13 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
 
   return (
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Progress Indicator */}
-      <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="text-center mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 4 of 8</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '50%' }}></div>
-          </div>
-        </div>
-      </div>
+      {/* Step Navigator */}
+      {onStepNavigation && (
+        <StepNavigator 
+          currentStep="license-verification" 
+          onStepClick={onStepNavigation}
+        />
+      )}
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 py-16">

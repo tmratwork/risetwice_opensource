@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
+import StepNavigator from './StepNavigator';
 
 interface CompleteProfileData {
   profilePhoto?: string;
@@ -31,13 +32,15 @@ interface CompleteProfileProps {
   onUpdate: (data: Partial<CompleteProfileData>) => void;
   onNext: () => void;
   onBack: () => void;
+  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
 }
 
 const CompleteProfile: React.FC<CompleteProfileProps> = ({
   profileData,
   onUpdate,
   onNext,
-  onBack
+  onBack,
+  onStepNavigation
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -213,17 +216,13 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
   return (
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Progress Indicator */}
-      <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
-        <div className="max-w-4xl mx-auto px-4 py-6">
-          <div className="text-center mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 5 of 8</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '63%' }}></div>
-          </div>
-        </div>
-      </div>
+      {/* Step Navigator */}
+      {onStepNavigation && (
+        <StepNavigator 
+          currentStep="complete-profile" 
+          onStepClick={onStepNavigation}
+        />
+      )}
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 py-16">

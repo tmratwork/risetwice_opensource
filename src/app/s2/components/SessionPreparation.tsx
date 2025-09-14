@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import StepNavigator from './StepNavigator';
 
 interface SessionData {
   therapistProfile: {
@@ -41,13 +42,15 @@ interface SessionPreparationProps {
   onNext: () => void;
   onBack: () => void;
   onUpdateSessionData: (data: Partial<SessionData>) => void;
+  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
 }
 
 const SessionPreparation: React.FC<SessionPreparationProps> = ({
   sessionData,
   onNext,
   onBack,
-  onUpdateSessionData
+  onUpdateSessionData,
+  onStepNavigation
 }) => {
   const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -121,17 +124,13 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
 
   return (
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Progress Indicator */}
-      <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
-        <div className="max-w-2xl mx-auto px-4 py-6">
-          <div className="text-center mb-4">
-            <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Step 6 of 8</span>
-          </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
-            <div className="bg-green-500 h-2 rounded-full" style={{ width: '75%' }}></div>
-          </div>
-        </div>
-      </div>
+      {/* Step Navigator */}
+      {onStepNavigation && (
+        <StepNavigator 
+          currentStep="preparation" 
+          onStepClick={onStepNavigation}
+        />
+      )}
 
       {/* Main Content */}
       <main className="flex-1 flex items-center justify-center px-4 py-16">
