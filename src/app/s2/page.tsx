@@ -23,6 +23,7 @@ interface TherapistProfile {
   fullName: string;
   title: string;
   degrees: string[];
+  otherTitle?: string;
   primaryLocation: string;
   offersOnline: boolean;
   phoneNumber?: string;

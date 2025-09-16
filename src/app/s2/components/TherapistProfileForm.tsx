@@ -12,6 +12,7 @@ interface TherapistProfile {
   title: string;
   degrees: string[];
   otherDegree?: string;
+  otherTitle?: string;
   primaryLocation: string;
   offersOnline: boolean;
   phoneNumber?: string;
@@ -38,6 +39,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [otherDegreeInput, setOtherDegreeInput] = useState('');
+  const [otherTitleInput, setOtherTitleInput] = useState('');
 
   // Load existing profile on mount
   useEffect(() => {
@@ -54,11 +56,16 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           if (data.profile.otherDegree) {
             setOtherDegreeInput(data.profile.otherDegree);
           }
+          // Set otherTitleInput state if otherTitle exists
+          if (data.profile.otherTitle) {
+            setOtherTitleInput(data.profile.otherTitle);
+          }
           onUpdate({
             fullName: data.profile.fullName,
             title: data.profile.title,
             degrees: data.profile.degrees,
             otherDegree: data.profile.otherDegree,
+            otherTitle: data.profile.otherTitle,
             primaryLocation: data.profile.primaryLocation,
             offersOnline: data.profile.offersOnline,
             phoneNumber: data.profile.phoneNumber,
@@ -85,6 +92,11 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
 
     if (!profile.title.trim()) {
       newErrors.title = 'Title is required';
+    }
+
+    // If "Other" title is selected, validate that custom title is provided
+    if (profile.title === 'Other' && !otherTitleInput.trim()) {
+      newErrors.title = 'Please specify your custom title';
     }
 
     if (profile.degrees.length === 0) {
@@ -129,6 +141,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           title: profile.title,
           degrees: profile.degrees,
           otherDegree: profile.otherDegree,
+          otherTitle: profile.otherTitle,
           primaryLocation: profile.primaryLocation,
           offersOnline: profile.offersOnline,
           phoneNumber: profile.phoneNumber,
@@ -254,6 +267,26 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
             </select>
             {errors.title && (
               <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+            )}
+
+            {/* Other Title Input - Show when "Other" is selected */}
+            {profile.title === 'Other' && (
+              <div className="mt-3">
+                <label htmlFor="otherTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                  Please specify your custom title:
+                </label>
+                <input
+                  type="text"
+                  id="otherTitle"
+                  value={otherTitleInput}
+                  onChange={(e) => {
+                    setOtherTitleInput(e.target.value);
+                    handleInputChange('otherTitle', e.target.value);
+                  }}
+                  placeholder="e.g., Licensed Professional Counselor, Mental Health Specialist, etc."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
             )}
           </div>
 
