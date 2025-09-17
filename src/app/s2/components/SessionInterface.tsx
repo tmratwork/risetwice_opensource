@@ -63,6 +63,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const [therapistMessage, setTherapistMessage] = useState('');
   const [s2SessionId, setS2SessionId] = useState<string>('');
   const [sessionAutoEnded, setSessionAutoEnded] = useState(false);
+  const userSpeakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Voice recording state (copied from S1)
   const [isRecordingSession, setIsRecordingSession] = useState(false);
@@ -84,6 +85,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   // S1 WebRTC Store (reusing for S2)
   const isConnected = useS1WebRTCStore(state => state.isConnected);
   const isThinking = useS1WebRTCStore(state => state.isThinking);
+  const isUserSpeaking = useS1WebRTCStore(state => state.isUserSpeaking);
   const isMuted = useS1WebRTCStore(state => state.isMuted);
   const sendMessage = useS1WebRTCStore(state => state.sendMessage);
   const connect = useS1WebRTCStore(state => state.connect);
@@ -170,6 +172,26 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
       const metadataRole = (metadata as { role?: string })?.role || "assistant";
       const isUserMessage = metadataRole === 'user' || id.includes('user-');
       const role = isUserMessage ? 'therapist' : 'patient';
+
+      // DEBUG: Log all callback details
+      console.log('[S2-CALLBACK] Transcript callback:', {
+        id,
+        data: data?.slice(0, 20) + '...',
+        isFinal,
+        metadataRole,
+        isUserMessage,
+        role
+      });
+
+      // User speaking state is now managed automatically by WebRTC store speech events
+      console.log('[S2] Transcript received:', { isUserMessage, isFinal, dataLength: data?.length || 0 });
+
+      // Keep AI thinking dots visible until response is completely finished
+      if (!isUserMessage && isFinal && data && data.trim().length > 0) {
+        // AI response is complete - stop thinking dots
+        console.log('[S2] 🔵 AI response complete - stopping BLUE thinking dots');
+        useS1WebRTCStore.setState({ isThinking: false });
+      }
 
       if (isFinal && data) {
         const newMessage: Message = {
@@ -338,6 +360,9 @@ Stay in character as the patient throughout the session. Respond naturally to th
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      if (userSpeakingTimeoutRef.current) {
+        clearTimeout(userSpeakingTimeoutRef.current);
+      }
       disconnect();
     };
   }, [disconnect, initializeSession]);
@@ -452,6 +477,9 @@ Stay in character as the patient throughout the session. Respond naturally to th
     const success = sendMessage(therapistMessage);
 
     if (success) {
+      // Set thinking state when message is sent - AI will start preparing response
+      console.log('[S2] Message sent successfully - setting thinking state');
+      useS1WebRTCStore.setState({ isThinking: true });
       setTherapistMessage('');
     } else {
       console.error('[S2] Failed to send message through WebRTC');
@@ -664,15 +692,44 @@ Stay in character as the patient throughout the session. Respond naturally to th
                 </div>
               ))}
 
-              {isThinking && (
-                <div className="message assistant">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+              {/* User speaking indicator with dancing dots - FORCED VISIBILITY */}
+              {isUserSpeaking && (
+                <div className="message user" style={{
+                  backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                  border: '1px solid #22c55e',
+                  minHeight: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '10px'
+                }}>
+                  <div className="flex space-x-2 items-center">
+                    <span style={{ fontSize: '12px', marginRight: '10px', color: '#22c55e' }}>Speaking...</span>
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDuration: '0.6s' }}></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s', animationDuration: '0.6s' }}></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '0.6s' }}></div>
                   </div>
                 </div>
               )}
+
+              {/* AI thinking indicator with dancing dots - FORCED VISIBILITY */}
+              {isThinking && (
+                <div className="message assistant" style={{
+                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                  border: '1px solid #3b82f6',
+                  minHeight: '50px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  padding: '10px'
+                }}>
+                  <div className="flex space-x-2 items-center">
+                    <span style={{ fontSize: '12px', marginRight: '10px', color: '#3b82f6' }}>Thinking...</span>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDuration: '0.6s' }}></div>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s', animationDuration: '0.6s' }}></div>
+                    <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '0.6s' }}></div>
+                  </div>
+                </div>
+              )}
+
 
               <div ref={messagesEndRef} />
             </div>

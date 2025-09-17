@@ -42,6 +42,7 @@ export interface S1WebRTCStoreState {
   audioLevel: number;
   isAudioPlaying: boolean;
   isThinking: boolean;
+  isUserSpeaking: boolean;
 
   // Mute state
   isMuted: boolean;
@@ -113,6 +114,7 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
   audioLevel: 0,
   isAudioPlaying: false,
   isThinking: false,
+  isUserSpeaking: false,
 
   // Mute state - start muted like V16
   isMuted: true,
@@ -268,6 +270,22 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
           if (currentState.errorCallback) {
             currentState.errorCallback(error);
           }
+        },
+
+        // Speech event callbacks for dancing dots timing
+        onSpeechStarted: () => {
+          console.log('[S1] User speech started - setting isUserSpeaking: true');
+          set(state => ({ ...state, isUserSpeaking: true }));
+        },
+
+        onSpeechStopped: () => {
+          console.log('[S1] User speech stopped - setting isUserSpeaking: false, isThinking: true');
+          set(state => ({ ...state, isUserSpeaking: false, isThinking: true }));
+        },
+
+        onAudioBufferCommitted: () => {
+          console.log('[S1] Audio buffer committed - API call made, setting isThinking: true');
+          set(state => ({ ...state, isThinking: true }));
         }
       };
 
