@@ -60,7 +60,6 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const [sessionTimer, setSessionTimer] = useState(0);
   const [connecting, setConnecting] = useState(false);
   const [conversation, setConversation] = useState<Message[]>([]);
-  const [therapistMessage, setTherapistMessage] = useState('');
   const [s2SessionId, setS2SessionId] = useState<string>('');
   const [sessionAutoEnded, setSessionAutoEnded] = useState(false);
   const userSpeakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -453,38 +452,6 @@ Stay in character as the patient throughout the session. Respond naturally to th
     scrollToBottom();
   }, [conversation]);
 
-  const handleSendMessage = async () => {
-    if (!therapistMessage.trim() || !isConnected) return;
-
-    console.log('[S2] Therapist sending message:', therapistMessage);
-
-    // Add therapist message to conversation immediately
-    const newMessage: Message = {
-      id: 'therapist_' + Date.now(),
-      role: 'therapist',
-      text: therapistMessage,
-      timestamp: new Date().toISOString(),
-      isFinal: true,
-      status: 'final'
-    };
-
-    setConversation(prev => [...prev, newMessage]);
-
-    // Save message to database
-    saveMessageToDatabase(newMessage);
-
-    // Send message through WebRTC
-    const success = sendMessage(therapistMessage);
-
-    if (success) {
-      // Set thinking state when message is sent - AI will start preparing response
-      console.log('[S2] Message sent successfully - setting thinking state');
-      useS1WebRTCStore.setState({ isThinking: true });
-      setTherapistMessage('');
-    } else {
-      console.error('[S2] Failed to send message through WebRTC');
-    }
-  };
 
 
   // Voice recording functions - now automatic based on session state (copied from S1)
@@ -734,12 +701,9 @@ Stay in character as the patient throughout the session. Respond naturally to th
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input container - matching V16 styling */}
+            {/* Audio controls container - voice-only mode */}
             {isConnected && (
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleSendMessage();
-              }} className="input-container">
+              <div className="audio-controls-container flex justify-center py-4">
                 <button
                   type="button"
                   onClick={toggleAudioOutputMute}
@@ -761,26 +725,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
                     </svg>
                   )}
                 </button>
-                <input
-                  type="text"
-                  value={therapistMessage}
-                  onChange={(e) => setTherapistMessage(e.target.value)}
-                  placeholder="Type your message..."
-                  className="text-input"
-                  disabled={!isConnected}
-                />
-                <button
-                  type="submit"
-                  className="send-button-new"
-                  disabled={!therapistMessage.trim()}
-                  aria-label="Send message to AI Patient"
-                >
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                    <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                    <path d="M6 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </button>
-              </form>
+              </div>
             )}
           </div>
 
