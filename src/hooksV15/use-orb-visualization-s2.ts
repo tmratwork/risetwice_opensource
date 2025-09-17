@@ -93,16 +93,15 @@ export function useOrbVisualizationS2(): OrbVisualizationState {
     console.log('[s2-orb] isAiThinking changed:', isAiThinking);
   }, [isAiThinking]);
 
-  // Log orb state values when there are significant changes
+  // Minimal logging for debugging (reduced noise)
   useEffect(() => {
-    if (isActuallyPlaying || currentVolume > 0.1) {
-      console.log('[s2-orb] Audio activity detected:', {
+    if (Math.random() < 0.01 && (isActuallyPlaying || currentVolume > 0.3)) {
+      console.log('[s2-orb] Audio activity (sample):', {
         isActuallyPlaying,
-        currentVolume: currentVolume.toFixed(3),
-        effectiveVolume: effectiveVolume.toFixed(3)
+        currentVolume: currentVolume.toFixed(3)
       });
     }
-  }, [isActuallyPlaying, currentVolume, effectiveVolume]);
+  }, [isActuallyPlaying, currentVolume]);
 
   const result = useMemo(() => {
     const orbState = {

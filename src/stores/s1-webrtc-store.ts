@@ -379,14 +379,42 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
           }
         };
 
-        // Set up event handlers for audio element
+        // Set up event handlers for audio element (matching V16 exactly)
         audioElement.oncanplay = () => {
           console.log('[S1] Audio element can play - setting up volume monitoring');
           setupVolumeMonitoring();
         };
 
+        audioElement.onplay = () => {
+          console.log('[S1] Audio element onplay event:', {
+            elementId: audioElement.id,
+            currentTime: audioElement.currentTime,
+            paused: audioElement.paused
+          });
+          set(state => ({ ...state, isAudioPlaying: true }));
+        };
+
+        audioElement.onended = () => {
+          console.log('[S1] Audio element ended');
+          set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+          if (volumeMonitoringInterval) {
+            clearInterval(volumeMonitoringInterval);
+            volumeMonitoringInterval = null;
+          }
+        };
+
+        audioElement.onpause = () => {
+          console.log('[S1] Audio element paused');
+          set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
+          if (volumeMonitoringInterval) {
+            clearInterval(volumeMonitoringInterval);
+            volumeMonitoringInterval = null;
+          }
+        };
+
         audioElement.onerror = (error) => {
           console.error('[S1] Audio element error:', error);
+          set(state => ({ ...state, isAudioPlaying: false, currentVolume: 0, audioLevel: 0 }));
         };
 
         // Append to DOM for playback
@@ -511,22 +539,39 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
     return newMutedState;
   },
 
-  toggleAudioOutputMute: () => {
-    const currentState = get().isAudioOutputMuted;
-    const newState = !currentState;
+  toggleAudioOutputMute: (): boolean => {
+    const currentState = get();
+    const { isAudioOutputMuted } = currentState;
 
-    // iOS-compatible mute implementation using .muted property (copied from V16)
+    const newMutedState = !isAudioOutputMuted;
+
+    // iOS-compatible mute implementation using .muted property (exact copy from V16)
+    // NOTE: iOS Safari ignores audioElement.volume changes, but respects .muted
     const audioElement = document.querySelector('audio') as HTMLAudioElement;
     if (audioElement) {
-      audioElement.muted = newState; // ✅ Works on iOS Safari
-      audioElement.volume = newState ? 0 : 1; // ✅ Fallback for other browsers
-      console.log('[S1] Audio output mute toggled:', { muted: newState, volume: audioElement.volume });
+      audioElement.muted = newMutedState; // ✅ Works on iOS Safari
+      audioElement.volume = newMutedState ? 0 : 1; // ✅ Fallback for other browsers
+      console.log('[S1] Audio output mute toggled:', {
+        muted: newMutedState,
+        volume: audioElement.volume,
+        elementId: audioElement.id,
+        elementSrc: audioElement.src,
+        elementSrcObject: !!audioElement.srcObject
+      });
     } else {
-      console.warn('[S1] No audio element found for muting');
+      console.warn('[S1] No audio element found for muting - checking all elements');
+      const allAudioElements = document.querySelectorAll('audio');
+      console.warn('[S1] All audio elements found:', allAudioElements.length, Array.from(allAudioElements).map(el => ({
+        id: el.id,
+        src: el.src,
+        hasSrcObject: !!el.srcObject
+      })));
     }
-    
-    set({ isAudioOutputMuted: newState });
-    return newState;
+
+    // Update store state
+    set({ isAudioOutputMuted: newMutedState });
+
+    return newMutedState;
   },
 
   addConversationMessage: (message: S1ConversationMessage) => {
