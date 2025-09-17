@@ -6,8 +6,9 @@
 import { AuthProvider } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/contexts/theme-context';
 import { ClientHeader } from '@/components/client-header';
-// Import V16 CSS styles to match chatbotV17 appearance
+// Import V16 CSS styles to match chatbotV16 appearance
 import '../chatbotV16/chatbotV16.css';
+import '../chatbotV16/chatbotV15.css';
 
 // Note: metadata export removed due to "use client" directive
 // This will need to be handled differently if SEO metadata is required

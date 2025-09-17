@@ -451,12 +451,6 @@ Stay in character as the patient throughout the session. Respond naturally to th
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    }
-  };
 
   // Voice recording functions - now automatic based on session state (copied from S1)
   const endRecordingSession = useCallback(async () => {
@@ -597,182 +591,134 @@ Stay in character as the patient throughout the session. Respond naturally to th
   }
 
   return (
-    <div className="flex flex-col h-screen" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Session Header - Clean styling like mockup */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4 pt-12">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <div className="h-10 w-10 bg-green-100 rounded-full flex items-center justify-center">
-              <span className="text-green-700 font-medium">🌱</span>
-            </div>
-            <div>
-              <h2 className="text-lg font-medium" style={{ color: 'var(--text-primary)' }}>
-                RiseTwice Case Simulation
-              </h2>
-              <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                Step 7 of 8 - AI Patient Session
-              </p>
-            </div>
-            <div className={`px-2 py-1 text-xs rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-              }`}>
-              {isConnected ? 'Connected' : 'Disconnected'}
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-4">
-            {/* Voice Recording Status - Show during session and upload (copied from S1) */}
-            {recordingStatus && (isRecordingSession || isUploading || recordingStatus.includes('✅') || recordingStatus.includes('❌')) && (
-              <div className="flex items-center space-x-2">
-                {isRecordingSession && (
-                  <div className={`w-2 h-2 rounded-full ${isMuted ? 'bg-gray-400' : 'bg-red-600 animate-pulse'
-                    }`} />
-                )}
-                <div className="text-xs text-gray-600">
-                  {recordingStatus}
-                </div>
+    <>
+      <div className="chatbot-v16-wrapper" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="main-container" style={{ paddingTop: '40px' }}>
+          {/* Session status bar - minimal design integrated with layout */}
+          <div className="flex items-center justify-between py-3 px-4 mb-4 text-sm text-gray-600 bg-white/50 rounded-lg">
+            <div className="flex items-center space-x-4">
+              <span>Step 7 of 8 - AI Patient Session</span>
+              <div className={`px-2 py-1 text-xs rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                {isConnected ? 'Connected' : 'Disconnected'}
               </div>
-            )}
+              {/* Voice Recording Status */}
+              {recordingStatus && (isRecordingSession || isUploading || recordingStatus.includes('✅') || recordingStatus.includes('❌')) && (
+                <div className="flex items-center space-x-2">
+                  {isRecordingSession && (
+                    <div className={`w-2 h-2 rounded-full ${isMuted ? 'bg-gray-400' : 'bg-red-600 animate-pulse'
+                      }`} />
+                  )}
+                  <span className="text-xs text-gray-600">
+                    {recordingStatus}
+                  </span>
+                </div>
+              )}
+            </div>
 
-            <div className="text-right">
-              <div className="text-sm font-medium text-gray-900 flex items-center">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center text-gray-700">
                 <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 {formatTime(sessionTimer)}
               </div>
-            </div>
 
-            <button
-              onClick={endSession}
-              className="control-button"
-              style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-              End Session
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        {conversation.length === 0 && isConnected && (
-          <div className="text-center py-8">
-            <div className="bg-blue-50 rounded-lg p-6 max-w-2xl mx-auto">
-              <h3 className="text-lg font-medium text-blue-900 mb-2">Session Ready</h3>
-              <p className="text-blue-700 text-sm">
-                Your AI patient is ready. Begin the session by speaking or typing your first message.
-              </p>
+              <button
+                onClick={endSession}
+                className="control-button px-3 py-1 text-sm"
+                style={{ backgroundColor: '#fee2e2', color: '#b91c1c' }}
+              >
+                End Session
+              </button>
             </div>
           </div>
-        )}
 
-        {conversation.map((message) => (
-          <div
-            key={message.id}
-            className={`flex ${message.role === 'therapist' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div className={`max-w-3xl ${message.role === 'therapist' ? 'ml-12' : 'mr-12'}`}>
-              <div className="flex items-start space-x-3">
-                {message.role === 'patient' && (
-                  <div className="flex-shrink-0">
-                    <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center">
-                      <span className="text-gray-600 text-sm font-medium">AI Assistant</span>
-                    </div>
+          {/* Conversation container - matching V16 styling */}
+          <div className="conversation-container">
+            <div className="conversation-history">
+              {conversation.length === 0 && isConnected && (
+                <div className="text-center py-8">
+                  <div className="message system">
+                    <h3 className="text-lg font-medium mb-2">Session Ready</h3>
+                    <p className="text-sm">
+                      Your AI patient is ready. Begin the session by speaking or typing your first message.
+                    </p>
                   </div>
-                )}
+                </div>
+              )}
 
+              {conversation.map((message) => (
                 <div
-                  className={`px-4 py-3 rounded-lg ${message.role === 'therapist'
-                    ? 'bg-green-600 text-white'
-                    : 'bg-white border border-gray-200 text-gray-900'
-                    }`}
+                  key={message.id}
+                  className={`message ${message.role === 'therapist' ? 'user' : 'assistant'}`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                    {message.text}
-                  </p>
+                  {message.text}
                 </div>
+              ))}
 
-                {message.role === 'therapist' && (
-                  <div className="flex-shrink-0">
-                    <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-                      <span className="text-green-700 text-sm font-medium">You</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-
-        {isThinking && (
-          <div className="flex justify-start">
-            <div className="max-w-3xl mr-12">
-              <div className="flex items-start space-x-3">
-                <div className="flex-shrink-0">
-                  <div className="h-8 w-8 bg-gray-200 rounded-full flex items-center justify-center">
-                    <span className="text-gray-600 text-sm font-medium">AI Assistant</span>
-                  </div>
-                </div>
-                <div className="bg-white border border-gray-200 text-gray-900 px-4 py-3 rounded-lg">
+              {isThinking && (
+                <div className="message assistant">
                   <div className="flex space-x-1">
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
                     <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input Area - Clean styling like mockup */}
-      <div className="border-t border-gray-200 bg-white p-6">
-        <div className="flex items-center space-x-4">
-          <button
-            onClick={toggleMute}
-            className={`p-3 rounded-full transition-colors ${isMuted
-              ? 'bg-red-100 text-red-700 hover:bg-red-200'
-              : 'bg-green-100 text-green-700 hover:bg-green-200'
-              }`}
-            title={isMuted ? 'Unmute Microphone' : 'Mute Microphone'}
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              {isMuted ? (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15zM17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
-              ) : (
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
               )}
-            </svg>
-          </button>
 
-          <div className="flex-1">
-            <textarea
-              value={therapistMessage}
-              onChange={(e) => setTherapistMessage(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="Type your message to the patient or speak directly..."
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 resize-none"
-              rows={1}
-              disabled={!isConnected}
-            />
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Input container - matching V16 styling */}
+            {isConnected && (
+              <form onSubmit={(e) => {
+                e.preventDefault();
+                handleSendMessage();
+              }} className="input-container">
+                <button
+                  type="button"
+                  onClick={toggleMute}
+                  className={`mute-button ${isMuted ? 'muted' : ''}`}
+                  aria-label={isMuted ? "Unmute Microphone" : "Mute Microphone"}
+                >
+                  {isMuted ? (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" />
+                      <path d="M11 5L6 9H2v6h4l3 3V16" stroke="currentColor" strokeWidth="2" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  ) : (
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="2"
+                        fill="none" />
+                      <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
+                      <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" strokeWidth="2" />
+                    </svg>
+                  )}
+                </button>
+                <input
+                  type="text"
+                  value={therapistMessage}
+                  onChange={(e) => setTherapistMessage(e.target.value)}
+                  placeholder="Type your message..."
+                  className="text-input"
+                  disabled={!isConnected}
+                />
+                <button
+                  type="submit"
+                  className="send-button-new"
+                  disabled={!therapistMessage.trim()}
+                  aria-label="Send message to AI Patient"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                    <path d="M6 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              </form>
+            )}
           </div>
-
-          <button
-            onClick={handleSendMessage}
-            disabled={!therapistMessage.trim() || !isConnected}
-            className={`px-6 py-3 rounded-lg font-medium transition-colors ${therapistMessage.trim() && isConnected
-              ? 'bg-green-600 text-white hover:bg-green-700'
-              : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-          >
-            Send
-          </button>
         </div>
       </div>
 
@@ -808,7 +754,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
 
