@@ -21,9 +21,9 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
     { step: 'welcome', number: 0, label: 'Welcome', width: '0%' },
     { step: 'profile', number: 1, label: 'Profile', width: '13%' },
     { step: 'patient-description', number: 2, label: 'Patient Description', width: '25%' },
-    { step: 'ai-style', number: 3, label: 'AI Style', width: '38%' },
-    { step: 'license-verification', number: 4, label: 'License', width: '50%' },
-    { step: 'complete-profile', number: 5, label: 'Complete Profile', width: '63%' },
+    { step: 'complete-profile', number: 3, label: 'Complete Profile', width: '38%' },
+    { step: 'ai-style', number: 4, label: 'AI Style', width: '50%' },
+    { step: 'license-verification', number: 5, label: 'License', width: '63%' },
     { step: 'preparation', number: 6, label: 'Preparation', width: '75%' },
     { step: 'session', number: 7, label: 'Session', width: '88%' },
     { step: 'onboarding-complete', number: 8, label: 'Complete', width: '100%' }
