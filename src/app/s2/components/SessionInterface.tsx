@@ -86,7 +86,6 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const isThinking = useS1WebRTCStore(state => state.isThinking);
   const isUserSpeaking = useS1WebRTCStore(state => state.isUserSpeaking);
   const isMuted = useS1WebRTCStore(state => state.isMuted);
-  const sendMessage = useS1WebRTCStore(state => state.sendMessage);
   const connect = useS1WebRTCStore(state => state.connect);
   const disconnect = useS1WebRTCStore(state => state.disconnect);
   const preInitialize = useS1WebRTCStore(state => state.preInitialize);
