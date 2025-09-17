@@ -7,6 +7,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useS1WebRTCStore } from '@/stores/s1-webrtc-store';
 import { useAuth } from '@/contexts/auth-context';
 import type { ConnectionConfig } from '@/hooksV15/types';
+import BlueOrbVoiceUI from '@/components/BlueOrbVoiceUI';
 
 interface SessionData {
   therapistProfile: {
@@ -90,6 +91,8 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const setTranscriptCallback = useS1WebRTCStore(state => state.setTranscriptCallback);
   const toggleMute = useS1WebRTCStore(state => state.toggleMute);
   const setS1Session = useS1WebRTCStore(state => state.setS1Session);
+  const isAudioOutputMuted = useS1WebRTCStore(state => state.isAudioOutputMuted);
+  const toggleAudioOutputMute = useS1WebRTCStore(state => state.toggleAudioOutputMute);
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -678,11 +681,11 @@ Stay in character as the patient throughout the session. Respond naturally to th
               }} className="input-container">
                 <button
                   type="button"
-                  onClick={toggleMute}
-                  className={`mute-button ${isMuted ? 'muted' : ''}`}
-                  aria-label={isMuted ? "Unmute Microphone" : "Mute Microphone"}
+                  onClick={toggleAudioOutputMute}
+                  className={`mute-button ${isAudioOutputMuted ? 'muted' : ''}`}
+                  aria-label={isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
                 >
-                  {isMuted ? (
+                  {isAudioOutputMuted ? (
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                       <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" />
                       <path d="M11 5L6 9H2v6h4l3 3V16" stroke="currentColor" strokeWidth="2" />
@@ -719,6 +722,31 @@ Stay in character as the patient throughout the session. Respond naturally to th
               </form>
             )}
           </div>
+
+          {/* Audio visualizer - matching V16 */}
+          {isConnected && (
+            <div className="visualization-container" role="button" aria-label="Microphone control - click to mute or unmute your microphone" aria-describedby="mic-description">
+              <BlueOrbVoiceUI
+                isSpeaking={isThinking}
+                isThinking={isThinking}
+                isMuted={isMuted}
+                isFunctionExecuting={false}
+                currentVolume={0}
+                onClick={toggleMute}
+                particleSizeMin={15}
+                particleSizeMax={35}
+                particleSpeedMin={0.1}
+                particleSpeedMax={0.4}
+                transitionSpeed={0.25}
+                size={125}
+                className="blue-orb-v15"
+                draggable={false}
+              />
+              <div id="mic-description" className="sr-only">
+                Microphone control button located in the center of the screen. Click to toggle your microphone on or off. Visual indicator shows blue animation when AI is speaking.
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
