@@ -5,6 +5,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import ContactSupportModal from './ContactSupportModal';
 
 interface OnboardingCompleteProps {
   onBack: () => void;
@@ -15,6 +16,7 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
 }) => {
   const router = useRouter();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
 
   const handleViewProfile = () => {
     setIsNavigating(true);
@@ -23,16 +25,17 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
   };
 
   const handleGoToDashboard = () => {
-    setIsNavigating(true);
-    // Navigate to main dashboard
-    router.push('/dashboard');
+    alert('This feature is in beta. Please contact the developers to join the beta program.');
   };
 
-  const handleCreateAnotherPreview = () => {
-    setIsNavigating(true);
-    // Navigate back to start of S2 flow
-    router.push('/s2');
+  const handleTestPreview = () => {
+    alert('This feature is in beta. Please contact the developers to join the beta program.');
   };
+
+  const handleContactSupport = () => {
+    setIsSupportModalOpen(true);
+  };
+
 
   return (
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
@@ -97,10 +100,32 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
               </button>
             </div>
 
-            {/* Go to Dashboard */}
+            {/* Test Your AI Preview */}
             <div className="text-center">
               <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
                 <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
+                Test Your AI Preview
+              </h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Experience your AI Preview as a patient would and make adjustments if needed.
+              </p>
+              <button
+                onClick={handleTestPreview}
+                disabled={isNavigating}
+                className="control-button primary text-sm"
+              >
+                Test Preview
+              </button>
+            </div>
+
+            {/* Go to Dashboard */}
+            <div className="text-center">
+              <div className="mx-auto mb-4 w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                 </svg>
               </div>
@@ -113,34 +138,13 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
               <button
                 onClick={handleGoToDashboard}
                 disabled={isNavigating}
-                className="control-button primary text-sm"
+                className="control-button text-sm"
+                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
               >
                 Dashboard
               </button>
             </div>
 
-            {/* Create Another Preview */}
-            <div className="text-center">
-              <div className="mx-auto mb-4 w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                Create Another Preview
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Create additional AI Previews for different specialties or patient types.
-              </p>
-              <button
-                onClick={handleCreateAnotherPreview}
-                disabled={isNavigating}
-                className="control-button text-sm"
-                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-              >
-                New Preview
-              </button>
-            </div>
           </div>
         </div>
 
@@ -150,12 +154,6 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
             Your AI Preview Includes:
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-start">
-              <svg className="w-5 h-5 text-green-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <span className="text-sm text-gray-700">Personalized clinical scenario based on your ideal patient</span>
-            </div>
             <div className="flex items-start">
               <svg className="w-5 h-5 text-green-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -182,12 +180,11 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
           <p className="text-sm text-gray-600 mb-4">
             Need help or have questions about your AI Preview?
           </p>
-          <div className="space-x-4">
-            <button className="text-green-600 hover:text-green-800 underline text-sm">
-              View Help Center
-            </button>
-            <span className="text-gray-400">•</span>
-            <button className="text-green-600 hover:text-green-800 underline text-sm">
+          <div>
+            <button
+              onClick={handleContactSupport}
+              className="text-green-600 hover:text-green-800 underline text-sm"
+            >
               Contact Support
             </button>
           </div>
@@ -204,6 +201,12 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
           </button>
         </div>
       </main>
+
+      {/* Contact Support Modal */}
+      <ContactSupportModal
+        isOpen={isSupportModalOpen}
+        onClose={() => setIsSupportModalOpen(false)}
+      />
     </div>
   );
 };
