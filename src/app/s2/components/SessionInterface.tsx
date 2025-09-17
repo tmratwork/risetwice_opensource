@@ -8,6 +8,7 @@ import { useS1WebRTCStore } from '@/stores/s1-webrtc-store';
 import { useAuth } from '@/contexts/auth-context';
 import type { ConnectionConfig } from '@/hooksV15/types';
 import BlueOrbVoiceUI from '@/components/BlueOrbVoiceUI';
+import { useOrbVisualizationS2 } from '@/hooksV15/use-orb-visualization-s2';
 
 interface SessionData {
   therapistProfile: {
@@ -93,6 +94,9 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const setS1Session = useS1WebRTCStore(state => state.setS1Session);
   const isAudioOutputMuted = useS1WebRTCStore(state => state.isAudioOutputMuted);
   const toggleAudioOutputMute = useS1WebRTCStore(state => state.toggleAudioOutputMute);
+
+  // Enhanced orb visualization (matching v16 implementation)
+  const orbState = useOrbVisualizationS2();
 
   const formatTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
@@ -643,9 +647,9 @@ Stay in character as the patient throughout the session. Respond naturally to th
               {conversation.length === 0 && isConnected && (
                 <div className="text-center py-8">
                   <div className="message system">
-                    <h3 className="text-lg font-medium mb-2">Session Ready</h3>
+                    <h3 className="text-lg font-medium mb-2">Preparing Session...</h3>
                     <p className="text-sm">
-                      Your AI patient is ready. Begin the session by speaking or typing your first message.
+                      Your AI patient is getting ready.
                     </p>
                   </div>
                 </div>
@@ -727,11 +731,11 @@ Stay in character as the patient throughout the session. Respond naturally to th
           {isConnected && (
             <div className="visualization-container" role="button" aria-label="Microphone control - click to mute or unmute your microphone" aria-describedby="mic-description">
               <BlueOrbVoiceUI
-                isSpeaking={isThinking}
-                isThinking={isThinking}
-                isMuted={isMuted}
+                isSpeaking={orbState.isActuallyPlaying}
+                isThinking={orbState.isAiThinking}
+                isMuted={orbState.isMuted}
                 isFunctionExecuting={false}
-                currentVolume={0}
+                currentVolume={orbState.effectiveVolume}
                 onClick={toggleMute}
                 particleSizeMin={15}
                 particleSizeMax={35}

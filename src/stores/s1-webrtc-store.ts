@@ -327,6 +327,9 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
 
             console.log('[S1] Volume monitoring setup complete');
 
+            // Event throttling for webrtc-audio-level dispatch
+            let lastEventDispatchTime = 0;
+
             // Start volume monitoring loop (copied from V16)
             volumeMonitoringInterval = window.setInterval(() => {
               if (!analyser) return;
@@ -356,6 +359,18 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
                   audioLevel: audioLevel,
                   isAudioPlaying: isAudioPlaying
                 });
+              }
+
+              // Dispatch webrtc-audio-level events for BlueOrbVoiceUI (matching v16)
+              // Throttle event dispatching to prevent excessive events (dispatch every 500ms)
+              const eventNow = Date.now();
+              if (isAudioPlaying && typeof window !== 'undefined' &&
+                (!lastEventDispatchTime || eventNow - lastEventDispatchTime > 500)) {
+                const event = new CustomEvent('webrtc-audio-level', {
+                  detail: { level: rms } // Send raw RMS value (0-255 scale)
+                });
+                window.dispatchEvent(event);
+                lastEventDispatchTime = eventNow;
               }
             }, 50); // 20 FPS monitoring
 
