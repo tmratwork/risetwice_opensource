@@ -306,7 +306,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
         voice: 'alloy', // Same voice as S1 for consistency
         tools: [], // No tools needed for AI patients
         tool_choice: 'none',
-        greetingInstructions: '' // S2: Allow auto-greeting - user wants to see/hear it
+        greetingInstructions: 'Speak in English. Remember: You are the PATIENT, not the therapist. Speak first, greet the user, who is a therapist, express uncertainty, nervousness, or your presenting concern. Do not act like a therapist asking questions.'
       };
 
       // Pre-initialize WebRTC with AI patient configuration
