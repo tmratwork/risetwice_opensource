@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
+import { createClient } from '@supabase/supabase-js';
 
 interface CompleteProfileData {
   profilePhoto?: string;
@@ -46,6 +47,13 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Initialize Supabase client
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   // Load existing complete profile data on mount
   useEffect(() => {
@@ -58,8 +66,15 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
         if (data.success && data.completeProfile) {
           console.log('[S2] Loaded existing complete profile:', data.completeProfile);
+
+          // Fix: Skip blob URLs entirely to prevent security errors
+          const profilePhoto = data.completeProfile.profilePhoto &&
+                               !data.completeProfile.profilePhoto.startsWith('blob:')
+                               ? data.completeProfile.profilePhoto
+                               : '';
+
           onUpdate({
-            profilePhoto: data.completeProfile.profilePhoto || '',
+            profilePhoto,
             personalStatement: data.completeProfile.personalStatement,
             mentalHealthSpecialties: data.completeProfile.mentalHealthSpecialties,
             treatmentApproaches: data.completeProfile.treatmentApproaches,
@@ -82,6 +97,50 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     loadExistingProfile();
   }, [user?.uid]);
+
+  // Function to upload profile photo to Supabase Storage
+  const uploadProfilePhoto = async (file: File): Promise<string | null> => {
+    if (!user?.uid) {
+      throw new Error('User not authenticated');
+    }
+
+    try {
+      setUploadingPhoto(true);
+
+      // Generate unique filename with user ID prefix
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.uid}/${Date.now()}.${fileExt}`;
+
+      console.log('[S2] Uploading profile photo:', fileName);
+
+      // Upload to Supabase Storage
+      const { data, error } = await supabase.storage
+        .from('profile-photos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: false
+        });
+
+      if (error) {
+        console.error('[S2] Error uploading profile photo:', error);
+        throw new Error('Failed to upload photo. Please try again.');
+      }
+
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
+        .from('profile-photos')
+        .getPublicUrl(data.path);
+
+      console.log('[S2] ✅ Profile photo uploaded successfully:', publicUrlData.publicUrl);
+      return publicUrlData.publicUrl;
+
+    } catch (error) {
+      console.error('[S2] Error in uploadProfilePhoto:', error);
+      throw error;
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -273,26 +332,66 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => {
+                  onChange={async (e) => {
                     const file = e.target.files?.[0];
                     if (file) {
                       console.log('[S2] Profile photo selected:', file.name);
-                      // Create a URL for the uploaded file to display immediately
-                      const imageUrl = URL.createObjectURL(file);
-                      handleInputChange('profilePhoto', imageUrl);
+
+                      try {
+                        // Validate file size (5MB limit)
+                        if (file.size > 5 * 1024 * 1024) {
+                          setErrors(prev => ({ ...prev, profilePhoto: 'File size must be less than 5MB' }));
+                          return;
+                        }
+
+                        // Validate file type
+                        if (!file.type.startsWith('image/')) {
+                          setErrors(prev => ({ ...prev, profilePhoto: 'Please select a valid image file' }));
+                          return;
+                        }
+
+                        // Clear any previous errors
+                        if (errors.profilePhoto) {
+                          setErrors(prev => ({ ...prev, profilePhoto: '' }));
+                        }
+
+                        // Upload to Supabase Storage and get permanent URL
+                        const publicUrl = await uploadProfilePhoto(file);
+                        if (publicUrl) {
+                          handleInputChange('profilePhoto', publicUrl);
+                        }
+
+                      } catch (error) {
+                        console.error('[S2] Error uploading profile photo:', error);
+                        setErrors(prev => ({
+                          ...prev,
+                          profilePhoto: error instanceof Error ? error.message : 'Failed to upload photo'
+                        }));
+                      }
                     }
                   }}
                   className="hidden"
                   id="profilePhoto"
+                  disabled={uploadingPhoto}
                 />
                 <label
                   htmlFor="profilePhoto"
-                  className="control-button cursor-pointer inline-block"
+                  className={`control-button cursor-pointer inline-block ${uploadingPhoto ? 'opacity-50 cursor-not-allowed' : ''}`}
                   style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                 >
-                  Upload Photo
+                  {uploadingPhoto ? (
+                    <>
+                      <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-2"></div>
+                      Uploading...
+                    </>
+                  ) : (
+                    'Upload Photo'
+                  )}
                 </label>
                 <p className="text-sm text-gray-500 mt-1">JPG, PNG up to 5MB</p>
+                {errors.profilePhoto && (
+                  <p className="mt-1 text-sm text-red-600">{errors.profilePhoto}</p>
+                )}
               </div>
             </div>
           </div>
