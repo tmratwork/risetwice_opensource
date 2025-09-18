@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
+import InfoTooltip from './InfoTooltip';
 
 interface AIStyle {
   therapeuticModalities: {
@@ -183,17 +184,26 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Therapeutic Modality Profile */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
-            <h2 className="text-xl font-semibold text-gray-900 mb-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">
               Therapeutic Modality Profile
             </h2>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <p className="text-sm text-blue-800">
+                <strong>Allocate 100 points across these styles</strong> (e.g., 60% CBT, 30% Person-Centered, 10% Solution-Focused).
+                These aren&apos;t built to control deep clinical interventions, but rather the conversational style that stems from those modalities.
+              </p>
+            </div>
 
             <div className="space-y-6">
               {/* Cognitive & Behavioral */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Cognitive & Behavioral
-                  </label>
+                  <div className="flex items-center">
+                    <label className="text-sm font-medium text-gray-700">
+                      Cognitive & Behavioral
+                    </label>
+                    <InfoTooltip content="Focus on Thoughts & Actions - The AI will be more likely to gently ask about the connection between thoughts, feelings, and actions. It may try to identify thinking patterns or explore potential coping skills." />
+                  </div>
                   <span className="text-sm text-gray-500">
                     {style.therapeuticModalities.cognitive_behavioral}%
                   </span>
@@ -211,9 +221,12 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
               {/* Person-Centered & Humanistic */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Person-Centered & Humanistic
-                  </label>
+                  <div className="flex items-center">
+                    <label className="text-sm font-medium text-gray-700">
+                      Person-Centered & Humanistic
+                    </label>
+                    <InfoTooltip content="Focus on Validation & Self-Exploration - The AI will prioritize reflective listening, empathy, and validation. It will ask open-ended questions to help the user explore their own feelings and insights." />
+                  </div>
                   <span className="text-sm text-gray-500">
                     {style.therapeuticModalities.person_centered}%
                   </span>
@@ -231,9 +244,12 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
               {/* Psychodynamic & Insight-Oriented */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Psychodynamic & Insight-Oriented
-                  </label>
+                  <div className="flex items-center">
+                    <label className="text-sm font-medium text-gray-700">
+                      Psychodynamic & Insight-Oriented
+                    </label>
+                    <InfoTooltip content="Focus on Patterns & Deeper Meanings - The AI might ask questions that hint at recurring patterns or the history of a feeling, without getting into a deep analysis." />
+                  </div>
                   <span className="text-sm text-gray-500">
                     {style.therapeuticModalities.psychodynamic}%
                   </span>
@@ -251,9 +267,12 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
               {/* Solution-Focused & Strategic */}
               <div>
                 <div className="flex justify-between items-center mb-2">
-                  <label className="text-sm font-medium text-gray-700">
-                    Solution-Focused & Strategic
-                  </label>
+                  <div className="flex items-center">
+                    <label className="text-sm font-medium text-gray-700">
+                      Solution-Focused & Strategic
+                    </label>
+                    <InfoTooltip content="Focus on Strengths & Future Goals - The AI will spend less time on the problem's history and more time exploring the user's desired future, exceptions to the problem, and existing strengths." />
+                  </div>
                   <span className="text-sm text-gray-500">
                     {style.therapeuticModalities.solution_focused}%
                   </span>
@@ -295,9 +314,12 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
             <div className="space-y-8">
               {/* Interaction Style */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-4">
-                  Interaction Style
-                </h3>
+                <div className="flex items-center mb-4">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Interaction Style
+                  </h3>
+                  <InfoTooltip content="Suggestive Framing side: The AI is more likely to offer gentle suggestions or frames. (e.g., 'Have you considered looking at it from this angle?') | Guided Reflection side: The AI almost exclusively asks guiding questions to help the user find their own answers. (e.g., 'What do you think is stopping you from looking at it from a different angle?')" />
+                </div>
                 <div className="relative">
                   <input
                     type="range"
@@ -320,9 +342,12 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
 
               {/* Tone */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-4">
-                  Tone
-                </h3>
+                <div className="flex items-center mb-4">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Tone
+                  </h3>
+                  <InfoTooltip content="Warm & Casual side: Uses more contractions, affirmations, and relatable language. (e.g., 'Wow, that sounds tough. It makes total sense why you'd feel that way.') | Clinical & Formal side: Uses more precise, academic language and maintains a more professional boundary. (e.g., 'The situation you've described appears to be a significant source of distress.')" />
+                </div>
                 <div className="relative">
                   <input
                     type="range"
@@ -345,9 +370,12 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
 
               {/* Energy Level */}
               <div>
-                <h3 className="text-sm font-medium text-gray-700 mb-4">
-                  Energy Level
-                </h3>
+                <div className="flex items-center mb-4">
+                  <h3 className="text-sm font-medium text-gray-700">
+                    Energy Level
+                  </h3>
+                  <InfoTooltip content="Energetic & Expressive side: The voice clone's intonation will have more dynamic range, sounding more active and engaged. | Calm & Grounded side: The voice clone's intonation will be more measured, steady, and soothing." />
+                </div>
                 <div className="relative">
                   <input
                     type="range"
