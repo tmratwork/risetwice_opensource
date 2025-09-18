@@ -9,7 +9,7 @@ interface InfoTooltipProps {
 
 interface TooltipContentProps {
   content: string;
-  iconRef: React.RefObject<HTMLButtonElement>;
+  iconRef: React.RefObject<HTMLButtonElement | null>;
   isMobile: boolean;
 }
 
