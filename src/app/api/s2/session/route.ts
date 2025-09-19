@@ -145,15 +145,39 @@ export async function PUT(request: NextRequest) {
 
       console.log('[S2] Saving message for session:', sessionId);
       
-      // Save message to database
+      // Save message to database with enhanced S2 fields
+      console.log('[S2] [message_persistence] Saving message to s2_session_messages:', {
+        sessionId,
+        role: messageData.role,
+        contentLength: messageData.content?.length || 0,
+        messageId: messageData.messageId
+      });
+
+      // Get the next sequence number for this session
+      const { data: sequenceData } = await supabase
+        .from('s2_session_messages')
+        .select('message_sequence')
+        .eq('session_id', sessionId)
+        .order('message_sequence', { ascending: false })
+        .limit(1);
+
+      const nextSequence = sequenceData && sequenceData.length > 0 ? sequenceData[0].message_sequence + 1 : 1;
+
       const { error: messageError } = await supabase
         .from('s2_session_messages')
         .insert({
           session_id: sessionId,
           role: messageData.role,
           content: messageData.content,
-          timestamp: messageData.timestamp,
-          message_id: messageData.messageId
+          message_type: 'webrtc', // Mark as WebRTC message
+          openai_message_id: messageData.messageId || null, // Store OpenAI message ID
+          is_final_transcript: true, // Only final messages are saved
+          emotional_tone: messageData.emotional_tone || null,
+          word_count: messageData.word_count || messageData.content?.split(' ').length || 0,
+          sentiment_score: messageData.sentiment_score || null,
+          clinical_relevance: messageData.clinical_relevance || null,
+          message_sequence: nextSequence, // CRITICAL: Required field
+          timestamp_in_session: Math.floor(Date.now() / 1000) // Unix timestamp
         });
 
       if (messageError) {

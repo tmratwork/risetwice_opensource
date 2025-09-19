@@ -605,51 +605,77 @@ export const useS1WebRTCStore = create<S1WebRTCStoreState>((set, get) => ({
 
   saveMessageToSupabase: async (message: S1ConversationMessage) => {
     const state = get();
-    
+
     if (!state.s1Session) {
-      console.warn('[S1] Cannot save message: no active session');
+      console.warn('[S1/S2] Cannot save message: no active session');
       return;
     }
 
+    // Detect S2 context from localStorage (outside try block)
+    const isS2Context = typeof localStorage !== 'undefined' && localStorage.getItem('s2Context') === 'true';
+    const s2SessionId = typeof localStorage !== 'undefined' ? localStorage.getItem('s2SessionId') : null;
+    const logPrefix = isS2Context ? '[S2]' : '[S1]';
+    const sessionId = isS2Context && s2SessionId ? s2SessionId : state.s1Session.sessionId;
+
     try {
-      // Get therapist user ID (following V16 pattern)
-      let therapistUserId: string | null = null;
+      // Get user ID based on context
+      let userId: string | null = null;
       if (typeof localStorage !== 'undefined') {
-        therapistUserId = localStorage.getItem('s1UserId');
+        userId = isS2Context ? localStorage.getItem('userId') : localStorage.getItem('s1UserId');
       }
 
-      console.log('[S1] Saving message to database:', {
-        sessionId: state.s1Session.sessionId,
+      console.log(`${logPrefix} [message_persistence] Saving message to database:`, {
+        context: isS2Context ? 'S2' : 'S1',
+        sessionId,
         role: message.role,
         contentLength: message.text.length,
-        therapistUserId: therapistUserId || 'anonymous',
-        hasEmotionalTone: !!message.emotional_tone
+        userId: userId || 'anonymous',
+        hasEmotionalTone: !!message.emotional_tone,
+        isFinal: message.isFinal
       });
 
-      const response = await fetch('/api/s1/session-messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          session_id: state.s1Session.sessionId,
-          role: message.role,
+      // Choose API endpoint based on context
+      const apiEndpoint = isS2Context ? '/api/s2/session' : '/api/s1/session-messages';
+
+      const requestBody = isS2Context ? {
+        // S2 API format
+        action: 'save_message',
+        sessionId: sessionId,
+        userId: userId,
+        messageData: {
+          role: message.role, // Keep original role for S2 (ai_patient, therapist)
           content: message.text,
-          emotional_tone: message.emotional_tone,
-          therapist_user_id: therapistUserId // Pass therapist ID for session tracking
-        })
+          timestamp: new Date().toISOString(),
+          messageId: message.id,
+          emotional_tone: message.emotional_tone
+        }
+      } : {
+        // S1 API format
+        session_id: sessionId,
+        role: message.role, // Keep original role for S1
+        content: message.text,
+        emotional_tone: message.emotional_tone,
+        therapist_user_id: userId
+      };
+
+      const response = await fetch(apiEndpoint, {
+        method: isS2Context ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody)
       });
 
       if (!response.ok) {
-        console.error('[S1] HTTP error saving message:', response.status, response.statusText);
+        console.error(`${logPrefix} HTTP error saving message:`, response.status, response.statusText);
         const errorText = await response.text();
-        console.error('[S1] Error response body:', errorText);
+        console.error(`${logPrefix} Error response body:`, errorText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
 
       const result = await response.json();
-      console.log('[S1] ✅ Message saved to database:', result);
+      console.log(`${logPrefix} [message_persistence] ✅ Message saved to ${isS2Context ? 's2_session_messages' : 's1_session_messages'}:`, result);
 
     } catch (error) {
-      console.error('[S1] Failed to save message:', error);
+      console.error(`${logPrefix} [message_persistence] ❌ Failed to save message:`, error);
       // Don't throw - allow conversation to continue even if persistence fails
     }
   },

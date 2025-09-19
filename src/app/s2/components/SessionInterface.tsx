@@ -59,7 +59,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
 }) => {
   const [sessionTimer, setSessionTimer] = useState(0);
   const [connecting, setConnecting] = useState(false);
-  const [conversation, setConversation] = useState<Message[]>([]);
+  // Use conversation from S1 store (it handles both S1 and S2)
   const [s2SessionId, setS2SessionId] = useState<string>('');
   const [sessionAutoEnded, setSessionAutoEnded] = useState(false);
   const userSpeakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -81,7 +81,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   // Auth context
   const { user } = useAuth();
 
-  // S1 WebRTC Store (reusing for S2)
+  // S1 WebRTC Store (works for both S1 and S2)
   const isConnected = useS1WebRTCStore(state => state.isConnected);
   const isThinking = useS1WebRTCStore(state => state.isThinking);
   const isUserSpeaking = useS1WebRTCStore(state => state.isUserSpeaking);
@@ -91,9 +91,11 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const preInitialize = useS1WebRTCStore(state => state.preInitialize);
   const setTranscriptCallback = useS1WebRTCStore(state => state.setTranscriptCallback);
   const toggleMute = useS1WebRTCStore(state => state.toggleMute);
+  const addConversationMessage = useS1WebRTCStore(state => state.addConversationMessage);
   const setS1Session = useS1WebRTCStore(state => state.setS1Session);
   const isAudioOutputMuted = useS1WebRTCStore(state => state.isAudioOutputMuted);
   const toggleAudioOutputMute = useS1WebRTCStore(state => state.toggleAudioOutputMute);
+  const conversation = useS1WebRTCStore(state => state.conversation);
 
   // Enhanced orb visualization (matching v16 implementation)
   const orbState = useOrbVisualizationS2();
@@ -133,46 +135,17 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
     }, 1000);
   };
 
-  const saveMessageToDatabase = useCallback(async (message: Message) => {
-    if (!s2SessionId || !user?.uid) return;
-
-    try {
-      const response = await fetch('/api/s2/session', {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          action: 'save_message',
-          sessionId: s2SessionId,
-          userId: user.uid,
-          messageData: {
-            role: message.role,
-            content: message.text,
-            timestamp: message.timestamp,
-            messageId: message.id
-          }
-        })
-      });
-
-      const data = await response.json();
-      if (!data.success) {
-        console.error('[S2] Failed to save message to database:', data.error);
-      }
-    } catch (error) {
-      console.error('[S2] Error saving message to database:', error);
-    }
-  }, [s2SessionId, user?.uid]);
+  // Use S1 store's message handling - it now auto-detects S1/S2 context
 
   const setupMessageHandling = useCallback(() => {
+    // Use original S1 message handling - works perfectly and now saves to correct table
     setTranscriptCallback(({ id, data, metadata }) => {
       const isFinal = metadata?.isFinal === true;
       const metadataRole = (metadata as { role?: string })?.role || "assistant";
       const isUserMessage = metadataRole === 'user' || id.includes('user-');
-      const role = isUserMessage ? 'therapist' : 'patient';
+      const role = isUserMessage ? 'therapist' : 'ai_patient'; // S1 store expects 'ai_patient'
 
-      // DEBUG: Log all callback details
-      console.log('[S2-CALLBACK] Transcript callback:', {
+      console.log('[S2] Transcript callback:', {
         id,
         data: data?.slice(0, 20) + '...',
         isFinal,
@@ -181,33 +154,27 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
         role
       });
 
-      // User speaking state is now managed automatically by WebRTC store speech events
-      console.log('[S2] Transcript received:', { isUserMessage, isFinal, dataLength: data?.length || 0 });
-
-      // Keep AI thinking dots visible until response is completely finished
+      // Handle AI thinking state
       if (!isUserMessage && isFinal && data && data.trim().length > 0) {
-        // AI response is complete - stop thinking dots
-        console.log('[S2] 🔵 AI response complete - stopping BLUE thinking dots');
+        console.log('[S2] 🔵 AI response complete - stopping thinking dots');
         useS1WebRTCStore.setState({ isThinking: false });
       }
 
       if (isFinal && data) {
-        const newMessage: Message = {
+        const newMessage = {
           id: `${role}_${id}`,
-          role,
+          role: role as 'therapist' | 'ai_patient',
           text: data,
           timestamp: new Date().toISOString(),
           isFinal: true,
-          status: 'final'
+          status: 'final' as const
         };
 
-        setConversation(prev => [...prev, newMessage]);
-
-        // Save message to database
-        saveMessageToDatabase(newMessage);
+        // S1 store will auto-detect S2 context and save to s2_session_messages
+        addConversationMessage(newMessage);
       }
     });
-  }, [setTranscriptCallback, saveMessageToDatabase]);
+  }, [setTranscriptCallback, addConversationMessage]);
 
   const generateAIPersonalityPrompt = useCallback(() => {
     const { therapeuticModalities, communicationStyle } = sessionData.aiStyle;
@@ -302,8 +269,19 @@ Stay in character as the patient throughout the session. Respond naturally to th
       console.log('[S2] Initializing case simulation session...');
 
       // Generate AI personality prompt based on user selections
+      console.log('[S2] [DEBUG] sessionData before generating prompt:', {
+        hasPatientDescription: !!sessionData.patientDescription?.description,
+        patientDescriptionLength: sessionData.patientDescription?.description?.length || 0,
+        hasAiStyle: !!sessionData.aiStyle,
+        aiStyleKeys: Object.keys(sessionData.aiStyle || {})
+      });
+
       const aiPersonalityPrompt = generateAIPersonalityPrompt();
-      console.log('[S2] Generated AI personality prompt:', aiPersonalityPrompt.slice(0, 200) + '...');
+      console.log('[S2] [DEBUG] Generated AI personality prompt (length, first 200 chars):', aiPersonalityPrompt?.length || 0, aiPersonalityPrompt?.slice(0, 200) || 'EMPTY');
+
+      if (!aiPersonalityPrompt || aiPersonalityPrompt.trim().length === 0) {
+        throw new Error('Generated AI personality prompt is empty - check sessionData');
+      }
 
       // Create S2 session in database
       const createdSessionId = await createS2Session(aiPersonalityPrompt);
@@ -312,6 +290,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
       }
 
       // Set S2 session in store - exactly like S1 pattern
+      // Set S1 session (works for S2 too)
       setS1Session({
         sessionId: createdSessionId,
         aiPatientId: 's2_ai_patient',
@@ -320,7 +299,14 @@ Stay in character as the patient throughout the session. Respond naturally to th
         sessionStatus: 'active'
       });
 
+      // Store S2 session ID for message saving context
+      localStorage.setItem('s2SessionId', createdSessionId);
+      localStorage.setItem('s2Context', 'true'); // Flag to indicate S2 context
+
       // Create WebRTC configuration for AI patient (identical to S1)
+      console.log('[S2] [DEBUG] Creating ConnectionConfig with prompt length:', aiPersonalityPrompt.length);
+      console.log('[S2] [DEBUG] Prompt starts with:', aiPersonalityPrompt.substring(0, 100));
+
       const connectionConfig: ConnectionConfig = {
         instructions: aiPersonalityPrompt,
         voice: 'alloy', // Same voice as S1 for consistency
@@ -328,6 +314,8 @@ Stay in character as the patient throughout the session. Respond naturally to th
         tool_choice: 'none',
         greetingInstructions: 'Speak in English. Remember: You are the PATIENT, not the therapist. Speak first, greet the user, who is a therapist, express uncertainty, nervousness, or your presenting concern. Do not act like a therapist asking questions.'
       };
+
+      console.log('[S2] [DEBUG] ConnectionConfig created with instructions length:', connectionConfig.instructions?.length || 0);
 
       // Pre-initialize WebRTC with AI patient configuration
       await preInitialize(connectionConfig);
