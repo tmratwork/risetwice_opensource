@@ -1,7 +1,7 @@
 // src/app/api/admin/s2/therapists/route.ts
 // API endpoint to fetch comprehensive therapist data for admin panel
 
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -9,7 +9,7 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     console.log('[S2 Admin] Fetching comprehensive therapist data');
 
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
     // For each therapist, fetch their complete data from all related tables
     const therapistsWithCompleteData = await Promise.all(
       (therapistProfiles || []).map(async (profile) => {
-        const therapistData: any = { ...profile };
+        const therapistData: Record<string, unknown> = { ...profile };
 
         // Fetch complete profile data
         const { data: completeProfile } = await supabase

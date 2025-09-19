@@ -68,6 +68,41 @@ interface SessionSummary {
   last_session_date?: string;
 }
 
+// S2 session interface for admin panel (matches database structure)
+interface S2AdminSession {
+  id: string;
+  sessionId?: string; // Keep both for compatibility
+  therapistProfileId?: string;
+  generatedScenarioId?: string;
+  session_number: number;
+  sessionNumber?: number; // Keep both for compatibility
+  sessionStatus?: 'created' | 'active' | 'completed';
+  status: 'created' | 'active' | 'completed';
+  aiPersonalityPrompt?: string;
+  created_at: string;
+  duration_seconds?: number;
+  message_count: number;
+  messages?: S2SessionMessage[];
+  s2_generated_scenarios?: {
+    scenario_text: string;
+    generation_model?: string;
+    scenario_rating?: number;
+    used_in_session?: boolean;
+  };
+}
+
+// S2 session message interface
+interface S2SessionMessage {
+  id: string;
+  role: 'therapist' | 'patient';
+  content: string;
+  created_at: string;
+  emotional_tone?: string;
+  word_count?: number;
+  sentiment_score?: number;
+  clinical_relevance?: string;
+}
+
 interface TherapistData extends TherapistProfile {
   complete_profile?: CompleteProfile;
   ai_style_config?: AIStyleConfig;
@@ -534,10 +569,10 @@ const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist 
 
 // Sessions and Transcripts Component
 const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId }) => {
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<S2AdminSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSession, setSelectedSession] = useState<any | null>(null);
+  const [selectedSession, setSelectedSession] = useState<S2AdminSession | null>(null);
 
   useEffect(() => {
     const fetchSessions = async () => {
@@ -640,7 +675,7 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
 
           {selectedSession.messages && selectedSession.messages.length > 0 ? (
             <div className="space-y-4 max-h-96 overflow-y-auto">
-              {selectedSession.messages.map((message: any, index: number) => (
+              {selectedSession.messages.map((message: S2SessionMessage, index: number) => (
                 <div
                   key={message.id || index}
                   className={`flex ${message.role === 'therapist' ? 'justify-end' : 'justify-start'}`}

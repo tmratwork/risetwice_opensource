@@ -44,15 +44,6 @@ interface SessionInterfaceProps {
   onEndSession: () => void;
 }
 
-interface Message {
-  id: string;
-  role: 'therapist' | 'patient';
-  text: string;
-  timestamp: string;
-  isFinal: boolean;
-  status: string;
-}
-
 const SessionInterface: React.FC<SessionInterfaceProps> = ({
   sessionData,
   onEndSession
