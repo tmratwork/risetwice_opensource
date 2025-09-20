@@ -4,6 +4,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { convertWebMToMp3, isAudioConversionSupported, generateAudioFilename } from '@/utils/audio-converter';
 
 // Types based on database schema
 interface TherapistProfile {
@@ -656,6 +657,10 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
                   >
                     🎧 Listen to Recording
                   </a>
+                  <AudioDownloadButton
+                    audioUrl={selectedSession.voice_recording_url}
+                    sessionNumber={selectedSession.session_number}
+                  />
                   {selectedSession.voice_recording_size && (
                     <span className="text-gray-500 ml-2">
                       ({(selectedSession.voice_recording_size / (1024 * 1024)).toFixed(2)} MB)
@@ -690,18 +695,25 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
                     <p className="text-sm text-green-800 mb-2">
                       🎧 Audio recording successfully captured
                     </p>
-                    <a
-                      href={selectedSession.voice_recording_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      Listen to Full Session Recording
-                    </a>
+                    <div className="flex gap-3">
+                      <a
+                        href={selectedSession.voice_recording_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                        Listen to Full Session Recording
+                      </a>
+                      <AudioDownloadButton
+                        audioUrl={selectedSession.voice_recording_url}
+                        sessionNumber={selectedSession.session_number}
+                        variant="primary"
+                      />
+                    </div>
                   </div>
                   {selectedSession.voice_recording_size && (
                     <div className="text-sm text-gray-600">
@@ -849,6 +861,147 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
         <p className="text-gray-600 text-center py-8">No sessions found for this therapist.</p>
       )}
     </div>
+  );
+};
+
+// Audio Download Button Component
+interface AudioDownloadButtonProps {
+  audioUrl: string;
+  sessionNumber: number;
+  variant?: 'primary' | 'link';
+}
+
+const AudioDownloadButton: React.FC<AudioDownloadButtonProps> = ({
+  audioUrl,
+  sessionNumber,
+  variant = 'link'
+}) => {
+  const [isConverting, setIsConverting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [isSupported, setIsSupported] = useState(true);
+
+  useEffect(() => {
+    // Check if audio conversion is supported in this browser
+    setIsSupported(isAudioConversionSupported());
+  }, []);
+
+  const handleDownload = async () => {
+    if (!isSupported) {
+      alert('Audio conversion not supported in this browser. Please try Chrome, Firefox, or Safari.');
+      return;
+    }
+
+    try {
+      setIsConverting(true);
+      setProgress(0);
+      setError(null);
+
+      const filename = generateAudioFilename(audioUrl, sessionNumber);
+
+      await convertWebMToMp3(audioUrl, filename, (progressPercent) => {
+        setProgress(progressPercent);
+      });
+
+      // Success - reset state
+      setProgress(100);
+      setTimeout(() => {
+        setIsConverting(false);
+        setProgress(0);
+      }, 1000);
+
+    } catch (err) {
+      console.error('Download failed:', err);
+      setError(err instanceof Error ? err.message : 'Download failed');
+      setIsConverting(false);
+      setProgress(0);
+    }
+  };
+
+  if (!isSupported) {
+    return (
+      <span className="text-gray-400 text-sm ml-2" title="Audio conversion not supported in this browser">
+        <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Download MP3 (Not supported)
+      </span>
+    );
+  }
+
+  if (variant === 'primary') {
+    return (
+      <button
+        onClick={handleDownload}
+        disabled={isConverting}
+        className={`inline-flex items-center px-4 py-2 rounded-lg transition-colors ${
+          isConverting
+            ? 'bg-gray-400 cursor-not-allowed'
+            : error
+            ? 'bg-red-600 hover:bg-red-700'
+            : 'bg-green-600 hover:bg-green-700'
+        } text-white`}
+        title={error || (isConverting ? `Converting... ${progress}%` : 'Download as MP3')}
+      >
+        {isConverting ? (
+          <>
+            <svg className="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
+              <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" />
+            </svg>
+            Converting... {progress}%
+          </>
+        ) : error ? (
+          <>
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Retry Download
+          </>
+        ) : (
+          <>
+            <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Download MP3
+          </>
+        )}
+      </button>
+    );
+  }
+
+  // Link variant (default)
+  return (
+    <button
+      onClick={handleDownload}
+      disabled={isConverting}
+      className={`text-sm ml-2 ${
+        isConverting
+          ? 'text-gray-400 cursor-not-allowed'
+          : error
+          ? 'text-red-600 hover:text-red-800'
+          : 'text-green-600 hover:text-green-800'
+      } underline`}
+      title={error || (isConverting ? `Converting... ${progress}%` : 'Download as MP3')}
+    >
+      {isConverting ? (
+        <>⏳ Converting... {progress}%</>
+      ) : error ? (
+        <>
+          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Retry MP3
+        </>
+      ) : (
+        <>
+          <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          </svg>
+          Download MP3
+        </>
+      )}
+    </button>
   );
 };
 
