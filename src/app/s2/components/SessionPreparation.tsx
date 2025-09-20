@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 
+type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+
 interface SessionData {
   therapistProfile: {
     fullName: string;
@@ -42,7 +44,8 @@ interface SessionPreparationProps {
   onNext: () => void;
   onBack: () => void;
   onUpdateSessionData: (data: Partial<SessionData>) => void;
-  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
+  onStepNavigation?: (step: FlowStep) => void;
+  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
 }
 
 const SessionPreparation: React.FC<SessionPreparationProps> = ({
@@ -50,7 +53,8 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
   onNext,
   onBack,
   onUpdateSessionData,
-  onStepNavigation
+  onStepNavigation,
+  canSkipToStep
 }) => {
   const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -126,9 +130,10 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
-        <StepNavigator 
-          currentStep="preparation" 
+        <StepNavigator
+          currentStep="preparation"
           onStepClick={onStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       )}
 

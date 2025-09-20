@@ -227,7 +227,6 @@ const S2CaseSimulation: React.FC = () => {
   };
 
   const handleStepNavigation = (targetStep: FlowStep) => {
-    // Only allow navigation to previous steps
     const stepOrder: FlowStep[] = [
       'welcome', 'profile', 'patient-description', 'preparation', 'session',
       'ai-style', 'license-verification', 'complete-profile', 'onboarding-complete'
@@ -236,10 +235,50 @@ const S2CaseSimulation: React.FC = () => {
     const currentIndex = stepOrder.indexOf(currentStep);
     const targetIndex = stepOrder.indexOf(targetStep);
 
-    // Only allow navigation backward (to previous steps)
+    // Always allow backward navigation
     if (targetIndex < currentIndex) {
       setCurrentStep(targetStep);
+      return;
     }
+
+    // Check if forward navigation is allowed
+    if (canSkipToStep(targetStep, currentStep)) {
+      setCurrentStep(targetStep);
+    }
+  };
+
+  // Function to determine if user can skip forward to a specific step
+  const canSkipToStep = (targetStep: FlowStep, currentStep: FlowStep): boolean => {
+    const independentSteps: FlowStep[] = ['ai-style', 'license-verification', 'complete-profile'];
+    const stepOrder: FlowStep[] = [
+      'welcome', 'profile', 'patient-description', 'preparation', 'session',
+      'ai-style', 'license-verification', 'complete-profile', 'onboarding-complete'
+    ];
+
+    const currentIndex = stepOrder.indexOf(currentStep);
+    const targetIndex = stepOrder.indexOf(targetStep);
+
+    // Always allow backward navigation
+    if (targetIndex < currentIndex) {
+      return true;
+    }
+
+    // Can skip forward to independent steps from session or later
+    if (currentIndex >= stepOrder.indexOf('session') && independentSteps.includes(targetStep)) {
+      return true;
+    }
+
+    // Can skip between independent steps
+    if (independentSteps.includes(currentStep) && independentSteps.includes(targetStep)) {
+      return true;
+    }
+
+    // Can always go to onboarding-complete from complete-profile
+    if (currentStep === 'complete-profile' && targetStep === 'onboarding-complete') {
+      return true;
+    }
+
+    return false;
   };
 
   const updateTherapistProfile = (profile: Partial<TherapistProfile>) => {
@@ -294,6 +333,7 @@ const S2CaseSimulation: React.FC = () => {
           onNext={handleNext}
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       );
       
@@ -305,6 +345,7 @@ const S2CaseSimulation: React.FC = () => {
           onNext={handleNext}
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       );
       
@@ -316,6 +357,7 @@ const S2CaseSimulation: React.FC = () => {
           onNext={handleNext}
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       );
       
@@ -328,6 +370,7 @@ const S2CaseSimulation: React.FC = () => {
           onSkip={handleNext}
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       );
       
@@ -339,6 +382,7 @@ const S2CaseSimulation: React.FC = () => {
           onNext={handleNext}
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       );
       
@@ -350,6 +394,7 @@ const S2CaseSimulation: React.FC = () => {
           onBack={handleBack}
           onUpdateSessionData={updateSessionData}
           onStepNavigation={handleStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       );
       

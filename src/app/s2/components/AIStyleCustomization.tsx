@@ -8,6 +8,8 @@ import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 import InfoTooltip from './InfoTooltip';
 
+type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+
 interface AIStyle {
   therapeuticModalities: {
     cognitive_behavioral: number;
@@ -27,7 +29,8 @@ interface AIStyleCustomizationProps {
   onUpdate: (style: Partial<AIStyle>) => void;
   onNext: () => void;
   onBack: () => void;
-  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
+  onStepNavigation?: (step: FlowStep) => void;
+  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
 }
 
 const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
@@ -35,7 +38,8 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
   onUpdate,
   onNext,
   onBack,
-  onStepNavigation
+  onStepNavigation,
+  canSkipToStep
 }) => {
   const { user } = useAuth();
   const [totalModality, setTotalModality] = useState(0);
@@ -152,9 +156,10 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
-        <StepNavigator 
-          currentStep="ai-style" 
+        <StepNavigator
+          currentStep="ai-style"
           onStepClick={onStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       )}
 

@@ -60,7 +60,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const [isUploading, setIsUploading] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState<string>('Recording ready - unmute mic to start');
 
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const conversationHistoryRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const initializingRef = useRef<boolean>(false);
 
@@ -102,9 +102,6 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
     return `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
 
   const startTimer = () => {
     timerRef.current = setInterval(() => {
@@ -426,8 +423,42 @@ Stay in character as the patient throughout the session. Respond naturally to th
     }
   }, [isMuted, isRecordingSession]);
 
+  // Auto-scroll to bottom when conversation changes (copied from V16)
   useEffect(() => {
-    scrollToBottom();
+    if (conversationHistoryRef.current && conversation.length > 0) {
+      const scrollContainer = conversationHistoryRef.current;
+
+      // Use requestAnimationFrame to ensure DOM has updated before scrolling
+      requestAnimationFrame(() => {
+        // Triple RAF to ensure all rendering and layout is complete
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            // Always scroll to bottom on new messages - no proximity check needed
+            if (process.env.NEXT_PUBLIC_ENABLE_V16_AUTO_SCROLL_LOGS === 'true') {
+              const currentScrollTop = scrollContainer.scrollTop;
+              const maxScrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
+              const distanceFromBottom = maxScrollTop - currentScrollTop;
+
+              console.log('[s2_auto_scroll] Auto-scroll triggered', {
+                currentScrollTop,
+                scrollHeight: scrollContainer.scrollHeight,
+                clientHeight: scrollContainer.clientHeight,
+                maxScrollTop,
+                distanceFromBottom,
+                conversationLength: conversation.length
+              });
+            }
+
+            // Always scroll to bottom for new messages
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+
+            if (process.env.NEXT_PUBLIC_ENABLE_V16_AUTO_SCROLL_LOGS === 'true') {
+              console.log('[s2_auto_scroll] ✅ SCROLLED to bottom');
+            }
+          });
+        });
+      });
+    }
   }, [conversation]);
 
 
@@ -616,7 +647,12 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
           {/* Conversation container - matching V16 styling */}
           <div className="conversation-container">
-            <div className="conversation-history">
+            <div
+              className="conversation-history"
+              ref={conversationHistoryRef}
+              role="log"
+              aria-live="polite"
+            >
               {conversation.length === 0 && isConnected && (
                 <div className="text-center py-8">
                   <div className="message system">
@@ -676,7 +712,6 @@ Stay in character as the patient throughout the session. Respond naturally to th
               )}
 
 
-              <div ref={messagesEndRef} />
             </div>
 
             {/* Audio controls container - voice-only mode */}

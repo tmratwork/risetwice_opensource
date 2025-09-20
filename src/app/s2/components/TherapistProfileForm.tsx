@@ -19,12 +19,15 @@ interface TherapistProfile {
   emailAddress?: string;
 }
 
+type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+
 interface TherapistProfileFormProps {
   profile: TherapistProfile;
   onUpdate: (profile: Partial<TherapistProfile>) => void;
   onNext: () => void;
   onBack: () => void;
-  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
+  onStepNavigation?: (step: FlowStep) => void;
+  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
 }
 
 const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
@@ -32,7 +35,8 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   onUpdate,
   onNext,
   onBack,
-  onStepNavigation
+  onStepNavigation,
+  canSkipToStep
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -192,9 +196,10 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
-        <StepNavigator 
-          currentStep="profile" 
+        <StepNavigator
+          currentStep="profile"
           onStepClick={onStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       )}
 

@@ -7,12 +7,15 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 
+type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+
 interface PatientDescriptionFormProps {
   description: string;
   onUpdate: (description: string) => void;
   onNext: () => void;
   onBack: () => void;
-  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
+  onStepNavigation?: (step: FlowStep) => void;
+  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
 }
 
 const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
@@ -20,7 +23,8 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
   onUpdate,
   onNext,
   onBack,
-  onStepNavigation
+  onStepNavigation,
+  canSkipToStep
 }) => {
   const { user } = useAuth();
   const [error, setError] = useState<string>('');
@@ -124,9 +128,10 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
-        <StepNavigator 
-          currentStep="patient-description" 
+        <StepNavigator
+          currentStep="patient-description"
           onStepClick={onStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       )}
 

@@ -10,11 +10,13 @@ type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'li
 interface StepNavigatorProps {
   currentStep: FlowStep;
   onStepClick: (step: FlowStep) => void;
+  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
 }
 
 const StepNavigator: React.FC<StepNavigatorProps> = ({
   currentStep,
-  onStepClick
+  onStepClick,
+  canSkipToStep
 }) => {
   // Define the step order and their display information (Byron's new flow)
   const stepOrder: { step: FlowStep; number: number; label: string; width: string }[] = [
@@ -42,8 +44,9 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
             const stepNumber = stepInfo.number;
             const isCompleted = stepNumber < currentStepNumber;
             const isCurrent = stepNumber === currentStepNumber;
-            const isClickable = stepNumber < currentStepNumber; // Only allow clicking on previous steps
-            
+            const isClickable = stepNumber < currentStepNumber ||
+              (canSkipToStep ? canSkipToStep(stepInfo.step, currentStep) : false);
+
             return (
               <div key={stepInfo.step} className="flex items-center">
                 <button
@@ -51,14 +54,16 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
                   disabled={!isClickable}
                   className={`
                     flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors
-                    ${isCurrent 
-                      ? 'bg-green-600 text-white' 
-                      : isCompleted 
-                        ? 'bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer' 
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ${isCurrent
+                      ? 'bg-green-600 text-white'
+                      : isCompleted
+                        ? 'bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer'
+                        : isClickable
+                          ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }
                   `}
-                  title={isClickable ? `Go to ${stepInfo.label}` : stepInfo.label}
+                  title={isClickable ? `Go to ${stepInfo.label}` : `${stepInfo.label} (locked)`}
                 >
                   {stepNumber}
                 </button>

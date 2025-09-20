@@ -7,6 +7,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 
+type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+
 interface LicenseVerificationData {
   licenseType: string;
   licenseNumber: string;
@@ -19,7 +21,8 @@ interface LicenseVerificationProps {
   onNext: () => void;
   onSkip: () => void;
   onBack?: () => void;
-  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
+  onStepNavigation?: (step: FlowStep) => void;
+  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
 }
 
 const LicenseVerification: React.FC<LicenseVerificationProps> = ({
@@ -27,7 +30,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
   onUpdate,
   onNext,
   onSkip,
-  onStepNavigation
+  onStepNavigation,
+  canSkipToStep
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -160,9 +164,10 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
-        <StepNavigator 
-          currentStep="license-verification" 
+        <StepNavigator
+          currentStep="license-verification"
           onStepClick={onStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       )}
 

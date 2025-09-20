@@ -9,6 +9,8 @@ import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 // Removed direct Supabase import - now using server-side upload API
 
+type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+
 interface CompleteProfileData {
   profilePhoto?: string;
   personalStatement: string;
@@ -33,7 +35,8 @@ interface CompleteProfileProps {
   onUpdate: (data: Partial<CompleteProfileData>) => void;
   onNext: () => void;
   onBack: () => void;
-  onStepNavigation?: (step: 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete') => void;
+  onStepNavigation?: (step: FlowStep) => void;
+  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
 }
 
 const CompleteProfile: React.FC<CompleteProfileProps> = ({
@@ -41,7 +44,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   onUpdate,
   onNext,
   onBack,
-  onStepNavigation
+  onStepNavigation,
+  canSkipToStep
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -270,9 +274,10 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
-        <StepNavigator 
-          currentStep="complete-profile" 
+        <StepNavigator
+          currentStep="complete-profile"
           onStepClick={onStepNavigation}
+          canSkipToStep={canSkipToStep}
         />
       )}
 
