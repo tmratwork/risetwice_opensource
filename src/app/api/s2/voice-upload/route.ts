@@ -79,18 +79,33 @@ export async function POST(request: NextRequest) {
     const audioUrl = urlData.publicUrl;
 
     // Update session record with voice recording info
-    const { error: updateError } = await supabaseAdmin
+    console.log(`${logPrefix} Attempting to update session with audio info:`, {
+      sessionId: sessionId,
+      audioUrl: audioUrl,
+      fileSize: audioFile.size
+    });
+
+    const { data: updateData, error: updateError } = await supabaseAdmin
       .from('s2_case_simulation_sessions')
       .update({
         voice_recording_url: audioUrl,
         voice_recording_uploaded: true,
         voice_recording_size: audioFile.size
       })
-      .eq('id', sessionId);
+      .eq('id', sessionId)
+      .select();
 
     if (updateError) {
-      console.warn(`${logPrefix} Failed to update session record (non-critical):`, updateError);
+      console.error(`${logPrefix} ❌ Failed to update session record:`, {
+        error: updateError.message,
+        code: updateError.code,
+        details: updateError.details,
+        hint: updateError.hint,
+        sessionId: sessionId
+      });
       // Don't fail the request - the audio is already uploaded
+    } else {
+      console.log(`${logPrefix} ✅ Session updated with audio info:`, updateData);
     }
 
     console.log(`${logPrefix} ✅ Voice upload completed successfully:`, {

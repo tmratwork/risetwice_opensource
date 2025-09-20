@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
 
     console.log(`[S2 Admin] Fetching sessions for therapist profile: ${therapistProfileId}`);
 
-    // Fetch all sessions for this therapist with scenario information
+    // Fetch all sessions for this therapist with scenario information and audio recording data
     const { data: sessions, error: sessionsError } = await supabase
       .from('s2_case_simulation_sessions')
       .select(`
@@ -50,6 +50,18 @@ export async function GET(request: NextRequest) {
     }
 
     console.log(`[S2 Admin] Found ${sessions?.length || 0} sessions`);
+
+    // Log first session to check if audio fields are present
+    if (sessions && sessions.length > 0) {
+      console.log('[S2 Admin] First session data (checking for audio fields):', {
+        id: sessions[0].id,
+        session_number: sessions[0].session_number,
+        status: sessions[0].status,
+        voice_recording_url: sessions[0].voice_recording_url,
+        voice_recording_uploaded: sessions[0].voice_recording_uploaded,
+        voice_recording_size: sessions[0].voice_recording_size
+      });
+    }
 
     // For each session, fetch the conversation messages
     const sessionsWithMessages = await Promise.all(

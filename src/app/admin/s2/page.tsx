@@ -83,6 +83,10 @@ interface S2AdminSession {
   duration_seconds?: number;
   message_count: number;
   messages?: S2SessionMessage[];
+  // Audio recording fields from database
+  voice_recording_url?: string;
+  voice_recording_uploaded?: boolean;
+  voice_recording_size?: number;
   s2_generated_scenarios?: {
     scenario_text: string;
     generation_model?: string;
@@ -639,8 +643,97 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
             <p><span className="font-medium">Status:</span> <span className="capitalize">{selectedSession.status}</span></p>
             <p><span className="font-medium">Duration:</span> {selectedSession.duration_seconds ? `${Math.floor(selectedSession.duration_seconds / 60)}m ${selectedSession.duration_seconds % 60}s` : 'N/A'}</p>
             <p><span className="font-medium">Messages:</span> {selectedSession.message_count}</p>
+            {/* Audio Recording Status and Link */}
+            <div className="mt-2 pt-2 border-t border-gray-200">
+              <span className="font-medium">Audio Recording:</span>{' '}
+              {selectedSession.voice_recording_uploaded && selectedSession.voice_recording_url ? (
+                <span>
+                  <a
+                    href={selectedSession.voice_recording_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline ml-1"
+                  >
+                    🎧 Listen to Recording
+                  </a>
+                  {selectedSession.voice_recording_size && (
+                    <span className="text-gray-500 ml-2">
+                      ({(selectedSession.voice_recording_size / (1024 * 1024)).toFixed(2)} MB)
+                    </span>
+                  )}
+                </span>
+              ) : selectedSession.status === 'completed' ? (
+                <span className="text-amber-600 ml-1">
+                  ⚠️ No audio uploaded (session may have ended unexpectedly)
+                </span>
+              ) : selectedSession.status === 'active' ? (
+                <span className="text-gray-500 ml-1">
+                  Session in progress...
+                </span>
+              ) : (
+                <span className="text-gray-500 ml-1">
+                  Not yet recorded
+                </span>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* Audio Recording Section */}
+        {(selectedSession.voice_recording_uploaded || selectedSession.status === 'completed') && (
+          <div className="bg-white rounded-lg shadow p-6">
+            <h4 className="text-lg font-medium text-gray-900 mb-3">Session Audio Recording</h4>
+            {selectedSession.voice_recording_uploaded && selectedSession.voice_recording_url ? (
+              <div className="bg-green-50 rounded-lg p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-green-800 mb-2">
+                      🎧 Audio recording successfully captured
+                    </p>
+                    <a
+                      href={selectedSession.voice_recording_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                      Listen to Full Session Recording
+                    </a>
+                  </div>
+                  {selectedSession.voice_recording_size && (
+                    <div className="text-sm text-gray-600">
+                      <p>File size: {(selectedSession.voice_recording_size / (1024 * 1024)).toFixed(2)} MB</p>
+                      <p>Format: WebM (Opus codec)</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="bg-amber-50 rounded-lg p-4">
+                <div className="flex items-start">
+                  <svg className="w-5 h-5 text-amber-600 mr-3 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-amber-800 font-medium">No audio recording available</p>
+                    <p className="text-sm text-amber-600 mt-1">
+                      This session was completed but no audio was uploaded. Possible reasons:
+                    </p>
+                    <ul className="text-sm text-amber-600 mt-2 list-disc list-inside space-y-1">
+                      <li>Browser was closed before upload completed</li>
+                      <li>Network connection was lost during upload</li>
+                      <li>User navigated away from the session too quickly</li>
+                      <li>Microphone permissions were not granted</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Scenario Information */}
         {selectedSession.s2_generated_scenarios && (
@@ -737,6 +830,12 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
                         Duration: {Math.floor(session.duration_seconds / 60)}m {session.duration_seconds % 60}s
                       </span>
                     )}
+                    {/* Audio Recording Indicator */}
+                    {session.voice_recording_uploaded ? (
+                      <span className="text-green-600">🎧 Audio Available</span>
+                    ) : session.status === 'completed' ? (
+                      <span className="text-amber-600">⚠️ No Audio</span>
+                    ) : null}
                   </div>
                 </div>
                 <button className="text-blue-600 hover:text-blue-800 text-sm">
