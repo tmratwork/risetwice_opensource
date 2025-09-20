@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
-import { createClient } from '@supabase/supabase-js';
+// Removed direct Supabase import - now using server-side upload API
 
 interface CompleteProfileData {
   profilePhoto?: string;
@@ -49,11 +49,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
-  // Initialize Supabase client
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  // Profile photo uploads now use server-side API with service role key
+  // This bypasses the Firebase UID → PostgreSQL UUID conversion issue
 
   // Load existing complete profile data on mount
   useEffect(() => {
@@ -98,7 +95,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     loadExistingProfile();
   }, [user?.uid]);
 
-  // Function to upload profile photo to Supabase Storage
+  // Function to upload profile photo via server-side API
   const uploadProfilePhoto = async (file: File): Promise<string | null> => {
     if (!user?.uid) {
       throw new Error('User not authenticated');
@@ -107,32 +104,28 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     try {
       setUploadingPhoto(true);
 
-      // Generate unique filename with user ID prefix
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${user.uid}/${Date.now()}.${fileExt}`;
+      console.log('[S2] Uploading profile photo via server API:', file.name);
 
-      console.log('[S2] Uploading profile photo:', fileName);
+      // Create form data for server upload
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', user.uid);
 
-      // Upload to Supabase Storage
-      const { data, error } = await supabase.storage
-        .from('profile-photos')
-        .upload(fileName, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
+      // Upload via server-side API route
+      const response = await fetch('/api/s2/profile-photo', {
+        method: 'POST',
+        body: formData
+      });
 
-      if (error) {
-        console.error('[S2] Error uploading profile photo:', error);
-        throw new Error('Failed to upload photo. Please try again.');
+      const result = await response.json();
+
+      if (!result.success) {
+        console.error('[S2] Server error uploading profile photo:', result.error);
+        throw new Error(result.error || 'Failed to upload photo. Please try again.');
       }
 
-      // Get the public URL
-      const { data: publicUrlData } = supabase.storage
-        .from('profile-photos')
-        .getPublicUrl(data.path);
-
-      console.log('[S2] ✅ Profile photo uploaded successfully:', publicUrlData.publicUrl);
-      return publicUrlData.publicUrl;
+      console.log('[S2] ✅ Profile photo uploaded successfully:', result.url);
+      return result.url;
 
     } catch (error) {
       console.error('[S2] Error in uploadProfilePhoto:', error);

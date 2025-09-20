@@ -16,6 +16,17 @@ const nextConfig: NextConfig = {
   //   ignoreBuildErrors: true,
   // },
 
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'wppuvbraxusgltzcspfo.supabase.co',
+        port: '',
+        pathname: '/storage/v1/object/public/**',
+      },
+    ],
+  },
+
   async headers() {
     return [
       {
