@@ -1,0 +1,34 @@
+the complete data flow! Here's what's happening:
+
+  Answer: The codebase uses BOTH therapist input AND mock data
+
+  Data Flow:
+
+  1. Therapist Input: Therapists enter their ideal patient description in the
+  PatientDescriptionForm component during the S2 onboarding process. This gets saved to the
+  s2_patient_descriptions table.
+  2. Mock Scenario Generation: When a scenario needs to be generated, the code currently uses
+  mock data instead of real AI generation:
+
+    - Line 114 in generate-scenario/route.ts: generation_model: 'mock-anthropic-claude'
+    - Line 102: const scenario = await generateMockScenario(patientDescription);
+    - Lines 157-203: The generateMockScenario() function contains pre-written scenario templates
+  3. The Mock Process:
+    - Takes the therapist's actual patient description
+    - Analyzes it for keywords (anxiety, depression, trauma, relationships)
+    - Selects a matching pre-written scenario template from lines 162-183
+    - Returns scenarios like "Meet Alex, a 32-year-old marketing professional experiencing panic
+   attacks at work..."
+  4. Why "mock-anthropic-claude":
+    - Line 97: // TODO: Integrate with Anthropic Claude API
+    - The real Anthropic integration is not implemented yet
+    - It's using mock scenarios as placeholders
+
+  Current State:
+
+  - ✅ Therapist input: Real data from therapists about their ideal patients
+  - ❌ AI generation: Currently mocked with pre-written templates
+  - ✅ Scenario matching: Uses therapist input to select appropriate mock scenarios
+
+  The "Meet Alex" scenario you're seeing is one of the anxiety-related templates that gets
+  selected when the therapist's patient description contains anxiety-related keywords.

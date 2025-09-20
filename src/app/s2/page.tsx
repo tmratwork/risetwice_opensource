@@ -177,21 +177,21 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('patient-description');
         break;
       case 'patient-description':
-        setCurrentStep('complete-profile');
-        break;
-      case 'complete-profile':
-        setCurrentStep('ai-style');
-        break;
-      case 'ai-style':
-        setCurrentStep('license-verification');
-        break;
-      case 'license-verification':
         setCurrentStep('preparation');
         break;
       case 'preparation':
         setCurrentStep('session');
         break;
       case 'session':
+        setCurrentStep('ai-style');
+        break;
+      case 'ai-style':
+        setCurrentStep('license-verification');
+        break;
+      case 'license-verification':
+        setCurrentStep('complete-profile');
+        break;
+      case 'complete-profile':
         setCurrentStep('onboarding-complete');
         break;
     }
@@ -205,23 +205,23 @@ const S2CaseSimulation: React.FC = () => {
       case 'patient-description':
         setCurrentStep('profile');
         break;
-      case 'complete-profile':
-        setCurrentStep('patient-description');
-        break;
-      case 'ai-style':
-        setCurrentStep('complete-profile');
-        break;
-      case 'license-verification':
-        setCurrentStep('ai-style');
-        break;
       case 'preparation':
-        setCurrentStep('license-verification');
+        setCurrentStep('patient-description');
         break;
       case 'session':
         setCurrentStep('preparation');
         break;
-      case 'onboarding-complete':
+      case 'ai-style':
         setCurrentStep('session');
+        break;
+      case 'license-verification':
+        setCurrentStep('ai-style');
+        break;
+      case 'complete-profile':
+        setCurrentStep('license-verification');
+        break;
+      case 'onboarding-complete':
+        setCurrentStep('complete-profile');
         break;
     }
   };
@@ -229,13 +229,13 @@ const S2CaseSimulation: React.FC = () => {
   const handleStepNavigation = (targetStep: FlowStep) => {
     // Only allow navigation to previous steps
     const stepOrder: FlowStep[] = [
-      'welcome', 'profile', 'patient-description', 'complete-profile', 'ai-style', 
-      'license-verification', 'preparation', 'session', 'onboarding-complete'
+      'welcome', 'profile', 'patient-description', 'preparation', 'session',
+      'ai-style', 'license-verification', 'complete-profile', 'onboarding-complete'
     ];
-    
+
     const currentIndex = stepOrder.indexOf(currentStep);
     const targetIndex = stepOrder.indexOf(targetStep);
-    
+
     // Only allow navigation backward (to previous steps)
     if (targetIndex < currentIndex) {
       setCurrentStep(targetStep);
