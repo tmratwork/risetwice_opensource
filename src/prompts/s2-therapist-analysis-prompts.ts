@@ -4,6 +4,7 @@
 
 // Type definitions for therapist data
 interface TherapistProfile {
+  id?: string;
   full_name?: string;
   title?: string;
   degrees?: string[];
@@ -51,6 +52,8 @@ interface TherapistData {
   complete_profile?: CompleteProfile;
   license_verification?: LicenseVerification;
   patient_description?: PatientDescription;
+  ai_style_config?: AIStyleConfig;
+  sessions?: SessionData[];
 }
 
 interface SessionMessage {
@@ -63,7 +66,8 @@ interface SessionData {
   status?: string;
   duration_seconds?: number;
   message_count?: number;
-  messages?: SessionMessage[];
+  messages: SessionMessage[];
+  id?: string;
 }
 
 interface SampleConversationSession {

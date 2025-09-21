@@ -417,7 +417,18 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [dataAnalysis, setDataAnalysis] = useState<any>(null);
+  const [dataAnalysis, setDataAnalysis] = useState<{
+    totalSessions?: number;
+    totalMessages?: number;
+    totalTherapistMessages?: number;
+    completenessScore?: number;
+    confidenceScore?: number;
+    processingTimeMinutes?: string;
+    conversationPatterns?: {
+      totalTherapistMessages?: number;
+      averageMessageLength?: number;
+    };
+  } | null>(null);
 
   const handleGeneratePrompt = async () => {
     try {
