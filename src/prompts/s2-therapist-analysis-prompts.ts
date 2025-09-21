@@ -2,6 +2,77 @@
 // Centralized Claude AI prompts for S2 Therapist Analysis System
 // Quality-first approach: Multiple specialized AI calls for comprehensive analysis
 
+// Type definitions for therapist data
+interface TherapistProfile {
+  full_name?: string;
+  title?: string;
+  degrees?: string[];
+  primary_location?: string;
+  offers_online?: boolean;
+}
+
+interface CompleteProfile {
+  personal_statement?: string;
+  mental_health_specialties?: string[];
+  treatment_approaches?: string[];
+  age_ranges_treated?: string[];
+  practice_type?: string;
+  session_length?: string;
+  availability_hours?: string;
+  emergency_protocol?: string;
+  accepts_insurance?: boolean;
+  insurance_plans?: string[];
+}
+
+interface LicenseVerification {
+  license_type?: string;
+  license_number?: string;
+  state_of_licensure?: string;
+}
+
+interface PatientDescription {
+  description?: string;
+  complexity_level?: string;
+  extracted_themes?: string[];
+}
+
+interface AIStyleConfig {
+  cognitive_behavioral?: number;
+  person_centered?: number;
+  psychodynamic?: number;
+  solution_focused?: number;
+  interaction_style?: number;
+  tone?: number;
+  energy_level?: number;
+}
+
+interface TherapistData {
+  profile?: TherapistProfile;
+  complete_profile?: CompleteProfile;
+  license_verification?: LicenseVerification;
+  patient_description?: PatientDescription;
+}
+
+interface SessionMessage {
+  role: string;
+  content: string;
+}
+
+interface SessionData {
+  session_number?: string;
+  status?: string;
+  duration_seconds?: number;
+  message_count?: number;
+  messages?: SessionMessage[];
+}
+
+interface SampleConversationSession {
+  sessionNumber: string;
+  totalMessages: number;
+  truncated?: boolean;
+  messages: SessionMessage[];
+}
+
 export const S2_ANALYSIS_PROMPTS = {
   /**
    * STEP 1: Raw Data Analysis
@@ -19,7 +90,7 @@ Focus on:
 
 Provide detailed, structured analysis that will be used for creating AI simulations of this therapist.`,
 
-    user: (therapistData: any) => `Analyze this therapist's complete profile data:
+    user: (therapistData: TherapistData) => `Analyze this therapist's complete profile data:
 
 **THERAPIST PROFILE:**
 Name: ${therapistData.profile?.full_name}
@@ -85,23 +156,23 @@ Your task is to analyze real therapy session transcripts to identify:
 
 Provide detailed analysis that captures the unique communication signature of this therapist.`,
 
-    user: (sessions: any[], profileAnalysis: string) => `Analyze the communication patterns from these therapy sessions:
+    user: (sessions: SessionData[], profileAnalysis: string) => `Analyze the communication patterns from these therapy sessions:
 
 **PREVIOUS PROFILE ANALYSIS:**
 ${profileAnalysis}
 
 **SESSION TRANSCRIPTS:**
-${sessions.map((session, index) => `
+${sessions.map((session) => `
 --- SESSION ${session.session_number} ---
 Status: ${session.status}
 Duration: ${session.duration_seconds ? Math.floor(session.duration_seconds / 60) + 'm' : 'Unknown'}
 Message Count: ${session.message_count}
 
 CONVERSATION:
-${session.messages?.slice(0, 30).map((msg: any, msgIndex: number) =>
+${session.messages?.slice(0, 500).map((msg: SessionMessage, msgIndex: number) =>
   `${msgIndex + 1}. ${msg.role.toUpperCase()}: ${msg.content}`
 ).join('\n') || 'No messages available'}
-${session.messages?.length > 30 ? '\n[Additional messages truncated for analysis...]' : ''}
+${session.messages?.length > 500 ? `\n[🚨 TRUNCATED: ${session.messages.length - 500} additional messages not shown for token management]` : ''}
 `).join('\n\n')}
 
 Based on these actual therapeutic conversations, provide detailed analysis of:
@@ -157,7 +228,7 @@ Your task is to integrate AI style configuration data with conversation patterns
 
 Provide expert assessment that captures the nuanced therapeutic style of this individual clinician.`,
 
-    user: (aiStyleConfig: any, conversationAnalysis: string, profileAnalysis: string) => `Assess the therapeutic style and approach of this therapist:
+    user: (aiStyleConfig: AIStyleConfig | null, conversationAnalysis: string, profileAnalysis: string) => `Assess the therapeutic style and approach of this therapist:
 
 **CONFIGURED AI STYLE PREFERENCES:**
 ${aiStyleConfig ? `
@@ -307,7 +378,7 @@ Focus on creating instructions that capture:
 
 Write a masterful AI roleplay prompt that brings this therapist to life.`,
 
-    user: (allAnalyses: string, sampleConversations: any[], therapistProfile: any) => `Create a comprehensive AI therapist simulation prompt using all analyses:
+    user: (allAnalyses: string, sampleConversations: SampleConversationSession[], therapistProfile: TherapistProfile | null) => `Create a comprehensive AI therapist simulation prompt using all analyses:
 
 **THERAPIST PROFILE:**
 Name: ${therapistProfile?.full_name}
@@ -319,11 +390,12 @@ Location: ${therapistProfile?.primary_location || 'Not specified'}
 ${allAnalyses}
 
 **SAMPLE CONVERSATION EXAMPLES:**
-${sampleConversations.map((session, index) => `
-Example Session ${session.sessionNumber}:
-${session.messages.slice(0, 15).map((msg: any) =>
+${sampleConversations.map((session) => `
+Example Session ${session.sessionNumber} (${session.totalMessages} total messages${session.truncated ? ` - SHOWING FIRST 500` : ''}):
+${session.messages.slice(0, 15).map((msg: SessionMessage) =>
   `${msg.role === 'therapist' ? 'THERAPIST' : 'PATIENT'}: ${msg.content}`
 ).join('\n')}
+${session.messages.length > 15 ? `\n[... ${session.messages.length - 15} additional messages available for full context analysis]` : ''}
 `).join('\n\n')}
 
 Create a comprehensive AI roleplay prompt with the following structure:
@@ -396,6 +468,16 @@ export const validateTokenLimits = (inputText: string, maxTokens: number): boole
 export type AnalysisStep = keyof typeof S2_ANALYSIS_PROMPTS;
 export type PromptConfig = {
   system: string;
-  user: (...args: any[]) => string;
+  user: (...args: unknown[]) => string;
   maxTokens: number;
+};
+
+// Export interfaces for use in other files
+export type {
+  TherapistData,
+  SessionData,
+  SessionMessage,
+  SampleConversationSession,
+  TherapistProfile,
+  AIStyleConfig
 };

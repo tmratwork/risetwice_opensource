@@ -202,6 +202,28 @@ Generates comprehensive AI therapist simulation prompt using 5-step Claude AI an
 }
 ```
 
+### Conversation Quality Filtering
+
+**NEW: Automatic Quality Filtering**
+- **High Quality Sessions**: ≥10 messages included in analysis
+- **Low Quality Sessions**: <10 messages automatically excluded
+- **Clear Logging**: Shows exactly which sessions were filtered and why
+
+**Sample filtering output:**
+```
+🗑️ FILTERING LOW QUALITY SESSIONS (< 10 messages):
+🗑️ - Session 1: 0 messages (EXCLUDED from analysis)
+🗑️ - Session 2: 0 messages (EXCLUDED from analysis)
+🗑️ - Session 4: 3 messages (EXCLUDED from analysis)
+✅ HIGH QUALITY SESSIONS (≥ 10 messages):
+✅ - Session 3: 29 total (16 therapist, 13 patient) - INCLUDED
+```
+
+**Message Limit Enhancement**
+- **Previous**: Limited to 20-30 messages per conversation
+- **Current**: Up to 500 messages per conversation analyzed
+- **Truncation Warnings**: Clear logging when conversations exceed 500 messages
+
 ### Enhanced Quality Scoring System
 
 **Completeness Score (0.0 - 1.0):**
@@ -223,6 +245,13 @@ Generates comprehensive AI therapist simulation prompt using 5-step Claude AI an
 - **Data Completeness Bonus:**
   - Complete profile: +0.1, AI style config: +0.1
   - License verification: +0.05, Patient description: +0.05
+
+**Realistic Score Ranges Observed:**
+- **High Data Availability**: Completeness 0.83-1.00, Confidence 0.90-1.00
+- **Medium Data Availability**: Completeness 0.50-0.83, Confidence 0.75-0.90
+- **Basic Data Only**: Completeness 0.33-0.50, Confidence 0.60-0.80
+
+**Note**: Many therapists have incomplete profile data, so scores of 0.83 (5/6 components) are common and still produce excellent AI prompts.
 
 ## Generated Prompt Structure
 
@@ -269,7 +298,7 @@ The AI-generated prompts include:
 
 ### Dependencies
 - **Next.js API Routes**: Server-side processing with service role authentication
-- **Supabase Client**: Database integration using `SUPABASE_SERVICE_ROLE_KEY`
+- **Database Client**: Database integration using `DATABASE_SERVICE_ROLE_KEY`
 - **Claude Sonnet 4**: Latest model via `getClaudeModel()` from config
 - **Centralized Prompts**: `src/prompts/s2-therapist-analysis-prompts.ts`
 - **React Components**: Admin interface with enhanced progress tracking
@@ -286,6 +315,130 @@ The AI-generated prompts include:
 - **💾 Database Storage**: Full analysis metadata saving
 - **🎉 Quality Metrics**: Completeness and confidence scoring
 
+### Development Mode Deep Logging
+
+**Enable comprehensive dev logging by adding to `.env.local`:**
+```bash
+NEXT_PUBLIC_ENABLE_S2_PROMPT_DEV_LOGS=true
+```
+
+**When enabled, creates a single comprehensive log file in `logs/s2-prompt-generation/`:**
+
+**File naming pattern:** `timestamp_therapistId_COMPLETE_ANALYSIS.log`
+
+**Example:** `20250921_140530_user456_COMPLETE_ANALYSIS.log`
+
+**Log file contains clearly separated sections:**
+```
+============================================================
+STEP 0: DATA EXTRACTION
+============================================================
+- All extracted Supabase data formatted for readability
+
+============================================================
+STEP 1: RAW DATA ANALYSIS
+============================================================
+- Complete prompt sent + Claude AI response
+
+============================================================
+STEP 2: CONVERSATION PATTERN ANALYSIS
+============================================================
+- Complete prompt sent + Claude AI response
+
+============================================================
+STEP 3: THERAPEUTIC STYLE ASSESSMENT
+============================================================
+- Complete prompt sent + Claude AI response
+
+============================================================
+STEP 4: PERSONALITY & COMMUNICATION SYNTHESIS
+============================================================
+- Complete prompt sent + Claude AI response
+
+============================================================
+STEP 5: FINAL PROMPT GENERATION
+============================================================
+- Complete prompt sent + Claude AI response
+```
+
+**Perfect for non-technical review**: Everything in chronological order in one readable file that clearly shows what data was extracted, what prompts were sent to Claude AI, and what responses were received.
+
+**Sample log file format:**
+```
+S2 AI THERAPIST PROMPT GENERATION - COMPLETE ANALYSIS
+============================================================
+Therapist ID: 6928605c-e0be-404d-b473-d956b35a5a4a
+Analysis Start: 9/21/2025, 4:30:15 AM
+============================================================
+
+============================================================
+STEP 0: DATA EXTRACTION
+============================================================
+Timestamp: 9/21/2025, 4:30:15 AM
+Therapist ID: 6928605c-e0be-404d-b473-d956b35a5a4a
+
+EXTRACTED DATA FROM DATABASE:
+----------------------------------------
+👤 THERAPIST PROFILE:
+   Name: Dr. Sarah Johnson
+   Title: Psychiatrist
+   Degrees: MD, PhD
+   Location: New York, NY
+   Online Practice: Yes
+
+🎨 AI STYLE CONFIG:
+   CBT: 40%
+   Person-Centered: 20%
+   Psychodynamic: 25%
+   Solution-Focused: 15%
+
+🔍 QUALITY FILTERING:
+🗑️ FILTERING LOW QUALITY SESSIONS (< 10 messages):
+🗑️ - Session 1: 3 messages (EXCLUDED from analysis)
+🗑️ - Session 2: 7 messages (EXCLUDED from analysis)
+✅ HIGH QUALITY SESSIONS (≥ 10 messages):
+✅ - Session 3: 29 messages (16 therapist, 13 patient) - INCLUDED
+
+💬 INCLUDED CONVERSATION SESSIONS:
+   Session 3: 29 messages (16 therapist, 13 patient)
+      Sample messages (showing first 15 of 29):
+      1. PATIENT: "Hi there. I'm feeling a little nervous today..."
+      2. THERAPIST: "Yeah, of course, what's been on your mind?..."
+      3. PATIENT: "I guess it's mostly that I've been feeling stuck..."
+      ... and 26 more messages
+
+============================================================
+STEP 1: RAW DATA ANALYSIS
+============================================================
+
+📤 PROMPT SENT TO CLAUDE AI:
+----------------------------------------
+Model: claude-sonnet-4-20250514
+Max Output Tokens: 12000
+
+🤖 SYSTEM MESSAGE:
+You are an expert clinical psychologist and therapist profiling specialist...
+
+👤 USER MESSAGE:
+Analyze this therapist's complete profile data:
+
+**THERAPIST PROFILE:**
+Name: Dr. Sarah Johnson
+Title: Psychiatrist
+...
+
+📥 CLAUDE AI RESPONSE:
+----------------------------------------
+Input Tokens: 525
+Output Tokens: 1349
+Timestamp: 2025-09-21T04:30:16.000Z
+
+🧠 AI ANALYSIS:
+Based on the comprehensive profile data provided, here is my detailed analysis...
+
+[continues for all 5 steps]
+```
+
 **Sample Multi-Step Log Output:**
 ```
 [s2_prompt_generation] 🚀 Starting quality-first multi-step analysis for therapist: 6928605c-e0be-404d-b473-d956b35a5a4a
@@ -297,9 +450,17 @@ The AI-generated prompts include:
 [s2_prompt_generation] ⚠️ No license verification data available for this user
 [s2_prompt_generation] ✅ Patient description found: homeless 18 year old with history of trauma...
 [s2_prompt_generation] ✅ Found 5 sessions
-[s2_prompt_generation] ✅ Session 3: 29 total messages (16 therapist, 13 patient)
+[s2_prompt_generation] 🗑️ FILTERING LOW QUALITY SESSIONS (< 10 messages):
+[s2_prompt_generation] 🗑️ - Session 1: 0 messages (EXCLUDED from analysis)
+[s2_prompt_generation] 🗑️ - Session 2: 0 messages (EXCLUDED from analysis)
+[s2_prompt_generation] 🗑️ - Session 4: 3 messages (EXCLUDED from analysis)
+[s2_prompt_generation] 🗑️ - Session 5: 5 messages (EXCLUDED from analysis)
+[s2_prompt_generation] ✅ HIGH QUALITY SESSIONS (≥ 10 messages):
+[s2_prompt_generation] ✅ - Session 3: 29 total (16 therapist, 13 patient) - INCLUDED
 [s2_prompt_generation] 📊 FINAL DATA SUMMARY:
-[s2_prompt_generation] 📊 - Sessions: 5, Total Messages: 37, Therapist Messages: 19
+[s2_prompt_generation] 📊 - Total Sessions Found: 5 (4 filtered out)
+[s2_prompt_generation] 📊 - Quality Sessions Used: 1
+[s2_prompt_generation] 📊 - Total Messages: 29, Therapist Messages: 16, Patient Messages: 13
 [s2_prompt_generation] 📊 - Profile completeness: ✅, AI style config: ✅, License verification: ❌
 [s2_prompt_generation] 🔄 Beginning 5-step AI analysis workflow...
 [s2_prompt_generation] 📊 Step 1/5: Raw Data Analysis
@@ -324,7 +485,7 @@ The AI-generated prompts include:
 ### Security Architecture
 
 **API-Level Security (No RLS Required):**
-- Uses `SUPABASE_SERVICE_ROLE_KEY` for direct database access
+- Uses `DATABASE_SERVICE_ROLE_KEY` for direct database access
 - Admin-only functionality controlled at Next.js API route level
 - Service role bypasses Row Level Security for better performance
 - Security handled in application layer rather than database policies
@@ -471,6 +632,16 @@ ORDER BY completeness_range DESC, confidence_range DESC;
 - Review server logs for specific error details
 - Check all required environment variables
 - Verify database table structure and permissions
+
+**"Multiple (or no) rows returned" database errors**
+- This indicates `.single()` queries failing due to multiple records
+- System now uses `.order('created_at', { ascending: false }).limit(1)` to get most recent record
+- Check if tables like `s2_complete_profiles`, `s2_ai_style_configs` have multiple records per user
+
+**"License found: undefined in undefined" in logs**
+- This was a logging bug where data availability wasn't properly checked
+- Fixed to show accurate "⚠️ No license verification data available for this user" message
+- System handles missing optional data gracefully
 
 ## Maintenance
 

@@ -6,6 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { getClaudeModel } from '@/config/models';
 import { S2_ANALYSIS_PROMPTS, validateTokenLimits, estimateTokenCount } from '@/prompts/s2-therapist-analysis-prompts';
+import fs from 'fs';
+import path from 'path';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -15,6 +17,187 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Get the correct Claude model from config
 const CLAUDE_MODEL = getClaudeModel(); // Returns CLAUDE_SONNET_4
+
+// Dev mode comprehensive logging
+const isDevelopment = process.env.NODE_ENV === 'development';
+const DEV_LOG_ENABLED = process.env.NEXT_PUBLIC_ENABLE_S2_PROMPT_DEV_LOGS === 'true';
+const devLogsDir = path.join(process.cwd(), 'logs', 's2-prompt-generation');
+
+// Global log content for single file
+let globalLogContent = '';
+let currentTherapistId = '';
+
+// Dev mode logging function - builds single readable log file
+function logDevMode(stage: string, type: 'DATA' | 'PROMPT' | 'RESPONSE', content: any, therapistId?: string) {
+  if (!isDevelopment || !DEV_LOG_ENABLED) return;
+
+  try {
+    if (therapistId) currentTherapistId = therapistId;
+
+    if (type === 'DATA') {
+      globalLogContent += `\n${'='.repeat(60)}\n`;
+      globalLogContent += `STEP 0: DATA EXTRACTION\n`;
+      globalLogContent += `${'='.repeat(60)}\n`;
+      globalLogContent += `Timestamp: ${new Date().toLocaleString()}\n`;
+      globalLogContent += `Therapist ID: ${currentTherapistId}\n\n`;
+
+      globalLogContent += `EXTRACTED DATA FROM SUPABASE:\n`;
+      globalLogContent += `${'-'.repeat(40)}\n`;
+
+      // Format the therapist data in a readable way
+      if (content.profile) {
+        globalLogContent += `👤 THERAPIST PROFILE:\n`;
+        globalLogContent += `   Name: ${content.profile.full_name}\n`;
+        globalLogContent += `   Title: ${content.profile.title}\n`;
+        globalLogContent += `   Degrees: ${content.profile.degrees?.join(', ') || 'Not specified'}\n`;
+        globalLogContent += `   Location: ${content.profile.primary_location || 'Not specified'}\n`;
+        globalLogContent += `   Online Practice: ${content.profile.offers_online ? 'Yes' : 'No'}\n\n`;
+      }
+
+      if (content.complete_profile) {
+        globalLogContent += `📋 COMPLETE PROFILE:\n`;
+        globalLogContent += `   Specialties: ${content.complete_profile.mental_health_specialties?.join(', ') || 'Not specified'}\n`;
+        globalLogContent += `   Approaches: ${content.complete_profile.treatment_approaches?.join(', ') || 'Not specified'}\n`;
+        globalLogContent += `   Age Ranges: ${content.complete_profile.age_ranges_treated?.join(', ') || 'Not specified'}\n`;
+        globalLogContent += `   Practice Type: ${content.complete_profile.practice_type || 'Not specified'}\n\n`;
+      }
+
+      if (content.ai_style_config) {
+        globalLogContent += `🎨 AI STYLE CONFIG:\n`;
+        globalLogContent += `   CBT: ${content.ai_style_config.cognitive_behavioral || 0}%\n`;
+        globalLogContent += `   Person-Centered: ${content.ai_style_config.person_centered || 0}%\n`;
+        globalLogContent += `   Psychodynamic: ${content.ai_style_config.psychodynamic || 0}%\n`;
+        globalLogContent += `   Solution-Focused: ${content.ai_style_config.solution_focused || 0}%\n\n`;
+      }
+
+      if (content.patient_description) {
+        globalLogContent += `👥 PATIENT DESCRIPTION:\n`;
+        globalLogContent += `   ${content.patient_description.description}\n\n`;
+      }
+
+      globalLogContent += `💬 CONVERSATION SESSIONS:\n`;
+      if (content.sessions && content.sessions.length > 0) {
+        content.sessions.forEach((session: any, index: number) => {
+          globalLogContent += `   Session ${session.session_number}: ${session.messages.length} messages (`;
+          const therapistCount = session.messages.filter((m: any) => m.role === 'therapist').length;
+          const patientCount = session.messages.filter((m: any) => m.role === 'ai_patient').length;
+          globalLogContent += `${therapistCount} therapist, ${patientCount} patient)\n`;
+
+          // Show first few messages as examples
+          if (session.messages.length > 0) {
+            globalLogContent += `      Sample messages:\n`;
+            session.messages.slice(0, 3).forEach((msg: any, msgIndex: number) => {
+              const role = msg.role === 'therapist' ? 'THERAPIST' : 'PATIENT';
+              const preview = msg.content.length > 60 ? msg.content.substring(0, 60) + '...' : msg.content;
+              globalLogContent += `      ${msgIndex + 1}. ${role}: "${preview}"\n`;
+            });
+            if (session.messages.length > 3) {
+              globalLogContent += `      ... and ${session.messages.length - 3} more messages\n`;
+            }
+            globalLogContent += `\n`;
+          }
+        });
+      } else {
+        globalLogContent += `   No conversation sessions available\n\n`;
+      }
+    }
+  } catch (error) {
+    console.error(`[s2_prompt_generation] ❌ Dev logging error:`, error);
+  }
+}
+
+// Add step logging for prompts and responses
+function logDevStep(stepNumber: number, stepName: string, type: 'PROMPT' | 'RESPONSE', content: any) {
+  if (!isDevelopment || !DEV_LOG_ENABLED) return;
+
+  try {
+    if (type === 'PROMPT') {
+      globalLogContent += `\n${'='.repeat(60)}\n`;
+      globalLogContent += `STEP ${stepNumber}: ${stepName.toUpperCase()}\n`;
+      globalLogContent += `${'='.repeat(60)}\n\n`;
+
+      globalLogContent += `📤 PROMPT SENT TO CLAUDE AI:\n`;
+      globalLogContent += `${'-'.repeat(40)}\n`;
+      globalLogContent += `Model: ${content.model}\n`;
+      globalLogContent += `Max Output Tokens: ${content.maxTokens}\n\n`;
+
+      globalLogContent += `🤖 SYSTEM MESSAGE:\n`;
+      globalLogContent += `${content.system}\n\n`;
+
+      globalLogContent += `👤 USER MESSAGE:\n`;
+      globalLogContent += `${content.user}\n\n`;
+    }
+
+    else if (type === 'RESPONSE') {
+      globalLogContent += `📥 CLAUDE AI RESPONSE:\n`;
+      globalLogContent += `${'-'.repeat(40)}\n`;
+      globalLogContent += `Input Tokens: ${content.inputTokens}\n`;
+      globalLogContent += `Output Tokens: ${content.outputTokens}\n`;
+      globalLogContent += `Timestamp: ${content.timestamp}\n\n`;
+
+      globalLogContent += `🧠 AI ANALYSIS:\n`;
+      globalLogContent += `${content.response}\n\n`;
+    }
+  } catch (error) {
+    console.error(`[s2_prompt_generation] ❌ Dev step logging error:`, error);
+  }
+}
+
+// Save the complete log file at the end
+function saveDevLogFile() {
+  if (!isDevelopment || !DEV_LOG_ENABLED || !globalLogContent) return;
+
+  try {
+    // Create logs directory if it doesn't exist
+    if (!fs.existsSync(devLogsDir)) {
+      fs.mkdirSync(devLogsDir, { recursive: true });
+    }
+
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `${timestamp}_${currentTherapistId}_COMPLETE_ANALYSIS.log`;
+    const filepath = path.join(devLogsDir, filename);
+
+    // Add final header
+    let finalContent = `S2 AI THERAPIST PROMPT GENERATION - COMPLETE ANALYSIS\n`;
+    finalContent += `${'='.repeat(60)}\n`;
+    finalContent += `Therapist ID: ${currentTherapistId}\n`;
+    finalContent += `Analysis Start: ${new Date().toLocaleString()}\n`;
+    finalContent += `${'='.repeat(60)}\n`;
+    finalContent += globalLogContent;
+
+    fs.writeFileSync(filepath, finalContent);
+    console.log(`[s2_prompt_generation] 📝 DEV LOG: Complete analysis saved to ${filename}`);
+
+    // Reset for next analysis
+    globalLogContent = '';
+    currentTherapistId = '';
+  } catch (error) {
+    console.error(`[s2_prompt_generation] ❌ Dev log save error:`, error);
+  }
+}
+
+// Helper functions for step mapping
+function getStepNumber(step: string): number {
+  const stepMap: Record<string, number> = {
+    'dataAnalysis': 1,
+    'conversationPatterns': 2,
+    'therapeuticStyle': 3,
+    'personalitySynthesis': 4,
+    'finalPromptGeneration': 5
+  };
+  return stepMap[step] || 0;
+}
+
+function getStepName(step: string): string {
+  const stepNames: Record<string, string> = {
+    'dataAnalysis': 'Raw Data Analysis',
+    'conversationPatterns': 'Conversation Pattern Analysis',
+    'therapeuticStyle': 'Therapeutic Style Assessment',
+    'personalitySynthesis': 'Personality & Communication Synthesis',
+    'finalPromptGeneration': 'Final Prompt Generation'
+  };
+  return stepNames[step] || 'Unknown Step';
+}
 
 interface TherapistData {
   profile: {
@@ -109,6 +292,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Dev logging: Log all extracted data
+    logDevMode('0-data-aggregation', 'DATA', therapistData, therapistId);
+
     // Multi-step Claude AI analysis for maximum quality
     console.log(`[s2_prompt_generation] 🔄 Beginning 5-step AI analysis workflow...`);
 
@@ -134,7 +320,9 @@ export async function POST(request: NextRequest) {
     const finalAnalyses = `${allPreviousAnalyses}\n\nPERSONALITY SYNTHESIS:\n${personalitySynthesis}`;
     const sampleConversations = therapistData.sessions.slice(0, 3).map(session => ({
       sessionNumber: session.session_number,
-      messages: session.messages.slice(0, 20) // First 20 messages as examples
+      messages: session.messages.slice(0, 500), // First 500 messages as examples
+      totalMessages: session.messages.length,
+      truncated: session.messages.length > 500
     }));
     const generatedPrompt = await callClaudeAPI('finalPromptGeneration', finalAnalyses, sampleConversations, therapistData.profile);
 
@@ -183,6 +371,9 @@ export async function POST(request: NextRequest) {
     console.log(`[s2_prompt_generation] 🎯 - Confidence Score: ${confidenceScore}`);
     console.log(`[s2_prompt_generation] 📝 - Generated Prompt Length: ${generatedPrompt.length} characters`);
     console.log(`[s2_prompt_generation] 💾 - Saved as: ${savedPrompt.id} (v${savedPrompt.prompt_version})`);
+
+    // Save the complete dev log file
+    saveDevLogFile();
 
     return NextResponse.json({
       success: true,
@@ -386,17 +577,43 @@ async function aggregateTherapistData(therapistId: string): Promise<TherapistDat
     })
   );
 
-  // Calculate final statistics
-  const totalMessages = sessionsWithMessages.reduce((sum, s) => sum + s.messages.length, 0);
-  const totalTherapistMessages = sessionsWithMessages.reduce((sum, s) =>
+  // Filter out low quality conversations (less than 10 messages)
+  const MIN_MESSAGES_FOR_QUALITY = 10;
+  const lowQualitySessions = sessionsWithMessages.filter(session => session.messages.length < MIN_MESSAGES_FOR_QUALITY);
+  const qualitySessions = sessionsWithMessages.filter(session => session.messages.length >= MIN_MESSAGES_FOR_QUALITY);
+
+  // Log filtered sessions clearly
+  if (lowQualitySessions.length > 0) {
+    console.log(`[s2_prompt_generation] 🗑️ FILTERING LOW QUALITY SESSIONS (< ${MIN_MESSAGES_FOR_QUALITY} messages):`);
+    lowQualitySessions.forEach(session => {
+      console.log(`[s2_prompt_generation] 🗑️ - Session ${session.session_number}: ${session.messages.length} messages (EXCLUDED from analysis)`);
+    });
+  }
+
+  if (qualitySessions.length > 0) {
+    console.log(`[s2_prompt_generation] ✅ HIGH QUALITY SESSIONS (≥ ${MIN_MESSAGES_FOR_QUALITY} messages):`);
+    qualitySessions.forEach(session => {
+      const therapistCount = session.messages.filter(m => m.role === 'therapist').length;
+      const patientCount = session.messages.filter(m => m.role === 'ai_patient').length;
+      console.log(`[s2_prompt_generation] ✅ - Session ${session.session_number}: ${session.messages.length} total (${therapistCount} therapist, ${patientCount} patient) - INCLUDED`);
+    });
+  }
+
+  // Use only quality sessions for analysis
+  const filteredSessions = qualitySessions;
+
+  // Calculate final statistics from quality sessions only
+  const totalMessages = filteredSessions.reduce((sum, s) => sum + s.messages.length, 0);
+  const totalTherapistMessages = filteredSessions.reduce((sum, s) =>
     sum + s.messages.filter(m => m.role === 'therapist').length, 0
   );
-  const totalPatientMessages = sessionsWithMessages.reduce((sum, s) =>
+  const totalPatientMessages = filteredSessions.reduce((sum, s) =>
     sum + s.messages.filter(m => m.role === 'ai_patient').length, 0
   );
 
   console.log(`[s2_prompt_generation] 📊 FINAL DATA SUMMARY:`);
-  console.log(`[s2_prompt_generation] 📊 - Sessions: ${sessionsWithMessages.length}`);
+  console.log(`[s2_prompt_generation] 📊 - Total Sessions Found: ${sessionsWithMessages.length} (${lowQualitySessions.length} filtered out)`);
+  console.log(`[s2_prompt_generation] 📊 - Quality Sessions Used: ${filteredSessions.length}`);
   console.log(`[s2_prompt_generation] 📊 - Total Messages: ${totalMessages}`);
   console.log(`[s2_prompt_generation] 📊 - Therapist Messages: ${totalTherapistMessages}`);
   console.log(`[s2_prompt_generation] 📊 - Patient Messages: ${totalPatientMessages}`);
@@ -411,7 +628,7 @@ async function aggregateTherapistData(therapistId: string): Promise<TherapistDat
     ai_style_config: aiStyleConfig || undefined,
     license_verification: licenseVerification || undefined,
     patient_description: patientDescription || undefined,
-    sessions: sessionsWithMessages
+    sessions: filteredSessions  // Use only quality sessions
   };
 }
 
@@ -431,6 +648,17 @@ async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: an
   console.log(`[s2_prompt_generation] 🔍 Step ${step}:`);
   console.log(`[s2_prompt_generation] 📊 - Estimated input tokens: ${inputTokens}`);
   console.log(`[s2_prompt_generation] 📤 - Max output tokens: ${promptConfig.maxTokens}`);
+
+  // Dev logging: Log the full prompt sent to Claude
+  const stepNumber = getStepNumber(step);
+  const stepName = getStepName(step);
+  const fullPrompt = {
+    system: promptConfig.system,
+    user: userPrompt,
+    model: CLAUDE_MODEL,
+    maxTokens: promptConfig.maxTokens
+  };
+  logDevStep(stepNumber, stepName, 'PROMPT', fullPrompt);
 
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -463,6 +691,17 @@ async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: an
     console.log(`[s2_prompt_generation] ✅ Step ${step} complete:`);
     console.log(`[s2_prompt_generation] 📝 - Generated ${outputTokens} tokens`);
     console.log(`[s2_prompt_generation] 💰 - Usage: ${inputTokens} in + ${outputTokens} out`);
+
+    // Dev logging: Log the Claude AI response
+    const responseData = {
+      step,
+      inputTokens,
+      outputTokens,
+      response: result,
+      model: CLAUDE_MODEL,
+      timestamp: new Date().toISOString()
+    };
+    logDevStep(stepNumber, stepName, 'RESPONSE', responseData);
 
     return result;
 
