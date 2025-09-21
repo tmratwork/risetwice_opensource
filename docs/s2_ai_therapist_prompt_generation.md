@@ -288,26 +288,37 @@ The AI-generated prompts include:
 
 **Sample Multi-Step Log Output:**
 ```
-[s2_prompt_generation] 🚀 Starting quality-first multi-step analysis for therapist: abc-123
+[s2_prompt_generation] 🚀 Starting quality-first multi-step analysis for therapist: 6928605c-e0be-404d-b473-d956b35a5a4a
 [s2_prompt_generation] 🤖 Using Claude model: claude-sonnet-4-20250514
+[s2_prompt_generation] 🔍 Starting data aggregation for therapist: 6928605c-e0be-404d-b473-d956b35a5a4a
+[s2_prompt_generation] ✅ Profile found: b test (Psychiatrist)
+[s2_prompt_generation] ✅ Complete profile found with 1 specialties
+[s2_prompt_generation] ✅ AI style config found - CBT: 40%, Person-Centered: 20%
+[s2_prompt_generation] ⚠️ No license verification data available for this user
+[s2_prompt_generation] ✅ Patient description found: homeless 18 year old with history of trauma...
+[s2_prompt_generation] ✅ Found 5 sessions
+[s2_prompt_generation] ✅ Session 3: 29 total messages (16 therapist, 13 patient)
+[s2_prompt_generation] 📊 FINAL DATA SUMMARY:
+[s2_prompt_generation] 📊 - Sessions: 5, Total Messages: 37, Therapist Messages: 19
+[s2_prompt_generation] 📊 - Profile completeness: ✅, AI style config: ✅, License verification: ❌
 [s2_prompt_generation] 🔄 Beginning 5-step AI analysis workflow...
 [s2_prompt_generation] 📊 Step 1/5: Raw Data Analysis
-[s2_prompt_generation] 🔍 Step dataAnalysis:
-[s2_prompt_generation] 📊 - Estimated input tokens: 2847
-[s2_prompt_generation] 📤 - Max output tokens: 12000
-[s2_prompt_generation] ✅ Step dataAnalysis complete:
-[s2_prompt_generation] 📝 - Generated 11,234 tokens
-[s2_prompt_generation] 💰 - Usage: 2847 in + 11234 out
+[s2_prompt_generation] 📊 - Estimated input tokens: 525, Max output tokens: 12000
+[s2_prompt_generation] ✅ Step dataAnalysis complete: 1349 tokens (525 in + 1349 out)
 [s2_prompt_generation] 💬 Step 2/5: Conversation Pattern Analysis
+[s2_prompt_generation] ✅ Step conversationPatterns complete: 1733 tokens (3902 in + 1733 out)
 [s2_prompt_generation] 🎯 Step 3/5: Therapeutic Style Assessment
+[s2_prompt_generation] ✅ Step therapeuticStyle complete: 2394 tokens (3718 in + 2394 out)
 [s2_prompt_generation] 🧠 Step 4/5: Personality & Communication Synthesis
+[s2_prompt_generation] ✅ Step personalitySynthesis complete: 3941 tokens (6135 in + 3941 out)
 [s2_prompt_generation] ✨ Step 5/5: Final Prompt Generation
+[s2_prompt_generation] ✅ Step finalPromptGeneration complete: 7187 tokens (11098 in + 7187 out)
 [s2_prompt_generation] 🎉 Final Results:
-[s2_prompt_generation] ⏱️ - Total Processing Time: 2.3 minutes
-[s2_prompt_generation] 📈 - Completeness Score: 0.92
-[s2_prompt_generation] 🎯 - Confidence Score: 0.88
-[s2_prompt_generation] 📝 - Generated Prompt Length: 28,547 characters
-[s2_prompt_generation] 💾 - Saved as: xyz-789 (v1)
+[s2_prompt_generation] ⏱️ - Total Processing Time: 5.9 minutes
+[s2_prompt_generation] 📈 - Completeness Score: 0.83
+[s2_prompt_generation] 🎯 - Confidence Score: 1.00
+[s2_prompt_generation] 📝 - Generated Prompt Length: 28,746 characters
+[s2_prompt_generation] 💾 - Saved as: 6364d275-c375-4872-87ed-202c15e154a5 (v3)
 ```
 
 ### Security Architecture
@@ -334,19 +345,25 @@ The AI-generated prompts include:
 
 ### Cost & Token Analysis
 
-**Per Generation (5 Claude API Calls):**
-- **Step 1**: ~3K input + 12K output tokens
-- **Step 2**: ~15K input + 16K output tokens
-- **Step 3**: ~20K input + 14K output tokens
-- **Step 4**: ~40K input + 16K output tokens
-- **Step 5**: ~60K input + 32K output tokens
-- **Total**: ~138K input + 90K output tokens
-- **Estimated Cost**: $0.15-0.25 per comprehensive analysis
+**Actual Performance (5 Claude API Calls - Real Data):**
+- **Step 1**: ~525 input + 1,349 output tokens
+- **Step 2**: ~3,902 input + 1,733 output tokens
+- **Step 3**: ~3,718 input + 2,394 output tokens
+- **Step 4**: ~6,135 input + 3,941 output tokens
+- **Step 5**: ~11,098 input + 7,187 output tokens
+- **Total**: ~25,378 input + 16,604 output tokens
+- **Processing Time**: 5.9 minutes average
+- **Estimated Cost**: $0.03-0.05 per comprehensive analysis
+
+**Token Usage Notes:**
+- Token usage varies significantly based on data availability and conversation volume
+- Systems with more complete profiles and longer conversations use more tokens
+- Input tokens build progressively as each step includes previous analyses
 
 **Quality vs. Cost Trade-off:**
 - **Previous**: 1 call, basic analysis, ~$0.02
-- **Current**: 5 calls, expert-level analysis, ~$0.20
-- **Value**: 10x cost for 50x quality improvement
+- **Current**: 5 calls, expert-level analysis, ~$0.04
+- **Value**: 2x cost for 50x quality improvement
 
 ## Use Cases
 
@@ -374,8 +391,8 @@ Generated prompts can be used to train AI systems for:
 ### Therapist Data Protection
 - Admin-only access to sensitive information
 - Secure API endpoints with proper authentication
-- No storage of generated prompts in database
-- Professional credential handling
+- Generated prompts stored in `s2_ai_therapist_prompts` table with versioning and metadata
+- Professional credential handling with appropriate security measures
 
 ### Patient Privacy
 - All patient information is simulated/fictional
