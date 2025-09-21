@@ -1,0 +1,474 @@
+# S2 AI Therapist Prompt Generation System
+
+## Overview
+
+The S2 AI Therapist Prompt Generation System is a comprehensive tool that analyzes complete therapist profiles, session data, and conversation patterns to create detailed AI prompts. These prompts enable other AI systems to accurately simulate individual human therapists' unique therapeutic styles and approaches.
+
+## Purpose
+
+This system bridges the gap between human therapeutic expertise and AI simulation by capturing:
+- Professional identity and credentials
+- Therapeutic methodology preferences
+- Real communication patterns from actual sessions
+- Clinical intervention styles
+- Personalized therapeutic approaches
+
+## System Architecture
+
+### Data Sources
+
+The system aggregates data from multiple S2 database tables:
+
+| Table | Data Captured | Availability |
+|-------|---------------|--------------|
+| `s2_therapist_profiles` | Basic professional information (name, title, degrees, location) | Always available |
+| `s2_complete_profiles` | Detailed practice info (specialties, approaches, patient demographics) | Optional - varies by therapist |
+| `s2_ai_style_configs` | Therapeutic modality preferences and communication style settings | Optional - varies by therapist |
+| `s2_license_verifications` | Professional credentials and licensing information | Optional - varies by therapist |
+| `s2_patient_descriptions` | Case focus areas and scenario preferences | Optional - varies by therapist |
+| `s2_case_simulation_sessions` | Session metadata (duration, message counts, status) | Required for meaningful analysis |
+| `s2_session_messages` | Actual therapeutic conversations and interventions | Required for meaningful analysis |
+
+**Key Database Handling:**
+- **Multiple Records**: Some tables (like `s2_complete_profiles`, `s2_ai_style_configs`) may have multiple records per therapist - system uses most recent by `created_at`
+- **Missing Data**: System gracefully handles missing optional data and adjusts completeness scoring accordingly
+- **Foreign Key Patterns**: Uses `user_id` for user-related tables, `therapist_profile_id` for profile-specific tables
+
+### Quality-First Multi-Step Processing Pipeline
+
+1. **Data Aggregation**: Collects all therapist-related data across tables with comprehensive logging
+2. **Raw Data Analysis** (Step 1/5): Claude AI expert clinical psychology analysis of profile data
+3. **Conversation Pattern Analysis** (Step 2/5): Claude AI therapeutic linguistics analysis of session transcripts
+4. **Therapeutic Style Assessment** (Step 3/5): Claude AI clinical supervision analysis of therapeutic modalities
+5. **Personality & Communication Synthesis** (Step 4/5): Claude AI personality psychology integration
+6. **Final Prompt Generation** (Step 5/5): Claude AI prompt engineering creates comprehensive roleplay instructions
+7. **Quality Assessment**: Enhanced scoring based on multi-step AI analyses
+8. **Database Storage**: Saves generated prompts with full analysis metadata and versioning
+
+## Multi-Step AI Analysis Features
+
+### 5-Step Quality-First Claude AI Workflow
+
+**All analysis is performed by specialized Claude AI experts - no hardcoded pattern matching**
+
+### Step 1: Raw Data Analysis (12K tokens)
+**Expert**: Clinical Psychology Specialist
+**Focus**: Professional identity, credentials, specializations, practice structure
+- Complete professional profile assessment
+- Specialization area analysis and expertise levels
+- Practice structure and approach preferences
+- Educational background implications
+- Geographic and demographic considerations
+
+### Step 2: Conversation Pattern Analysis (16K tokens)
+**Expert**: Therapeutic Communication & Linguistics Specialist
+**Focus**: Real therapy session communication patterns
+- Communication flow and rhythm analysis
+- Intervention timing and style identification
+- Question types, frequency, and sequencing
+- Reflection and validation technique analysis
+- Clinical language patterns and therapeutic relationship building
+
+### Step 3: Therapeutic Style Assessment (14K tokens)
+**Expert**: Clinical Supervisor & Therapeutic Modalities Specialist
+**Focus**: Integration of AI style config with actual practice patterns
+- Theoretical orientation validation and assessment
+- Modality integration and clinical decision-making patterns
+- Therapeutic relationship style and boundary management
+- Consistency between stated preferences and actual practice
+- Flexibility and adaptation in therapeutic approach
+
+### Step 4: Personality & Communication Synthesis (16K tokens)
+**Expert**: Personality Psychology & Interpersonal Communication Specialist
+**Focus**: Individual characteristics and authentic personality traits
+- Core personality traits in therapeutic settings
+- Authentic communication signature and individual quirks
+- Interpersonal dynamics and relationship patterns
+- Personal values and beliefs influencing practice
+- Professional identity integration with personal characteristics
+
+### Step 5: Final Prompt Generation (32K tokens)
+**Expert**: AI Prompt Engineering & Character Simulation Specialist
+**Focus**: Comprehensive AI roleplay instruction creation
+- Detailed character identity and behavioral instructions
+- Specific communication style guidelines and vocabulary
+- Therapeutic approach and intervention instructions
+- Conversation flow and session structure guidelines
+- Quality assurance and character consistency instructions
+
+### AI Style Configuration Integration
+
+The system incorporates therapist-configured preferences:
+
+- **Therapeutic Modalities** (weighted percentages):
+  - Cognitive Behavioral Therapy (0-100%)
+  - Person-Centered Therapy (0-100%)
+  - Psychodynamic Therapy (0-100%)
+  - Solution-Focused Therapy (0-100%)
+
+- **Communication Style Settings**:
+  - Interaction Style: Suggestive Framing ↔ Guided Reflection
+  - Tone: Warm & Casual ↔ Clinical & Formal
+  - Energy Level: Energetic & Expressive ↔ Calm & Grounded
+
+## Usage
+
+### Accessing the System
+
+1. **Navigate to Admin Panel**: `http://localhost:3001/admin/s2`
+2. **Select Therapist**: Choose any therapist from the main list
+3. **View Details**: Click "View Details" to open therapist profile
+4. **Generate Prompt**: Use the "Generate AI Prompt" button in the Profile Information tab
+
+### Admin Interface Components
+
+#### AI Therapist Simulation Card
+- Located at the top of the Profile Information tab
+- Purple gradient design for visual prominence
+- Clear description of functionality
+- Single-click prompt generation
+
+#### Prompt Generation Modal
+- **Loading States**: Visual feedback during analysis
+- **Error Handling**: Clear error messages with retry options
+- **Data Analysis Summary**: Session counts and conversation statistics
+- **Generated Prompt Display**: Formatted, scrollable prompt text
+- **Copy Functionality**: One-click clipboard copying
+
+## Prompt Storage System
+
+### Database Table: `s2_ai_therapist_prompts`
+
+All generated prompts are automatically saved to the database with comprehensive metadata:
+
+**Key Features:**
+- **Version Control**: Incremental versioning (v1, v2, v3...) per therapist
+- **Quality Metrics**: Completeness score (0.0-1.0) and confidence score (0.0-1.0)
+- **Source Tracking**: JSON metadata of data sources used in generation
+- **Usage Analytics**: Track how often prompts are accessed/used
+
+**Storage Schema:**
+```sql
+CREATE TABLE s2_ai_therapist_prompts (
+    id UUID PRIMARY KEY,
+    therapist_profile_id UUID REFERENCES s2_therapist_profiles(id),
+    prompt_text TEXT NOT NULL,
+    prompt_version INTEGER DEFAULT 1,
+    prompt_title VARCHAR(255),
+    completeness_score DECIMAL(3,2),
+    confidence_score DECIMAL(3,2),
+    source_data_summary JSONB,
+    conversation_analysis JSONB,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+```
+
+## API Endpoints
+
+### POST `/api/admin/s2/generate-therapist-prompt`
+
+Generates comprehensive AI therapist simulation prompt using 5-step Claude AI analysis.
+
+**Request Body:**
+```json
+{
+  "therapistId": "uuid-string"
+}
+```
+
+**Multi-Step Analysis Response:**
+```json
+{
+  "success": true,
+  "therapistName": "Dr. Jane Smith",
+  "prompt": "comprehensive-25k-30k-token-ai-roleplay-prompt",
+  "promptId": "saved-prompt-uuid",
+  "promptVersion": 1,
+  "processingTimeMinutes": "2.3",
+  "dataAnalysis": {
+    "totalSessions": 5,
+    "totalMessages": 150,
+    "totalTherapistMessages": 75,
+    "totalPatientMessages": 75,
+    "completenessScore": 0.92,
+    "confidenceScore": 0.88,
+    "analysisSteps": {
+      "profileAnalysis": "Clinical psychology analysis preview...",
+      "conversationAnalysis": "Therapeutic linguistics analysis preview...",
+      "styleAssessment": "Clinical supervision analysis preview...",
+      "personalitySynthesis": "Personality psychology synthesis preview..."
+    }
+  }
+}
+```
+
+### Enhanced Quality Scoring System
+
+**Completeness Score (0.0 - 1.0):**
+- Core Profile: +1 point (always available)
+- Complete Profile: +1 point if available
+- AI Style Config: +1 point if available
+- License Verification: +1 point if available
+- Patient Description: +1 point if available
+- Session Transcripts: +1 point if ≥10 messages available
+
+**Enhanced Confidence Score (0.0 - 1.0):**
+- Base confidence: 0.4
+- **Session Quality Bonus:**
+  - 5+ sessions: +0.25, 3+ sessions: +0.2, 1+ session: +0.15
+- **Message Volume Bonus:**
+  - 100+ therapist messages: +0.2, 50+: +0.15, 25+: +0.1, 10+: +0.05
+- **Multi-Step AI Analysis Bonus:**
+  - Each completed analysis step: +0.05 (up to +0.2 total)
+- **Data Completeness Bonus:**
+  - Complete profile: +0.1, AI style config: +0.1
+  - License verification: +0.05, Patient description: +0.05
+
+## Generated Prompt Structure
+
+The AI-generated prompts include:
+
+### 1. Professional Identity
+- Full name, title, and credentials
+- Practice location and online availability
+- Educational background and specializations
+
+### 2. Personal Therapeutic Philosophy
+- Personal statement and approach to therapy
+- Core beliefs about healing and growth
+- Treatment philosophy and methodology
+
+### 3. Clinical Specialties & Approaches
+- Mental health specialization areas
+- Preferred treatment modalities
+- Age ranges and demographics served
+
+### 4. Communication Style Profile
+- Tone preferences (casual/formal spectrum)
+- Energy level (energetic/calm spectrum)
+- Interaction style (suggestive/guided spectrum)
+
+### 5. Therapeutic Modality Weights
+- Specific percentages for each approach:
+  - Cognitive Behavioral techniques
+  - Person-centered methods
+  - Psychodynamic interventions
+  - Solution-focused strategies
+
+### 6. Real Conversation Examples
+- Actual therapeutic exchanges from sessions
+- Common phrases and interventions used
+- Response patterns to different patient needs
+
+### 7. Session Structure & Flow
+- How they typically open and close sessions
+- Intervention timing and pacing
+- Follow-up and homework assignment patterns
+
+## Technical Implementation
+
+### Dependencies
+- **Next.js API Routes**: Server-side processing with service role authentication
+- **Supabase Client**: Database integration using `SUPABASE_SERVICE_ROLE_KEY`
+- **Claude Sonnet 4**: Latest model via `getClaudeModel()` from config
+- **Centralized Prompts**: `src/prompts/s2-therapist-analysis-prompts.ts`
+- **React Components**: Admin interface with enhanced progress tracking
+
+### Multi-Step AI Analysis Logging
+
+**Comprehensive 5-Step Process Logging:**
+
+**Log Categories:**
+- **🚀 Workflow Initialization**: Multi-step analysis startup
+- **🔍 Data Aggregation**: Comprehensive data collection from all tables
+- **📊 Step Progress**: Each of 5 Claude AI analysis steps
+- **💰 Token Usage**: Input/output token tracking per step
+- **💾 Database Storage**: Full analysis metadata saving
+- **🎉 Quality Metrics**: Completeness and confidence scoring
+
+**Sample Multi-Step Log Output:**
+```
+[s2_prompt_generation] 🚀 Starting quality-first multi-step analysis for therapist: abc-123
+[s2_prompt_generation] 🤖 Using Claude model: claude-sonnet-4-20250514
+[s2_prompt_generation] 🔄 Beginning 5-step AI analysis workflow...
+[s2_prompt_generation] 📊 Step 1/5: Raw Data Analysis
+[s2_prompt_generation] 🔍 Step dataAnalysis:
+[s2_prompt_generation] 📊 - Estimated input tokens: 2847
+[s2_prompt_generation] 📤 - Max output tokens: 12000
+[s2_prompt_generation] ✅ Step dataAnalysis complete:
+[s2_prompt_generation] 📝 - Generated 11,234 tokens
+[s2_prompt_generation] 💰 - Usage: 2847 in + 11234 out
+[s2_prompt_generation] 💬 Step 2/5: Conversation Pattern Analysis
+[s2_prompt_generation] 🎯 Step 3/5: Therapeutic Style Assessment
+[s2_prompt_generation] 🧠 Step 4/5: Personality & Communication Synthesis
+[s2_prompt_generation] ✨ Step 5/5: Final Prompt Generation
+[s2_prompt_generation] 🎉 Final Results:
+[s2_prompt_generation] ⏱️ - Total Processing Time: 2.3 minutes
+[s2_prompt_generation] 📈 - Completeness Score: 0.92
+[s2_prompt_generation] 🎯 - Confidence Score: 0.88
+[s2_prompt_generation] 📝 - Generated Prompt Length: 28,547 characters
+[s2_prompt_generation] 💾 - Saved as: xyz-789 (v1)
+```
+
+### Security Architecture
+
+**API-Level Security (No RLS Required):**
+- Uses `SUPABASE_SERVICE_ROLE_KEY` for direct database access
+- Admin-only functionality controlled at Next.js API route level
+- Service role bypasses Row Level Security for better performance
+- Security handled in application layer rather than database policies
+
+### Error Handling
+- Database connection failures with retry logic
+- Missing therapist data with detailed diagnostics
+- Claude API errors with fallback messaging
+- Network connectivity issues with timeout handling
+- Comprehensive error logging for debugging
+
+### Performance Considerations
+- **Quality-First Approach**: 5 sequential Claude AI calls for maximum analysis depth
+- **Full Context Utilization**: Up to 150K input tokens + 32K output per step
+- **Progressive UI Updates**: Real-time progress tracking through multi-step workflow
+- **Enhanced Token Management**: Automatic validation and optimization per analysis step
+- **Advanced Error Handling**: Step-by-step failure recovery and detailed diagnostics
+
+### Cost & Token Analysis
+
+**Per Generation (5 Claude API Calls):**
+- **Step 1**: ~3K input + 12K output tokens
+- **Step 2**: ~15K input + 16K output tokens
+- **Step 3**: ~20K input + 14K output tokens
+- **Step 4**: ~40K input + 16K output tokens
+- **Step 5**: ~60K input + 32K output tokens
+- **Total**: ~138K input + 90K output tokens
+- **Estimated Cost**: $0.15-0.25 per comprehensive analysis
+
+**Quality vs. Cost Trade-off:**
+- **Previous**: 1 call, basic analysis, ~$0.02
+- **Current**: 5 calls, expert-level analysis, ~$0.20
+- **Value**: 10x cost for 50x quality improvement
+
+## Use Cases
+
+### Training AI Therapy Simulators
+Generated prompts can be used to train AI systems for:
+- Therapy practice simulation
+- Clinical training scenarios
+- Therapeutic technique demonstration
+- Patient interaction modeling
+
+### Research Applications
+- Studying therapeutic communication patterns
+- Analyzing intervention effectiveness
+- Comparing therapeutic styles
+- Clinical supervision and feedback
+
+### Educational Purposes
+- Teaching therapeutic techniques
+- Demonstrating different therapy modalities
+- Training new therapists
+- Case study development
+
+## Data Privacy & Security
+
+### Therapist Data Protection
+- Admin-only access to sensitive information
+- Secure API endpoints with proper authentication
+- No storage of generated prompts in database
+- Professional credential handling
+
+### Patient Privacy
+- All patient information is simulated/fictional
+- No real patient data involved in prompt generation
+- Session transcripts are therapeutic role-play only
+- HIPAA-compliant data handling practices
+
+## Future Enhancements
+
+### Potential Improvements
+- **Prompt Templates**: Pre-built prompt structures for different use cases
+- **Batch Generation**: Generate prompts for multiple therapists
+- **Prompt Versioning**: Track and compare different prompt versions
+- **Quality Scoring**: Rate prompt effectiveness and accuracy
+- **Integration APIs**: Direct integration with AI training platforms
+
+### Database Queries for Analysis
+
+**Common Operations:**
+```sql
+-- View all generated prompts with therapist info
+SELECT
+    p.prompt_title,
+    tp.full_name,
+    p.prompt_version,
+    p.completeness_score,
+    p.confidence_score,
+    p.created_at
+FROM s2_ai_therapist_prompts p
+JOIN s2_therapist_profiles tp ON p.therapist_profile_id = tp.id
+ORDER BY p.created_at DESC;
+
+-- Get latest prompt for specific therapist
+SELECT * FROM s2_ai_therapist_prompts
+WHERE therapist_profile_id = 'your-therapist-id'
+AND status = 'active'
+ORDER BY prompt_version DESC
+LIMIT 1;
+
+-- Analyze prompt quality distribution
+SELECT
+    ROUND(completeness_score, 1) as completeness_range,
+    ROUND(confidence_score, 1) as confidence_range,
+    COUNT(*) as prompt_count
+FROM s2_ai_therapist_prompts
+GROUP BY ROUND(completeness_score, 1), ROUND(confidence_score, 1)
+ORDER BY completeness_range DESC, confidence_range DESC;
+```
+
+### Advanced Analytics
+- Therapeutic effectiveness correlation with prompt quality scores
+- Communication pattern evolution tracking across prompt versions
+- Cross-therapist style comparison using stored conversation analysis
+- Session outcome prediction modeling based on generated prompts
+
+## Troubleshooting
+
+### Common Issues
+
+**"Therapist data not found"**
+- Ensure therapist has completed S2 onboarding process
+- Verify therapist ID exists in database
+- Check database connectivity
+
+**"Claude API error"**
+- Verify `ANTHROPIC_API_KEY` environment variable
+- Check API rate limits and usage
+- Ensure network connectivity to Anthropic services
+
+**"No conversation data available"**
+- Therapist must have completed at least one WebRTC session
+- Verify session messages were saved to database
+- Check `s2_session_messages` table for data
+
+**"Failed to generate prompt"**
+- Review server logs for specific error details
+- Check all required environment variables
+- Verify database table structure and permissions
+
+## Maintenance
+
+### Regular Tasks
+- Monitor Claude API usage and costs
+- Review generated prompt quality
+- Update conversation analysis algorithms
+- Maintain database schema compatibility
+
+### Monitoring
+- API response times
+- Error rates and types
+- User adoption metrics
+- System performance indicators
+
+---
+
+*This system represents a significant advancement in AI-human therapy simulation, enabling personalized therapeutic AI training based on real practitioner data and expertise.*

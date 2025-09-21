@@ -406,10 +406,245 @@ const TherapistDetailView: React.FC<TherapistDetailViewProps> = ({ therapist, on
   );
 };
 
+// Prompt Generation Modal Component
+interface PromptGenerationModalProps {
+  therapist: TherapistData;
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist, isOpen, onClose }) => {
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
+  const [error, setError] = useState<string | null>(null);
+  const [dataAnalysis, setDataAnalysis] = useState<any>(null);
+
+  const handleGeneratePrompt = async () => {
+    try {
+      setIsGenerating(true);
+      setError(null);
+      setGeneratedPrompt('');
+
+      console.log(`[s2_prompt_generation] Generating prompt for therapist: ${therapist.id}`);
+
+      const response = await fetch('/api/admin/s2/generate-therapist-prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          therapistId: therapist.id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      setGeneratedPrompt(data.prompt);
+      setDataAnalysis(data.dataAnalysis);
+
+      console.log(`[s2_prompt_generation] ✅ Prompt generated successfully`);
+
+    } catch (err) {
+      console.error('[s2_prompt_generation] Error generating prompt:', err);
+      setError(err instanceof Error ? err.message : 'Failed to generate prompt');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleCopyPrompt = async () => {
+    try {
+      await navigator.clipboard.writeText(generatedPrompt);
+      // Could add toast notification here
+    } catch (err) {
+      console.error('Failed to copy prompt:', err);
+    }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Generate AI Therapist Prompt
+            </h2>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          <p className="text-gray-600 mt-2">
+            Generate a comprehensive AI prompt to simulate <strong>{therapist.full_name}</strong>&apos;s therapeutic style
+          </p>
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-6">
+          {!generatedPrompt && !isGenerating && !error && (
+            <div className="text-center py-8">
+              <div className="mb-6">
+                <div className="mx-auto h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
+                  <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Generate</h3>
+                <p className="text-gray-600 mb-6">
+                  This will analyze all of {therapist.full_name}&apos;s profile data, therapy sessions, and conversation patterns to create a detailed AI roleplay prompt.
+                </p>
+                <button
+                  onClick={handleGeneratePrompt}
+                  className="inline-flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                  </svg>
+                  Generate AI Prompt
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isGenerating && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Generating Prompt...</h3>
+              <p className="text-gray-600">
+                Analyzing therapist data and generating comprehensive AI prompt with Claude AI
+              </p>
+            </div>
+          )}
+
+          {error && (
+            <div className="text-center py-8">
+              <div className="mx-auto h-16 w-16 rounded-full bg-red-100 flex items-center justify-center mb-4">
+                <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Generation Failed</h3>
+              <p className="text-red-600 mb-4">{error}</p>
+              <button
+                onClick={handleGeneratePrompt}
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 transition-colors"
+              >
+                Try Again
+              </button>
+            </div>
+          )}
+
+          {generatedPrompt && (
+            <div className="space-y-6">
+              {/* Data Analysis Summary */}
+              {dataAnalysis && (
+                <div className="bg-blue-50 rounded-lg p-4">
+                  <h4 className="font-medium text-blue-900 mb-2">Data Analysis Summary</h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div>
+                      <span className="text-blue-700 font-medium">Sessions:</span>
+                      <span className="text-blue-900 ml-1">{dataAnalysis.totalSessions}</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700 font-medium">Messages:</span>
+                      <span className="text-blue-900 ml-1">{dataAnalysis.totalMessages}</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700 font-medium">Therapist Responses:</span>
+                      <span className="text-blue-900 ml-1">{dataAnalysis.totalTherapistMessages || dataAnalysis.conversationPatterns?.totalTherapistMessages || 0}</span>
+                    </div>
+                    <div>
+                      <span className="text-blue-700 font-medium">Avg Length:</span>
+                      <span className="text-blue-900 ml-1">{dataAnalysis.conversationPatterns?.averageMessageLength || 0} chars</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Generated Prompt */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-medium text-gray-900">Generated AI Therapist Prompt</h4>
+                  <button
+                    onClick={handleCopyPrompt}
+                    className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                  >
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copy Prompt
+                  </button>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
+                  <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono">
+                    {generatedPrompt}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-gray-200">
+          <div className="flex justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Profile Information Component
 const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist }) => {
+  const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+
   return (
     <div className="space-y-6">
+      {/* AI Prompt Generation Card */}
+      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg shadow p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">AI Therapist Simulation</h3>
+            <p className="text-gray-600 mb-4">
+              Generate a comprehensive AI prompt that can simulate {therapist.full_name}&apos;s therapeutic style and approach based on their complete profile and session data.
+            </p>
+          </div>
+          <div className="ml-6">
+            <button
+              onClick={() => setIsPromptModalOpen(true)}
+              className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
+            >
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Generate AI Prompt
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <PromptGenerationModal
+        therapist={therapist}
+        isOpen={isPromptModalOpen}
+        onClose={() => setIsPromptModalOpen(false)}
+      />
       {/* Complete Profile */}
       {therapist.complete_profile && (
         <div className="bg-white rounded-lg shadow p-6">

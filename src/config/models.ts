@@ -12,22 +12,23 @@ export const MODELS = {
     GPT_5_NANO: "gpt-5-nano", // Smallest and fastest variant
     GPT_5_CHAT: "gpt-5-chat", // Non-reasoning model for ChatGPT
     GPT_5_CHAT_LATEST: "gpt-5-chat-latest", // Latest chat model via API
-    
+
     // GPT-4 Family (Legacy - kept for compatibility)
     GPT_4O: "gpt-4o",
     GPT_4O_MINI: "gpt-4o-mini",
-    
+
     // Realtime API models (for WebRTC/voice)
     GPT_REALTIME: "gpt-realtime", // Latest production realtime model (August 2025)
     GPT_4O_REALTIME_LEGACY: "gpt-4o-realtime-preview-2024-12-17", // Deprecated
     GPT_4O_REALTIME_MOBILE: "gpt-4o-realtime-preview-2024-10-01", // Mobile uses older version
-    
+
     // Transcription models
     GPT_4O_TRANSCRIBE: "gpt-4o-transcribe",
     GPT_4O_MINI_TRANSCRIBE: "gpt-4o-mini-transcribe"
   },
-  
+
   // Anthropic Models
+  // new model, but expensive: claude-opus-4-1-20250805
   ANTHROPIC: {
     CLAUDE_SONNET_4: "claude-sonnet-4-20250514",
     CLAUDE_SONNET_3_5: "claude-3-5-sonnet-20241022"
