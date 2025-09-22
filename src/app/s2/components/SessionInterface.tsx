@@ -76,6 +76,11 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const audioChunksRef = useRef<Blob[]>([]);
   const micStreamRef = useRef<MediaStream | null>(null);
 
+  // Chunk upload tracking
+  const chunkUploadQueue = useRef<Map<number, { blob: Blob, uploading: boolean, uploaded: boolean, failed: boolean }>>(new Map());
+  const [uploadingChunks, setUploadingChunks] = useState(0);
+  const [uploadedChunks, setUploadedChunks] = useState(0);
+
   // Auth context
   const { user } = useAuth();
 
@@ -348,6 +353,81 @@ Stay in character as the patient throughout the session. Respond naturally to th
     }
   }, [generateAIPersonalityPrompt, preInitialize, connect, setupMessageHandling, setS1Session, createS2Session]);
 
+  // Upload individual audio chunk
+  const uploadAudioChunk = useCallback(async (chunk: Blob, chunkIndex: number) => {
+    const chunkInfo = chunkUploadQueue.current.get(chunkIndex);
+    if (!chunkInfo || chunkInfo.uploading || chunkInfo.uploaded) {
+      return; // Skip if already uploading or uploaded
+    }
+
+    try {
+      // Mark as uploading
+      chunkUploadQueue.current.set(chunkIndex, { ...chunkInfo, uploading: true, failed: false });
+      setUploadingChunks(prev => prev + 1);
+
+      const sessionIdToUse = s2SessionId || capturedSessionIdRef.current || localStorage.getItem('s2SessionId');
+      if (!sessionIdToUse) {
+        throw new Error('No session ID available for chunk upload');
+      }
+
+      // Create FormData for chunk upload
+      const formData = new FormData();
+      formData.append('audio', chunk, `s2-chunk-${chunkIndex}-${Date.now()}.webm`);
+      formData.append('session_id', sessionIdToUse);
+      formData.append('chunk_index', chunkIndex.toString());
+      formData.append('purpose', 'voice_chunk');
+
+      console.log(`[S2] Uploading audio chunk ${chunkIndex}:`, {
+        chunkSize: chunk.size,
+        sessionId: sessionIdToUse,
+        chunkIndex: chunkIndex
+      });
+
+      // Upload to new chunk endpoint
+      const response = await fetch('/api/s2/voice-upload-chunk', {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(`[S2] ✅ Chunk ${chunkIndex} uploaded successfully:`, result);
+
+      // Mark as uploaded
+      chunkUploadQueue.current.set(chunkIndex, { ...chunkInfo, uploading: false, uploaded: true, failed: false });
+      setUploadedChunks(prev => prev + 1);
+
+    } catch (error) {
+      console.error(`[S2] ❌ Chunk ${chunkIndex} upload failed:`, error);
+
+      // Mark as failed for potential retry
+      chunkUploadQueue.current.set(chunkIndex, { ...chunkInfo, uploading: false, uploaded: false, failed: true });
+
+      // Don't break the session for individual chunk failures
+    } finally {
+      setUploadingChunks(prev => prev - 1);
+    }
+  }, [s2SessionId]);
+
+  // Retry failed chunk uploads
+  const retryFailedChunks = useCallback(async () => {
+    const failedChunks = Array.from(chunkUploadQueue.current.entries())
+      .filter(([_, info]) => info.failed && !info.uploading)
+      .map(([index, info]) => ({ index, info }));
+
+    console.log(`[S2] Retrying ${failedChunks.length} failed chunks`);
+
+    for (const { index, info } of failedChunks) {
+      await uploadAudioChunk(info.blob, index);
+      // Small delay between retries to avoid overwhelming the server
+      await new Promise(resolve => setTimeout(resolve, 500));
+    }
+  }, [uploadAudioChunk]);
+
   useEffect(() => {
     console.log('[S2] Case simulation interface mounted');
     startTimer();
@@ -409,8 +489,23 @@ Stay in character as the patient throughout the session. Respond naturally to th
           // Collect ALL audio chunks - this captures the exact same audio WebRTC uses
           mediaRecorder.ondataavailable = (event) => {
             if (event.data.size > 0) {
+              const chunkIndex = audioChunksRef.current.length;
               audioChunksRef.current.push(event.data);
-              console.log('[S2] Audio chunk collected:', event.data.size, 'bytes (from WebRTC stream)');
+
+              console.log('[S2] Audio chunk collected:', event.data.size, 'bytes (from WebRTC stream), index:', chunkIndex);
+
+              // NEW: Add chunk to upload queue and upload immediately
+              chunkUploadQueue.current.set(chunkIndex, {
+                blob: event.data,
+                uploading: false,
+                uploaded: false,
+                failed: false
+              });
+
+              // Upload chunk immediately in background
+              uploadAudioChunk(event.data, chunkIndex).catch(error => {
+                console.error(`[S2] Failed to initiate chunk ${chunkIndex} upload:`, error);
+              });
             }
           };
 
@@ -445,9 +540,19 @@ Stay in character as the patient throughout the session. Respond naturally to th
   // Update recording status when mic mute state changes (copied from S1)
   useEffect(() => {
     if (isRecordingSession) {
-      setRecordingStatus(isMuted ? 'Recording Muted' : 'Recording');
+      const failedChunks = Array.from(chunkUploadQueue.current.values()).filter(info => info.failed).length;
+
+      if (uploadingChunks > 0) {
+        setRecordingStatus(`Recording - Uploading chunks (${uploadingChunks} active)`);
+      } else if (failedChunks > 0) {
+        setRecordingStatus(`Recording - ${failedChunks} chunks failed upload`);
+      } else if (uploadedChunks > 0) {
+        setRecordingStatus(isMuted ? `Recording Muted - ${uploadedChunks} chunks saved` : `Recording - ${uploadedChunks} chunks saved`);
+      } else {
+        setRecordingStatus(isMuted ? 'Recording Muted' : 'Recording');
+      }
     }
-  }, [isMuted, isRecordingSession]);
+  }, [isMuted, isRecordingSession, uploadingChunks, uploadedChunks]);
 
   // Auto-scroll to bottom when conversation changes (copied from V16)
   useEffect(() => {
@@ -489,7 +594,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
 
 
-  // Voice recording functions - now automatic based on session state (copied from S1)
+  // Voice recording functions - now chunk-based with immediate uploads
   const endRecordingSession = useCallback(async () => {
     if (mediaRecorderRef.current && (isRecordingSession || audioChunksRef.current.length > 0)) {
       console.log('[S2] Ending recording session');
@@ -499,83 +604,66 @@ Stay in character as the patient throughout the session. Respond naturally to th
       // Just clear our reference to it
       micStreamRef.current = null;
 
-      setRecordingStatus('Recording session ended. Auto-uploading voice...');
+      const totalChunks = audioChunksRef.current.length;
+      const uploadedCount = Array.from(chunkUploadQueue.current.values()).filter(info => info.uploaded).length;
+      const failedCount = Array.from(chunkUploadQueue.current.values()).filter(info => info.failed).length;
+      const stillUploadingCount = Array.from(chunkUploadQueue.current.values()).filter(info => info.uploading).length;
 
-      // Execute upload immediately to avoid component lifecycle issues
-      if (audioChunksRef.current.length === 0) {
+      console.log('[S2] 🎤 Recording session ended - Chunk status:', {
+        totalChunks,
+        uploadedCount,
+        failedCount,
+        stillUploadingCount
+      });
+
+      if (totalChunks === 0) {
         console.log('[S2] ❌ No audio chunks captured during session');
         setRecordingStatus('No voice recorded during session.');
         return;
       }
 
-      console.log('[S2] 🎤 Audio chunks captured, starting upload:', {
-        totalChunks: audioChunksRef.current.length,
-        totalSize: audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)
-      });
+      setRecordingStatus(`Finalizing audio upload... (${uploadedCount}/${totalChunks} chunks saved)`);
 
       try {
         setIsUploading(true);
-        setRecordingStatus('Uploading voice to cloud...');
 
-        // Combine all chunks into single blob
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: 'audio/webm'
+        // Wait a moment for any final chunks to upload
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        const finalUploadedCount = Array.from(chunkUploadQueue.current.values()).filter(info => info.uploaded).length;
+        const finalFailedCount = Array.from(chunkUploadQueue.current.values()).filter(info => info.failed).length;
+
+        console.log('[S2] Final chunk upload status:', {
+          totalChunks,
+          finalUploadedCount,
+          finalFailedCount,
+          successRate: `${Math.round((finalUploadedCount / totalChunks) * 100)}%`
         });
 
-        console.log('[S2] 📤 Auto-uploading voice recording:', {
-          size: audioBlob.size,
-          type: audioBlob.type,
-          chunks: audioChunksRef.current.length,
-          sessionId: s2SessionId
-        });
-
-        // Use captured sessionId if current one is empty (for auto-timeout case)
-        const localStorageSessionId = localStorage.getItem('s2SessionId') || '';
-        const sessionIdToUse = s2SessionId || capturedSessionIdRef.current || localStorageSessionId;
-        console.log('[DEBUG] SessionId for upload - current:', s2SessionId, 'captured:', capturedSessionIdRef.current, 'localStorage:', localStorageSessionId, 'using:', sessionIdToUse);
-
-        // Debug: Check if sessionId is available
-        if (!sessionIdToUse) {
-          console.error('[S2] ❌ No sessionId available for upload! current:', s2SessionId, 'captured:', capturedSessionIdRef.current);
-          throw new Error('Session ID is required for voice upload');
+        if (finalUploadedCount > 0) {
+          setRecordingStatus(`✅ Audio chunks saved! (${finalUploadedCount}/${totalChunks} uploaded)`);
+        } else {
+          setRecordingStatus('❌ Upload failed. Session ended but voice not saved.');
         }
 
-        // Create FormData for upload
-        const formData = new FormData();
-        formData.append('audio', audioBlob, `s2-therapist-voice-${sessionIdToUse}-${Date.now()}.webm`);
-        formData.append('session_id', sessionIdToUse);
-        formData.append('purpose', 'voice_recording');
-
-        // Upload to S2 server
-        const response = await fetch('/api/s2/voice-upload', {
-          method: 'POST',
-          body: formData
-        });
-
-        if (!response.ok) {
-          throw new Error(`Upload failed: ${response.statusText}`);
-        }
-
-        const result = await response.json();
-        console.log('[S2] Voice auto-upload successful:', result);
-
-        setRecordingStatus('✅ Voice uploaded successfully!');
-
-        // Clear chunks from memory
+        // Clear chunks from memory after successful upload
         audioChunksRef.current = [];
+        chunkUploadQueue.current.clear();
+        setUploadedChunks(0);
+        setUploadingChunks(0);
 
         // Hide status after 5 seconds
         setTimeout(() => setRecordingStatus(''), 5000);
 
       } catch (error) {
-        console.error('[S2] Voice auto-upload failed:', error);
-        setRecordingStatus('❌ Upload failed. Session ended but voice not saved.');
+        console.error('[S2] Voice recording finalization failed:', error);
+        setRecordingStatus('❌ Upload failed. Session ended but voice may be incomplete.');
         setTimeout(() => setRecordingStatus(''), 8000);
       } finally {
         setIsUploading(false);
       }
     }
-  }, [isRecordingSession, s2SessionId]);
+  }, [isRecordingSession, s2SessionId, retryFailedChunks]);
 
   const endSession = async () => {
     console.log('[S2] Ending case simulation session');

@@ -88,6 +88,11 @@ interface S2AdminSession {
   voice_recording_url?: string;
   voice_recording_uploaded?: boolean;
   voice_recording_size?: number;
+  // NEW: Chunk-based audio fields
+  total_chunks?: number;
+  uploaded_chunks?: number;
+  chunks_combined_at?: string;
+  chunk_upload_enabled?: boolean;
   s2_generated_scenarios?: {
     scenario_text: string;
     generation_model?: string;
@@ -893,6 +898,7 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
             {/* Audio Recording Status and Link */}
             <div className="mt-2 pt-2 border-t border-gray-200">
               <span className="font-medium">Audio Recording:</span>{' '}
+              {/* Check for combined audio first */}
               {selectedSession.voice_recording_uploaded && selectedSession.voice_recording_url ? (
                 <span>
                   <a
@@ -911,6 +917,19 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
                     <span className="text-gray-500 ml-2">
                       ({(selectedSession.voice_recording_size / (1024 * 1024)).toFixed(2)} MB)
                     </span>
+                  )}
+                </span>
+              ) : /* Check for audio chunks */ selectedSession.total_chunks && selectedSession.total_chunks > 0 ? (
+                <span>
+                  <span className="text-green-600 ml-1">
+                    📁 {selectedSession.uploaded_chunks}/{selectedSession.total_chunks} chunks uploaded
+                  </span>
+                  {selectedSession.chunks_combined_at ? (
+                    <span className="text-blue-600 ml-2">
+                      (Combined: {new Date(selectedSession.chunks_combined_at).toLocaleString()})
+                    </span>
+                  ) : (
+                    <CombineAudioButton sessionId={selectedSession.id} sessionNumber={selectedSession.session_number} />
                   )}
                 </span>
               ) : selectedSession.status === 'completed' ? (
@@ -1091,6 +1110,8 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
                     {/* Audio Recording Indicator */}
                     {session.voice_recording_uploaded ? (
                       <span className="text-green-600">🎧 Audio Available</span>
+                    ) : session.total_chunks && session.total_chunks > 0 ? (
+                      <span className="text-blue-600">📁 {session.uploaded_chunks}/{session.total_chunks} chunks</span>
                     ) : session.status === 'completed' ? (
                       <span className="text-amber-600">⚠️ No Audio</span>
                     ) : null}
@@ -1246,6 +1267,96 @@ const AudioDownloadButton: React.FC<AudioDownloadButtonProps> = ({
           </svg>
           Download MP3
         </>
+      )}
+    </button>
+  );
+};
+
+// Combine Audio Button Component
+interface CombineAudioButtonProps {
+  sessionId: string;
+  sessionNumber: number;
+}
+
+const CombineAudioButton: React.FC<CombineAudioButtonProps> = ({
+  sessionId
+}) => {
+  const [isCombining, setIsCombining] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [combinedUrl, setCombinedUrl] = useState<string | null>(null);
+
+  const handleCombineAudio = async () => {
+    try {
+      setIsCombining(true);
+      setError(null);
+
+      console.log(`[admin_combine] Combining audio for session: ${sessionId}`);
+
+      const response = await fetch('/api/s2/voice-combine', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sessionId: sessionId
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      console.log(`[admin_combine] ✅ Audio combined successfully:`, result);
+
+      setCombinedUrl(result.combined_audio_url);
+
+      // Reload the page to show updated status
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+
+    } catch (err) {
+      console.error('[admin_combine] Audio combination failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to combine audio');
+    } finally {
+      setIsCombining(false);
+    }
+  };
+
+  if (combinedUrl) {
+    return (
+      <a
+        href={combinedUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-blue-600 hover:text-blue-800 underline ml-2"
+      >
+        🎧 Listen to Combined Audio
+      </a>
+    );
+  }
+
+  return (
+    <button
+      onClick={handleCombineAudio}
+      disabled={isCombining}
+      className={`ml-2 px-3 py-1 text-sm rounded transition-colors ${
+        isCombining
+          ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+          : error
+          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+          : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+      }`}
+      title={error || (isCombining ? 'Combining audio chunks...' : 'Combine chunks into playable audio')}
+    >
+      {isCombining ? (
+        <>⏳ Combining...</>
+      ) : error ? (
+        <>❌ Retry Combine</>
+      ) : (
+        <>🔧 Combine Audio</>
       )}
     </button>
   );
