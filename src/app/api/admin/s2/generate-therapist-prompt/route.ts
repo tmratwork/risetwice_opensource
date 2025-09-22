@@ -696,7 +696,7 @@ async function savePromptToDatabase(
       prompt_text: promptText,
       prompt_version: nextVersion,
       prompt_title: promptTitle,
-      generated_by: 'claude-3-5-sonnet-20241022',
+      generated_by: CLAUDE_MODEL,
       generation_method: 'comprehensive-analysis',
       prompt_length: promptText.length,
       source_data_summary: sourceDataSummary,
