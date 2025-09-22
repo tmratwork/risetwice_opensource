@@ -18,6 +18,7 @@ interface TherapistProfileRequest {
   offersOnline: boolean;
   phoneNumber?: string;
   emailAddress?: string;
+  dateOfBirth?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -46,6 +47,7 @@ export async function POST(request: NextRequest) {
         offers_online: data.offersOnline,
         phone_number: data.phoneNumber || null,
         email_address: data.emailAddress || null,
+        date_of_birth: data.dateOfBirth || null,
         profile_completion_status: 'profile_complete'
       }, {
         onConflict: 'user_id'
@@ -75,6 +77,7 @@ export async function POST(request: NextRequest) {
         offersOnline: profile.offers_online,
         phoneNumber: profile.phone_number,
         emailAddress: profile.email_address,
+        dateOfBirth: profile.date_of_birth,
         completionStatus: profile.profile_completion_status,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at
@@ -128,6 +131,7 @@ export async function GET(request: NextRequest) {
         offersOnline: profile.offers_online,
         phoneNumber: profile.phone_number,
         emailAddress: profile.email_address,
+        dateOfBirth: profile.date_of_birth,
         completionStatus: profile.profile_completion_status,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at

@@ -28,6 +28,7 @@ interface TherapistProfile {
   offersOnline: boolean;
   phoneNumber?: string;
   emailAddress?: string;
+  dateOfBirth?: string;
 }
 
 interface PatientDescription {

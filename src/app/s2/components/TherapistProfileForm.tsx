@@ -17,6 +17,7 @@ interface TherapistProfile {
   offersOnline: boolean;
   phoneNumber?: string;
   emailAddress?: string;
+  dateOfBirth?: string;
 }
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
@@ -73,7 +74,8 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
             primaryLocation: data.profile.primaryLocation,
             offersOnline: data.profile.offersOnline,
             phoneNumber: data.profile.phoneNumber,
-            emailAddress: data.profile.emailAddress
+            emailAddress: data.profile.emailAddress,
+            dateOfBirth: data.profile.dateOfBirth
           });
         }
       } catch (error) {
@@ -149,7 +151,8 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           primaryLocation: profile.primaryLocation,
           offersOnline: profile.offersOnline,
           phoneNumber: profile.phoneNumber,
-          emailAddress: profile.emailAddress
+          emailAddress: profile.emailAddress,
+          dateOfBirth: profile.dateOfBirth
         })
       });
 
@@ -420,6 +423,20 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               value={profile.emailAddress || ''}
               onChange={(e) => handleInputChange('emailAddress', e.target.value)}
               placeholder="sarah.miller@example.com"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+
+          {/* Date of Birth - Optional */}
+          <div>
+            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700 mb-2">
+              Date of Birth <span className="text-gray-400">(optional)</span>
+            </label>
+            <input
+              type="date"
+              id="dateOfBirth"
+              value={profile.dateOfBirth || ''}
+              onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
             />
           </div>
