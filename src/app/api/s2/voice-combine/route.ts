@@ -68,7 +68,6 @@ export async function POST(request: NextRequest) {
 
     // Download and combine all chunks
     const audioBuffers: Buffer[] = [];
-    let totalCombinedSize = 0;
 
     for (const chunk of chunks as AudioChunk[]) {
       try {
@@ -86,7 +85,6 @@ export async function POST(request: NextRequest) {
         if (chunkData) {
           const chunkBuffer = Buffer.from(await chunkData.arrayBuffer());
           audioBuffers.push(chunkBuffer);
-          totalCombinedSize += chunkBuffer.length;
           console.log(`${logPrefix} ✅ Chunk ${chunk.chunk_index} downloaded: ${chunkBuffer.length} bytes`);
         }
       } catch (error) {

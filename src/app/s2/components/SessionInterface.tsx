@@ -416,7 +416,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
   // Retry failed chunk uploads
   const retryFailedChunks = useCallback(async () => {
     const failedChunks = Array.from(chunkUploadQueue.current.entries())
-      .filter(([_, info]) => info.failed && !info.uploading)
+      .filter(([, info]) => info.failed && !info.uploading)
       .map(([index, info]) => ({ index, info }));
 
     console.log(`[S2] Retrying ${failedChunks.length} failed chunks`);
