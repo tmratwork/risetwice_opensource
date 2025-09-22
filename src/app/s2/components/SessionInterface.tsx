@@ -115,7 +115,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
       setSessionTimer(prev => {
         const newTime = prev + 1;
         // Auto-end session after 20 minutes (1200 seconds)
-        if (newTime >= 60) {
+        if (newTime >= 1200) {
           console.log('[S2] ⏰ 20-minute session limit reached - showing end session overlay');
           // Capture sessionId NOW while it's still valid
           capturedSessionIdRef.current = s2SessionId;
@@ -127,7 +127,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
             console.log('[S2] ⏰ 5 minutes of inactivity after overlay - auto-continuing to next step');
             // Programmatically trigger the exact same function as manual "Continue" button
             await handleContinueToNextStep();
-          }, 0.5 * 60 * 1000); // 5 minutes in milliseconds
+          }, 5 * 60 * 1000); // 5 minutes in milliseconds
 
           // Don't call endSession() automatically - wait for user to click "Continue" or timeout
           if (timerRef.current) {
