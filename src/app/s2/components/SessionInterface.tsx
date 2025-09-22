@@ -52,7 +52,13 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   const [connecting, setConnecting] = useState(false);
   // Use conversation from S1 store (it handles both S1 and S2)
   const [s2SessionId, setS2SessionId] = useState<string>('');
+
+  // Debug: Track s2SessionId changes
+  useEffect(() => {
+    console.log('[DEBUG] s2SessionId changed to:', s2SessionId);
+  }, [s2SessionId]);
   const [sessionAutoEnded, setSessionAutoEnded] = useState(false);
+  const capturedSessionIdRef = useRef<string>(''); // Capture sessionId when overlay shows
   const userSpeakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Voice recording state (copied from S1)
@@ -62,6 +68,7 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
 
   const conversationHistoryRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const overlayTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const initializingRef = useRef<boolean>(false);
 
   // Voice recording refs (copied from S1)
@@ -108,10 +115,21 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
       setSessionTimer(prev => {
         const newTime = prev + 1;
         // Auto-end session after 20 minutes (1200 seconds)
-        if (newTime >= 1200) {
+        if (newTime >= 60) {
           console.log('[S2] ⏰ 20-minute session limit reached - showing end session overlay');
+          // Capture sessionId NOW while it's still valid
+          capturedSessionIdRef.current = s2SessionId;
+          console.log('[DEBUG] Captured sessionId for later use:', capturedSessionIdRef.current);
           setSessionAutoEnded(true);
-          // Don't call endSession() automatically - wait for user to click "Continue"
+
+          // Start 5-minute timeout for auto-cleanup if user abandons session
+          overlayTimeoutRef.current = setTimeout(async () => {
+            console.log('[S2] ⏰ 5 minutes of inactivity after overlay - auto-continuing to next step');
+            // Programmatically trigger the exact same function as manual "Continue" button
+            await handleContinueToNextStep();
+          }, 0.5 * 60 * 1000); // 5 minutes in milliseconds
+
+          // Don't call endSession() automatically - wait for user to click "Continue" or timeout
           if (timerRef.current) {
             clearInterval(timerRef.current);
             timerRef.current = null;
@@ -232,6 +250,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
       if (data.success && data.session) {
         console.log('[S2] ✅ S2 session created successfully:', data.session.id);
+        console.log('[DEBUG] Setting s2SessionId to:', data.session.id);
         setS2SessionId(data.session.id);
         return data.session.id;
       } else {
@@ -245,6 +264,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
   }, [user?.uid, sessionData.scenarioId]);
 
   const initializeSession = useCallback(async () => {
+    console.log('[DEBUG] initializeSession called, initializing:', initializingRef.current);
     // Prevent double initialization in React Strict Mode (exactly like S1)
     if (initializingRef.current) {
       console.log('[S2] Session already initializing, skipping...');
@@ -255,6 +275,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
       initializingRef.current = true;
       setConnecting(true);
       console.log('[S2] Initializing case simulation session...');
+      console.log('[DEBUG] About to generate AI personality prompt...');
 
       // Generate AI personality prompt based on user selections
       console.log('[S2] [DEBUG] sessionData before generating prompt:', {
@@ -272,7 +293,9 @@ Stay in character as the patient throughout the session. Respond naturally to th
       }
 
       // Create S2 session in database
+      console.log('[DEBUG] About to call createS2Session...');
       const createdSessionId = await createS2Session(aiPersonalityPrompt);
+      console.log('[DEBUG] createS2Session returned:', createdSessionId);
       if (!createdSessionId) {
         throw new Error('Failed to create S2 session in database');
       }
@@ -333,6 +356,9 @@ Stay in character as the patient throughout the session. Respond naturally to th
     return () => {
       if (timerRef.current) {
         clearInterval(timerRef.current);
+      }
+      if (overlayTimeoutRef.current) {
+        clearTimeout(overlayTimeoutRef.current);
       }
       if (userSpeakingTimeoutRef.current) {
         clearTimeout(userSpeakingTimeoutRef.current);
@@ -465,7 +491,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
   // Voice recording functions - now automatic based on session state (copied from S1)
   const endRecordingSession = useCallback(async () => {
-    if (mediaRecorderRef.current && isRecordingSession) {
+    if (mediaRecorderRef.current && (isRecordingSession || audioChunksRef.current.length > 0)) {
       console.log('[S2] Ending recording session');
       mediaRecorderRef.current.stop();
 
@@ -475,83 +501,103 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
       setRecordingStatus('Recording session ended. Auto-uploading voice...');
 
-      // Auto-upload after a short delay to ensure MediaRecorder has finished
-      setTimeout(async () => {
-        if (audioChunksRef.current.length === 0) {
-          console.log('[S2] ❌ No audio chunks captured during session');
-          setRecordingStatus('No voice recorded during session.');
-          return;
-        }
+      // Execute upload immediately to avoid component lifecycle issues
+      if (audioChunksRef.current.length === 0) {
+        console.log('[S2] ❌ No audio chunks captured during session');
+        setRecordingStatus('No voice recorded during session.');
+        return;
+      }
 
-        console.log('[S2] 🎤 Audio chunks captured, starting upload:', {
-          totalChunks: audioChunksRef.current.length,
-          totalSize: audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)
+      console.log('[S2] 🎤 Audio chunks captured, starting upload:', {
+        totalChunks: audioChunksRef.current.length,
+        totalSize: audioChunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)
+      });
+
+      try {
+        setIsUploading(true);
+        setRecordingStatus('Uploading voice to cloud...');
+
+        // Combine all chunks into single blob
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: 'audio/webm'
         });
 
-        try {
-          setIsUploading(true);
-          setRecordingStatus('Uploading voice to cloud...');
+        console.log('[S2] 📤 Auto-uploading voice recording:', {
+          size: audioBlob.size,
+          type: audioBlob.type,
+          chunks: audioChunksRef.current.length,
+          sessionId: s2SessionId
+        });
 
-          // Combine all chunks into single blob
-          const audioBlob = new Blob(audioChunksRef.current, {
-            type: 'audio/webm'
-          });
+        // Use captured sessionId if current one is empty (for auto-timeout case)
+        const localStorageSessionId = localStorage.getItem('s2SessionId') || '';
+        const sessionIdToUse = s2SessionId || capturedSessionIdRef.current || localStorageSessionId;
+        console.log('[DEBUG] SessionId for upload - current:', s2SessionId, 'captured:', capturedSessionIdRef.current, 'localStorage:', localStorageSessionId, 'using:', sessionIdToUse);
 
-          console.log('[S2] 📤 Auto-uploading voice recording:', {
-            size: audioBlob.size,
-            type: audioBlob.type,
-            chunks: audioChunksRef.current.length,
-            sessionId: s2SessionId
-          });
-
-          // Create FormData for upload
-          const formData = new FormData();
-          formData.append('audio', audioBlob, `s2-therapist-voice-${s2SessionId}-${Date.now()}.webm`);
-          formData.append('session_id', s2SessionId);
-          formData.append('purpose', 'voice_recording');
-
-          // Upload to S2 server
-          const response = await fetch('/api/s2/voice-upload', {
-            method: 'POST',
-            body: formData
-          });
-
-          if (!response.ok) {
-            throw new Error(`Upload failed: ${response.statusText}`);
-          }
-
-          const result = await response.json();
-          console.log('[S2] Voice auto-upload successful:', result);
-
-          setRecordingStatus('✅ Voice uploaded successfully!');
-
-          // Clear chunks from memory
-          audioChunksRef.current = [];
-
-          // Hide status after 5 seconds
-          setTimeout(() => setRecordingStatus(''), 5000);
-
-        } catch (error) {
-          console.error('[S2] Voice auto-upload failed:', error);
-          setRecordingStatus('❌ Upload failed. Session ended but voice not saved.');
-          setTimeout(() => setRecordingStatus(''), 8000);
-        } finally {
-          setIsUploading(false);
+        // Debug: Check if sessionId is available
+        if (!sessionIdToUse) {
+          console.error('[S2] ❌ No sessionId available for upload! current:', s2SessionId, 'captured:', capturedSessionIdRef.current);
+          throw new Error('Session ID is required for voice upload');
         }
-      }, 1000);
+
+        // Create FormData for upload
+        const formData = new FormData();
+        formData.append('audio', audioBlob, `s2-therapist-voice-${sessionIdToUse}-${Date.now()}.webm`);
+        formData.append('session_id', sessionIdToUse);
+        formData.append('purpose', 'voice_recording');
+
+        // Upload to S2 server
+        const response = await fetch('/api/s2/voice-upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          throw new Error(`Upload failed: ${response.statusText}`);
+        }
+
+        const result = await response.json();
+        console.log('[S2] Voice auto-upload successful:', result);
+
+        setRecordingStatus('✅ Voice uploaded successfully!');
+
+        // Clear chunks from memory
+        audioChunksRef.current = [];
+
+        // Hide status after 5 seconds
+        setTimeout(() => setRecordingStatus(''), 5000);
+
+      } catch (error) {
+        console.error('[S2] Voice auto-upload failed:', error);
+        setRecordingStatus('❌ Upload failed. Session ended but voice not saved.');
+        setTimeout(() => setRecordingStatus(''), 8000);
+      } finally {
+        setIsUploading(false);
+      }
     }
   }, [isRecordingSession, s2SessionId]);
 
   const endSession = async () => {
     console.log('[S2] Ending case simulation session');
 
-    // End recording session if active (copied from S1)
-    if (isRecordingSession) {
-      endRecordingSession();
+    // ADD DEBUG LOG:
+    console.log('[DEBUG] endSession state check:', {
+      isRecordingSession,
+      hasMediaRecorder: !!mediaRecorderRef.current,
+      audioChunks: audioChunksRef.current.length,
+      s2SessionId: s2SessionId
+    });
+
+    // End recording session if active OR if we have audio chunks to upload
+    if (isRecordingSession || (audioChunksRef.current.length > 0 && mediaRecorderRef.current)) {
+      await endRecordingSession();
     }
 
-    // Update session status in database
-    if (s2SessionId && user?.uid) {
+    // Update session status in database - use captured sessionId if current one is empty
+    const sessionIdForDb = s2SessionId || capturedSessionIdRef.current;
+    console.log('[DEBUG] SessionId for database update - current:', s2SessionId, 'captured:', capturedSessionIdRef.current, 'using:', sessionIdForDb);
+
+    if (sessionIdForDb && user?.uid) {
       try {
         console.log('[S2] Updating session status to completed...');
 
@@ -562,7 +608,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
           },
           body: JSON.stringify({
             action: 'end_session',
-            sessionId: s2SessionId,
+            sessionId: sessionIdForDb,
             userId: user.uid,
             duration: sessionTimer
           })
@@ -585,6 +631,23 @@ Stay in character as the patient throughout the session. Respond naturally to th
 
     disconnect();
     onEndSession();
+  };
+
+  // Shared function for continuing to next step (used by both manual button and auto-timeout)
+  const handleContinueToNextStep = async () => {
+    console.log('[S2] Continue to next step triggered');
+
+    // Clear the 5-minute auto-cleanup timeout if it's active
+    if (overlayTimeoutRef.current) {
+      clearTimeout(overlayTimeoutRef.current);
+      overlayTimeoutRef.current = null;
+      console.log('[S2] ✅ Cleared 5-minute auto-cleanup timeout');
+    }
+
+    // First end the session properly (cleanup WebRTC, save to database, etc.)
+    await endSession();
+    // Then hide overlay and proceed to next step
+    setSessionAutoEnded(false);
   };
 
   // Loading state
@@ -788,10 +851,8 @@ Stay in character as the patient throughout the session. Respond naturally to th
               <button
                 onClick={async () => {
                   console.log('[S2] User clicked Continue - ending session and proceeding to next step');
-                  // First end the session properly (cleanup WebRTC, save to database, etc.)
-                  await endSession();
-                  // Then hide overlay and proceed to next step
-                  setSessionAutoEnded(false);
+                  // Use the same shared function as auto-timeout
+                  await handleContinueToNextStep();
                 }}
                 className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
               >
