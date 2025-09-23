@@ -21,7 +21,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { therapistProfileId } = body;
 
+    console.log(`[voice_cloning] 🚀 Starting voice cloning process for therapist: ${therapistProfileId}`);
+
     if (!therapistProfileId) {
+      console.log(`[voice_cloning] ❌ Missing therapist profile ID`);
       return NextResponse.json(
         {
           success: false,
@@ -35,6 +38,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Check if voice already exists
+    console.log(`[voice_cloning] 🔍 Checking for existing voice clone...`);
     const { data: existingProfile, error: profileError } = await supabase
       .from('s2_therapist_profiles')
       .select('cloned_voice_id, full_name')
@@ -42,6 +46,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (profileError) {
+      console.log(`[voice_cloning] ❌ Therapist profile not found: ${profileError.message}`);
       return NextResponse.json(
         {
           success: false,
@@ -52,7 +57,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[voice_cloning] 👩‍⚕️ Found therapist: ${existingProfile.full_name}`);
+
     if (existingProfile.cloned_voice_id) {
+      console.log(`[voice_cloning] ⚠️ Voice already exists: ${existingProfile.cloned_voice_id}`);
       return NextResponse.json(
         {
           success: false,
@@ -64,6 +72,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get all sessions with audio for this therapist, ordered by most recent first
+    console.log(`[voice_cloning] 🎧 Searching for audio sessions...`);
     const { data: sessions, error: sessionsError } = await supabase
       .from('s2_case_simulation_sessions')
       .select(`
@@ -80,6 +89,7 @@ export async function POST(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (sessionsError) {
+      console.log(`[voice_cloning] ❌ Failed to query sessions: ${sessionsError.message}`);
       return NextResponse.json(
         {
           success: false,
@@ -90,7 +100,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[voice_cloning] 📊 Found ${sessions?.length || 0} completed sessions with audio`);
+
     if (!sessions || sessions.length === 0) {
+      console.log(`[voice_cloning] ❌ No audio sessions found for voice cloning`);
       return NextResponse.json(
         {
           success: false,
@@ -101,14 +114,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Log session details
+    sessions.forEach((session, index) => {
+      const durationMin = Math.floor(session.duration_seconds / 60);
+      const durationSec = session.duration_seconds % 60;
+      console.log(`[voice_cloning] 📝 Session #${session.session_number} (${index + 1}/${sessions.length}): ${durationMin}m ${durationSec}s - ${new Date(session.created_at).toLocaleDateString()}`);
+    });
+
     // Calculate total available audio duration
     const totalAvailableMs = sessions.reduce((total, session) =>
       total + (session.duration_seconds * 1000), 0
     );
 
+    const totalAvailableMinutes = Math.floor(totalAvailableMs / 60000);
+    const totalAvailableSeconds = Math.floor((totalAvailableMs % 60000) / 1000);
+    console.log(`[voice_cloning] ⏱️ Total available audio: ${totalAvailableMinutes}m ${totalAvailableSeconds}s`);
+
     if (totalAvailableMs < MIN_AUDIO_DURATION_MS) {
       const availableMinutes = Math.floor(totalAvailableMs / 60000);
       const requiredMinutes = Math.floor(MIN_AUDIO_DURATION_MS / 60000);
+      console.log(`[voice_cloning] ❌ Insufficient audio: ${availableMinutes}m available, ${requiredMinutes}m required`);
       return NextResponse.json(
         {
           success: false,
@@ -120,6 +145,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Select sessions to combine (most recent first, up to MAX_AUDIO_DURATION_MS)
+    console.log(`[voice_cloning] 🎯 Selecting sessions for voice cloning (max ${Math.floor(MAX_AUDIO_DURATION_MS / 60000)}m)...`);
     const selectedSessions: SessionAudio[] = [];
     let totalSelectedMs = 0;
 
@@ -129,6 +155,7 @@ export async function POST(request: NextRequest) {
       if (totalSelectedMs + sessionMs <= MAX_AUDIO_DURATION_MS) {
         selectedSessions.push(session);
         totalSelectedMs += sessionMs;
+        console.log(`[voice_cloning] ✅ Selected session #${session.session_number}: ${Math.floor(sessionMs / 60000)}m ${Math.floor((sessionMs % 60000) / 1000)}s`);
       } else {
         // If adding this session would exceed max, add partial duration
         const remainingMs = MAX_AUDIO_DURATION_MS - totalSelectedMs;
@@ -138,32 +165,44 @@ export async function POST(request: NextRequest) {
             duration_seconds: Math.floor(remainingMs / 1000)
           });
           totalSelectedMs = MAX_AUDIO_DURATION_MS;
+          console.log(`[voice_cloning] ✂️ Partially selected session #${session.session_number}: ${Math.floor(remainingMs / 60000)}m ${Math.floor((remainingMs % 60000) / 1000)}s (truncated)`);
         }
         break;
       }
     }
 
+    const selectedMinutes = Math.floor(totalSelectedMs / 60000);
+    const selectedSeconds = Math.floor((totalSelectedMs % 60000) / 1000);
+    console.log(`[voice_cloning] 📋 Selected ${selectedSessions.length} sessions, total duration: ${selectedMinutes}m ${selectedSeconds}s`);
+
     // Download and combine audio files
+    console.log(`[voice_cloning] 📥 Downloading and combining audio files...`);
     const combinedAudioBuffer = await combineAudioFiles(selectedSessions);
 
     // Clone voice with ElevenLabs
+    console.log(`[voice_cloning] 🚀 Sending audio to ElevenLabs for voice cloning...`);
     const voiceId = await cloneVoiceWithElevenLabs(
       combinedAudioBuffer,
       existingProfile.full_name
     );
+    console.log(`[voice_cloning] ✅ Voice successfully cloned with ID: ${voiceId}`);
 
     // Store voice ID in database
+    console.log(`[voice_cloning] 💾 Saving voice ID to database...`);
     const { error: updateError } = await supabase
       .from('s2_therapist_profiles')
       .update({ cloned_voice_id: voiceId })
       .eq('id', therapistProfileId);
 
     if (updateError) {
+      console.log(`[voice_cloning] ❌ Database update failed: ${updateError.message}`);
       // If database update fails, clean up the created voice
       try {
+        console.log(`[voice_cloning] 🧹 Cleaning up created voice from ElevenLabs...`);
         await deleteVoiceFromElevenLabs(voiceId);
+        console.log(`[voice_cloning] ✅ Voice cleanup successful`);
       } catch (cleanupError) {
-        console.error('Failed to cleanup voice after database error:', cleanupError);
+        console.error(`[voice_cloning] ❌ Failed to cleanup voice after database error:`, cleanupError);
       }
 
       return NextResponse.json(
@@ -176,8 +215,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const selectedMinutes = Math.floor(totalSelectedMs / 60000);
-    const selectedSeconds = Math.floor((totalSelectedMs % 60000) / 1000);
+    console.log(`[voice_cloning] 🎉 Voice cloning completed successfully!`);
+    console.log(`[voice_cloning] 📊 Final stats: ${selectedSessions.length} sessions, ${selectedMinutes}m ${selectedSeconds}s audio, voice ID: ${voiceId}`);
 
     return NextResponse.json({
       success: true,
@@ -189,7 +228,7 @@ export async function POST(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Voice cloning error:', error);
+    console.error(`[voice_cloning] ❌ Voice cloning process failed:`, error);
     return NextResponse.json(
       {
         success: false,
@@ -204,29 +243,46 @@ export async function POST(request: NextRequest) {
 async function combineAudioFiles(sessions: SessionAudio[]): Promise<Buffer> {
   const audioBuffers: Buffer[] = [];
 
-  for (const session of sessions) {
+  console.log(`[voice_cloning] 🔄 Processing ${sessions.length} audio files...`);
+
+  for (let i = 0; i < sessions.length; i++) {
+    const session = sessions[i];
     try {
+      console.log(`[voice_cloning] 📥 Downloading session #${session.session_number} audio (${i + 1}/${sessions.length})...`);
+
       // Download audio file from Supabase Storage
       const response = await fetch(session.voice_recording_url);
 
       if (!response.ok) {
+        console.log(`[voice_cloning] ❌ Download failed for session #${session.session_number}: HTTP ${response.status}`);
         throw new Error(`Failed to download audio for session ${session.session_number}: ${response.status}`);
       }
 
       const arrayBuffer = await response.arrayBuffer();
-      audioBuffers.push(Buffer.from(arrayBuffer));
+      const audioBuffer = Buffer.from(arrayBuffer);
+      audioBuffers.push(audioBuffer);
+
+      const sizeKB = Math.round(audioBuffer.length / 1024);
+      console.log(`[voice_cloning] ✅ Downloaded session #${session.session_number}: ${sizeKB}KB`);
+
     } catch (error) {
+      console.log(`[voice_cloning] ❌ Failed to process session #${session.session_number}: ${error instanceof Error ? error.message : 'Unknown error'}`);
       throw new Error(`Failed to process audio for session ${session.session_number}: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
   if (audioBuffers.length === 0) {
+    console.log(`[voice_cloning] ❌ No audio files could be processed`);
     throw new Error('No audio files could be processed');
   }
+
+  const totalSizeKB = Math.round(audioBuffers.reduce((total, buffer) => total + buffer.length, 0) / 1024);
+  console.log(`[voice_cloning] 📊 Successfully downloaded ${audioBuffers.length} audio files, total size: ${totalSizeKB}KB`);
 
   // For MP3 concatenation, we'll need to use a more sophisticated approach
   // For now, we'll just use the first (most recent) audio file
   // TODO: Implement proper MP3 concatenation if multiple files needed
+  console.log(`[voice_cloning] ⚠️ Using most recent audio file for voice cloning (session #${sessions[0].session_number})`);
   return audioBuffers[0];
 }
 
@@ -234,18 +290,25 @@ async function cloneVoiceWithElevenLabs(audioBuffer: Buffer, therapistName: stri
   const apiKey = process.env.ELEVENLABS_API_KEY;
 
   if (!apiKey) {
+    console.log(`[voice_cloning] ❌ Missing ElevenLabs API key`);
     throw new Error('ELEVENLABS_API_KEY environment variable is required');
   }
+
+  console.log(`[voice_cloning] 🎤 Preparing voice clone for "${therapistName}"...`);
 
   const formData = new FormData();
 
   // Create blob from buffer
   const audioBlob = new Blob([audioBuffer], { type: 'audio/mp3' });
+  const sizeKB = Math.round(audioBuffer.length / 1024);
+  console.log(`[voice_cloning] 📦 Audio file size: ${sizeKB}KB`);
+
   formData.append('files', audioBlob, 'voice_sample.mp3');
   formData.append('name', `${therapistName} - AI Clone`);
   formData.append('description', `Voice clone of therapist ${therapistName} for AI simulation`);
   formData.append('remove_background_noise', 'true');
 
+  console.log(`[voice_cloning] 🌐 Sending request to ElevenLabs API...`);
   const response = await fetch('https://api.elevenlabs.io/v1/voices/add', {
     method: 'POST',
     headers: {
@@ -254,14 +317,22 @@ async function cloneVoiceWithElevenLabs(audioBuffer: Buffer, therapistName: stri
     body: formData,
   });
 
+  console.log(`[voice_cloning] 📡 ElevenLabs API response: ${response.status} ${response.statusText}`);
+
   if (!response.ok) {
     const errorText = await response.text();
+    console.log(`[voice_cloning] ❌ ElevenLabs API error: ${errorText}`);
     throw new Error(`ElevenLabs API error (${response.status}): ${errorText}`);
   }
 
   const result = await response.json();
+  console.log(`[voice_cloning] 📋 ElevenLabs response:`, {
+    voice_id: result.voice_id,
+    requires_verification: result.requires_verification
+  });
 
   if (!result.voice_id) {
+    console.log(`[voice_cloning] ❌ No voice_id in ElevenLabs response`);
     throw new Error('ElevenLabs API did not return a voice_id');
   }
 

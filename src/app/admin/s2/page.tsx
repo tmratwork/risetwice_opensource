@@ -505,9 +505,6 @@ interface PromptGenerationModalProps {
 }
 
 const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist, isOpen, onClose }) => {
-  // Add debugging log OUTSIDE useEffect to verify component is rendering
-  console.log(`🔍 [DEBUG] PromptGenerationModal render - isOpen: ${isOpen}, therapist.id: ${therapist?.id}`);
-
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
   const [promptId, setPromptId] = useState<string>('');
@@ -531,45 +528,22 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
     createdAt: string;
   } | null>(null);
 
-  // Add basic useEffect to test if hooks work at all
-  useEffect(() => {
-    console.log('🎯 [DEBUG] Basic useEffect running on every render');
-  });
-
-  // Add useEffect to track when component mounts/unmounts
-  useEffect(() => {
-    console.log('🚀 [DEBUG] Component mounted or isOpen/therapist.id changed');
-    return () => {
-      console.log('🧹 [DEBUG] Component cleanup or dependencies changed');
-    };
-  }, [isOpen, therapist?.id]);
 
   // Load existing prompt when modal opens
   useEffect(() => {
-    console.log(`💡 [DEBUG] Main useEffect triggered - isOpen: ${isOpen}, therapist.id: ${therapist?.id}`);
-
     const loadExistingPrompt = async () => {
-      console.log(`[s2_preview] useEffect triggered - isOpen: ${isOpen}, therapist.id: ${therapist?.id}`);
-
       if (!isOpen || !therapist?.id) {
-        console.log(`[s2_preview] Skipping load - modal not open (${isOpen}) or no therapist ID (${therapist?.id})`);
         return;
       }
 
       // Small delay to ensure modal is fully open before loading data
-      console.log(`[s2_preview] Adding 100ms delay before API call`);
       await new Promise(resolve => setTimeout(resolve, 100));
 
       try {
-        console.log(`[s2_preview] Checking for existing prompts for therapist: ${therapist.id}`);
-
-        // Simple fetch to our API to check for existing prompts
         const response = await fetch(`/api/admin/s2/therapist-prompts?therapistId=${therapist.id}`);
-        console.log(`[s2_preview] API response status: ${response.status}`);
 
         if (response.ok) {
           const data = await response.json();
-          console.log(`[s2_preview] API response data:`, data);
 
           if (data.prompts && data.prompts.length > 0) {
             const latestPrompt = data.prompts[0]; // API should return sorted by latest
@@ -580,15 +554,9 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
               createdAt: latestPrompt.created_at
             };
 
-            console.log(`[s2_preview] Setting existing prompt:`, existingPromptData);
             setExistingPrompt(existingPromptData);
             setPromptId(latestPrompt.id); // Set promptId so Start AI Preview button appears
-            console.log(`[s2_preview] ✅ Found existing prompt: ${latestPrompt.prompt_title}, promptId set to: ${latestPrompt.id}`);
-          } else {
-            console.log(`[s2_preview] No prompts found in response`);
           }
-        } else {
-          console.log(`[s2_preview] API request failed with status: ${response.status}`);
         }
       } catch (err) {
         console.error(`[s2_preview] Error loading existing prompts:`, err);
@@ -656,11 +624,6 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
 
     console.log(`[s2_preview] Starting AI Preview for prompt: ${promptId}`);
   };
-
-  console.log(`🎨 [DEBUG] About to render modal - isOpen: ${isOpen}, existingPrompt:`, existingPrompt, `promptId: ${promptId}`);
-
-  // Temporarily disable conditional return to debug
-  // if (!isOpen) return null;
 
   return (
     <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 ${!isOpen ? 'hidden' : ''}`}>
@@ -872,8 +835,6 @@ const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist 
   const [voiceError, setVoiceError] = useState<string | null>(null);
   const [voiceSuccess, setVoiceSuccess] = useState<string | null>(null);
 
-  console.log(`🏠 [DEBUG] ProfileInformation render - isPromptModalOpen: ${isPromptModalOpen}`);
-
   const handleCloneVoice = async () => {
     try {
       setIsCloningVoice(true);
@@ -965,11 +926,7 @@ const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist 
           </div>
           <div className="ml-6">
             <button
-              onClick={() => {
-                console.log(`🔴 [DEBUG] Button clicked - opening modal`);
-                setIsPromptModalOpen(true);
-                console.log(`🔴 [DEBUG] setIsPromptModalOpen(true) called`);
-              }}
+              onClick={() => setIsPromptModalOpen(true)}
               className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

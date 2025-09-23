@@ -9,7 +9,10 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { therapistProfileId } = body;
 
+    console.log(`[voice_deletion] 🗑️ Starting voice deletion for therapist: ${therapistProfileId}`);
+
     if (!therapistProfileId) {
+      console.log(`[voice_deletion] ❌ Missing therapist profile ID`);
       return NextResponse.json(
         {
           success: false,
@@ -23,6 +26,7 @@ export async function POST(request: NextRequest) {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Get current voice ID
+    console.log(`[voice_deletion] 🔍 Looking up therapist profile and voice ID...`);
     const { data: profile, error: profileError } = await supabase
       .from('s2_therapist_profiles')
       .select('cloned_voice_id, full_name')
@@ -30,6 +34,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (profileError) {
+      console.log(`[voice_deletion] ❌ Therapist profile not found: ${profileError.message}`);
       return NextResponse.json(
         {
           success: false,
@@ -40,7 +45,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[voice_deletion] 👩‍⚕️ Found therapist: ${profile.full_name}`);
+
     if (!profile.cloned_voice_id) {
+      console.log(`[voice_deletion] ⚠️ No voice to delete for ${profile.full_name}`);
       return NextResponse.json(
         {
           success: false,
@@ -51,16 +59,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    console.log(`[voice_deletion] 🎤 Found voice to delete: ${profile.cloned_voice_id}`);
+
     // Delete voice from ElevenLabs
+    console.log(`[voice_deletion] 🌐 Deleting voice from ElevenLabs...`);
     await deleteVoiceFromElevenLabs(profile.cloned_voice_id);
+    console.log(`[voice_deletion] ✅ Voice deleted from ElevenLabs successfully`);
 
     // Remove voice ID from database
+    console.log(`[voice_deletion] 💾 Updating database to remove voice ID...`);
     const { error: updateError } = await supabase
       .from('s2_therapist_profiles')
       .update({ cloned_voice_id: null })
       .eq('id', therapistProfileId);
 
     if (updateError) {
+      console.log(`[voice_deletion] ❌ Database update failed: ${updateError.message}`);
       return NextResponse.json(
         {
           success: false,
@@ -70,6 +84,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log(`[voice_deletion] 🎉 Voice deletion completed successfully for ${profile.full_name}`);
 
     return NextResponse.json({
       success: true,
