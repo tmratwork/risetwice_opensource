@@ -157,23 +157,32 @@ export async function POST(request: NextRequest) {
         totalSelectedMs += sessionMs;
         console.log(`[voice_cloning] ✅ Selected session #${session.session_number}: ${Math.floor(sessionMs / 60000)}m ${Math.floor((sessionMs % 60000) / 1000)}s`);
       } else {
-        // If adding this session would exceed max, add partial duration
+        // If adding this session would exceed max, check if we should truncate it
         const remainingMs = MAX_AUDIO_DURATION_MS - totalSelectedMs;
-        if (remainingMs > 0) {
+        if (remainingMs > 30000) { // Only truncate if remaining time is > 30 seconds
           selectedSessions.push({
             ...session,
             duration_seconds: Math.floor(remainingMs / 1000)
           });
           totalSelectedMs = MAX_AUDIO_DURATION_MS;
-          console.log(`[voice_cloning] ✂️ Partially selected session #${session.session_number}: ${Math.floor(remainingMs / 60000)}m ${Math.floor((remainingMs % 60000) / 1000)}s (truncated)`);
+          console.log(`[voice_cloning] ✂️ Partially selected session #${session.session_number}: ${Math.floor(remainingMs / 60000)}m ${Math.floor((remainingMs % 60000) / 1000)}s (truncated from ${Math.floor(sessionMs / 60000)}m ${Math.floor((sessionMs % 60000) / 1000)}s)`);
+        } else {
+          console.log(`[voice_cloning] ⏭️ Skipped session #${session.session_number}: would exceed max duration (only ${Math.floor(remainingMs / 1000)}s remaining)`);
         }
         break;
       }
     }
 
+    // Show any skipped sessions
+    if (selectedSessions.length < sessions.length) {
+      const skippedCount = sessions.length - selectedSessions.length;
+      const skippedSessions = sessions.slice(selectedSessions.length).map(s => s.session_number);
+      console.log(`[voice_cloning] ⏭️ Skipped ${skippedCount} older sessions: #${skippedSessions.join(', #')} (exceeded ${Math.floor(MAX_AUDIO_DURATION_MS / 60000)}m limit)`);
+    }
+
     const selectedMinutes = Math.floor(totalSelectedMs / 60000);
     const selectedSeconds = Math.floor((totalSelectedMs % 60000) / 1000);
-    console.log(`[voice_cloning] 📋 Selected ${selectedSessions.length} sessions, total duration: ${selectedMinutes}m ${selectedSeconds}s`);
+    console.log(`[voice_cloning] 📋 Final selection: ${selectedSessions.length} sessions, ${selectedMinutes}m ${selectedSeconds}s total (most recent audio prioritized)`);
 
     // Download and combine audio files
     console.log(`[voice_cloning] 📥 Downloading and combining audio files...`);
@@ -279,11 +288,34 @@ async function combineAudioFiles(sessions: SessionAudio[]): Promise<Buffer> {
   const totalSizeKB = Math.round(audioBuffers.reduce((total, buffer) => total + buffer.length, 0) / 1024);
   console.log(`[voice_cloning] 📊 Successfully downloaded ${audioBuffers.length} audio files, total size: ${totalSizeKB}KB`);
 
-  // For MP3 concatenation, we'll need to use a more sophisticated approach
-  // For now, we'll just use the first (most recent) audio file
-  // TODO: Implement proper MP3 concatenation if multiple files needed
-  console.log(`[voice_cloning] ⚠️ Using most recent audio file for voice cloning (session #${sessions[0].session_number})`);
-  return audioBuffers[0];
+  if (audioBuffers.length === 1) {
+    console.log(`[voice_cloning] 📁 Single audio file - using session #${sessions[0].session_number}`);
+    return audioBuffers[0];
+  }
+
+  // Concatenate multiple MP3 files (simple concatenation works for most MP3 files)
+  console.log(`[voice_cloning] 🔗 Concatenating ${audioBuffers.length} audio files (most recent first)...`);
+
+  // Calculate target buffer size and combine buffers
+  const totalLength = audioBuffers.reduce((sum, buffer) => sum + buffer.length, 0);
+  const combinedBuffer = Buffer.alloc(totalLength);
+
+  let offset = 0;
+  for (let i = 0; i < audioBuffers.length; i++) {
+    const buffer = audioBuffers[i];
+    const sessionNum = sessions[i].session_number;
+
+    buffer.copy(combinedBuffer, offset);
+    offset += buffer.length;
+
+    const bufferKB = Math.round(buffer.length / 1024);
+    console.log(`[voice_cloning] ✅ Added session #${sessionNum} to combined audio (${bufferKB}KB)`);
+  }
+
+  const combinedSizeKB = Math.round(combinedBuffer.length / 1024);
+  console.log(`[voice_cloning] 🎵 Created combined audio file: ${combinedSizeKB}KB from ${audioBuffers.length} sessions`);
+
+  return combinedBuffer;
 }
 
 async function cloneVoiceWithElevenLabs(audioBuffer: Buffer, therapistName: string): Promise<string> {
