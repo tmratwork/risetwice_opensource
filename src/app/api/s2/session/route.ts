@@ -13,6 +13,8 @@ interface CreateSessionRequest {
   userId: string; // Firebase UID
   generatedScenarioId: string; // UUID from s2_generated_scenarios
   aiPersonalityPrompt: string;
+  isAdminPreview?: boolean; // Optional flag for admin preview mode
+  therapistProfileId?: string; // Required for admin preview mode
 }
 
 export async function POST(request: NextRequest) {
@@ -20,42 +22,112 @@ export async function POST(request: NextRequest) {
     const data: CreateSessionRequest = await request.json();
 
     // Validate required fields
-    if (!data.userId || !data.generatedScenarioId || !data.aiPersonalityPrompt) {
+    if (!data.userId || !data.aiPersonalityPrompt) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       );
     }
 
-    console.log('[S2] Creating case simulation session for user:', data.userId);
-
-    // Get therapist profile first
-    const { data: profile, error: profileError } = await supabase
-      .from('s2_therapist_profiles')
-      .select('id')
-      .eq('user_id', data.userId)
-      .single();
-
-    if (profileError || !profile) {
-      return NextResponse.json(
-        { error: 'Therapist profile not found' },
-        { status: 400 }
-      );
+    // For admin preview, generatedScenarioId is optional and therapistProfileId is required
+    if (data.isAdminPreview) {
+      if (!data.therapistProfileId) {
+        return NextResponse.json(
+          { error: 'therapistProfileId is required for admin preview mode' },
+          { status: 400 }
+        );
+      }
+      console.log('[S2] Creating ADMIN PREVIEW session for therapist:', data.therapistProfileId);
+    } else {
+      if (!data.generatedScenarioId) {
+        return NextResponse.json(
+          { error: 'generatedScenarioId is required for normal sessions' },
+          { status: 400 }
+        );
+      }
+      console.log('[S2] Creating case simulation session for user:', data.userId);
     }
 
-    // Verify generated scenario exists and belongs to this user
-    const { data: scenario, error: scenarioError } = await supabase
-      .from('s2_generated_scenarios')
-      .select('id, scenario_text')
-      .eq('id', data.generatedScenarioId)
-      .eq('therapist_profile_id', profile.id)
-      .single();
+    // Get therapist profile
+    let profile;
+    if (data.isAdminPreview) {
+      // For admin preview, use the provided therapist profile ID directly
+      const { data: adminProfile, error: adminProfileError } = await supabase
+        .from('s2_therapist_profiles')
+        .select('id')
+        .eq('id', data.therapistProfileId)
+        .single();
 
-    if (scenarioError || !scenario) {
-      return NextResponse.json(
-        { error: 'Generated scenario not found or access denied' },
-        { status: 400 }
-      );
+      if (adminProfileError || !adminProfile) {
+        return NextResponse.json(
+          { error: 'Therapist profile not found for admin preview' },
+          { status: 400 }
+        );
+      }
+      profile = adminProfile;
+    } else {
+      // For normal sessions, look up by user ID
+      const { data: userProfile, error: userProfileError } = await supabase
+        .from('s2_therapist_profiles')
+        .select('id')
+        .eq('user_id', data.userId)
+        .single();
+
+      if (userProfileError || !userProfile) {
+        return NextResponse.json(
+          { error: 'Therapist profile not found' },
+          { status: 400 }
+        );
+      }
+      profile = userProfile;
+    }
+
+    // Handle scenario verification (optional for admin preview)
+    let scenario = null;
+    let scenarioId = null;
+
+    if (!data.isAdminPreview && data.generatedScenarioId) {
+      // For normal sessions, verify scenario exists and belongs to this user
+      const { data: verifiedScenario, error: scenarioError } = await supabase
+        .from('s2_generated_scenarios')
+        .select('id, scenario_text')
+        .eq('id', data.generatedScenarioId)
+        .eq('therapist_profile_id', profile.id)
+        .single();
+
+      if (scenarioError || !verifiedScenario) {
+        return NextResponse.json(
+          { error: 'Generated scenario not found or access denied' },
+          { status: 400 }
+        );
+      }
+      scenario = verifiedScenario;
+      scenarioId = verifiedScenario.id;
+    } else if (data.isAdminPreview) {
+      // For admin preview, create a dummy scenario record
+      const { data: dummyScenario, error: dummyScenarioError } = await supabase
+        .from('s2_generated_scenarios')
+        .insert({
+          therapist_profile_id: profile.id,
+          scenario_text: 'Admin Preview Session: Testing generated AI therapist prompt with realistic patient simulation.',
+          scenario_type: 'admin_preview',
+          complexity_level: 3,
+          extracted_themes: ['admin-testing', 'prompt-validation'],
+          used_in_session: true
+        })
+        .select('id, scenario_text')
+        .single();
+
+      if (dummyScenarioError || !dummyScenario) {
+        console.error('[S2] Error creating dummy scenario for admin preview:', dummyScenarioError);
+        return NextResponse.json(
+          { error: 'Failed to create admin preview scenario' },
+          { status: 500 }
+        );
+      }
+
+      scenario = dummyScenario;
+      scenarioId = dummyScenario.id;
     }
 
     // Get next session number for this therapist
@@ -70,16 +142,18 @@ export async function POST(request: NextRequest) {
     const nextSessionNumber = (sessionCount?.session_number || 0) + 1;
 
     // Create new session
+    const sessionInsert = {
+      therapist_profile_id: profile.id,
+      generated_scenario_id: scenarioId || data.generatedScenarioId,
+      session_number: nextSessionNumber,
+      ai_personality_prompt: data.aiPersonalityPrompt,
+      voice_model: 'alloy', // Same as S1
+      status: 'created'
+    };
+
     const { data: session, error } = await supabase
       .from('s2_case_simulation_sessions')
-      .insert({
-        therapist_profile_id: profile.id,
-        generated_scenario_id: data.generatedScenarioId,
-        session_number: nextSessionNumber,
-        ai_personality_prompt: data.aiPersonalityPrompt,
-        voice_model: 'alloy', // Same as S1
-        status: 'created'
-      })
+      .insert(sessionInsert)
       .select()
       .single();
 
@@ -91,11 +165,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mark scenario as used
-    await supabase
-      .from('s2_generated_scenarios')
-      .update({ used_in_session: true })
-      .eq('id', data.generatedScenarioId);
+    // Mark scenario as used (for normal sessions only, admin scenarios are already marked)
+    if (!data.isAdminPreview && data.generatedScenarioId) {
+      await supabase
+        .from('s2_generated_scenarios')
+        .update({ used_in_session: true })
+        .eq('id', data.generatedScenarioId);
+    }
 
     console.log('[S2] ✅ Case simulation session created:', session.id);
 
@@ -108,7 +184,7 @@ export async function POST(request: NextRequest) {
         aiPersonalityPrompt: session.ai_personality_prompt,
         voiceModel: session.voice_model,
         createdAt: session.created_at,
-        scenarioText: scenario.scenario_text
+        scenarioText: scenario?.scenario_text || 'Admin Preview Session'
       }
     });
 

@@ -119,6 +119,7 @@ interface TherapistData extends TherapistProfile {
   license_verification?: LicenseVerification;
   patient_description?: PatientDescription;
   session_summary?: SessionSummary;
+  cloned_voice_id?: string;
 }
 
 const S2AdminPanel: React.FC = () => {
@@ -343,6 +344,59 @@ interface TherapistDetailViewProps {
 
 const TherapistDetailView: React.FC<TherapistDetailViewProps> = ({ therapist, onBack }) => {
   const [activeTab, setActiveTab] = useState<'profile' | 'sessions'>('profile');
+  const [existingPrompt, setExistingPrompt] = useState<{
+    id: string;
+    title: string;
+    version: number;
+    createdAt: string;
+  } | null>(null);
+  const [loadingPrompt, setLoadingPrompt] = useState(false);
+
+  // Load existing prompt for this therapist
+  useEffect(() => {
+    const loadExistingPrompt = async () => {
+      try {
+        setLoadingPrompt(true);
+        console.log(`[s2_preview] Loading existing prompts for therapist: ${therapist.id}`);
+
+        const response = await fetch(`/api/admin/s2/therapist-prompts?therapistId=${therapist.id}`);
+
+        if (response.ok) {
+          const data = await response.json();
+
+          if (data.prompts && data.prompts.length > 0) {
+            const latestPrompt = data.prompts[0]; // API returns sorted by latest
+            const existingPromptData = {
+              id: latestPrompt.id,
+              title: latestPrompt.prompt_title,
+              version: latestPrompt.prompt_version,
+              createdAt: latestPrompt.created_at
+            };
+
+            console.log(`[s2_preview] Found existing prompt:`, existingPromptData);
+            setExistingPrompt(existingPromptData);
+          } else {
+            console.log(`[s2_preview] No existing prompts found for therapist: ${therapist.id}`);
+          }
+        } else {
+          console.error(`[s2_preview] Failed to load prompts:`, response.status, response.statusText);
+        }
+      } catch (error) {
+        console.error(`[s2_preview] Error loading existing prompts:`, error);
+      } finally {
+        setLoadingPrompt(false);
+      }
+    };
+
+    loadExistingPrompt();
+  }, [therapist.id]);
+
+  const handleStartPreview = () => {
+    if (existingPrompt) {
+      console.log(`[s2_preview] Starting AI preview with prompt: ${existingPrompt.id}`);
+      window.open(`/admin/s2/preview/${existingPrompt.id}`, '_blank');
+    }
+  };
 
   return (
     <div>
@@ -371,6 +425,38 @@ const TherapistDetailView: React.FC<TherapistDetailViewProps> = ({ therapist, on
             <span className="text-sm text-gray-500">
               ✉️ {therapist.email_address}
             </span>
+          )}
+        </div>
+
+        {/* AI Preview Button */}
+        <div className="mt-6 pt-4 border-t border-gray-200">
+          {loadingPrompt ? (
+            <div className="flex items-center text-gray-500">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+              Loading existing AI prompt...
+            </div>
+          ) : existingPrompt ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-900">AI Therapist Prompt Available</p>
+                <p className="text-xs text-gray-500">
+                  Version {existingPrompt.version} • Created {new Date(existingPrompt.createdAt).toLocaleDateString()}
+                </p>
+              </div>
+              <button
+                onClick={handleStartPreview}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Start AI Preview
+              </button>
+            </div>
+          ) : (
+            <div className="text-sm text-gray-500">
+              No AI therapist prompt generated yet. Use the "Generate AI Prompt" button to create one first.
+            </div>
           )}
         </div>
       </div>
@@ -419,8 +505,12 @@ interface PromptGenerationModalProps {
 }
 
 const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist, isOpen, onClose }) => {
+  // Add debugging log OUTSIDE useEffect to verify component is rendering
+  console.log(`🔍 [DEBUG] PromptGenerationModal render - isOpen: ${isOpen}, therapist.id: ${therapist?.id}`);
+
   const [isGenerating, setIsGenerating] = useState(false);
   const [generatedPrompt, setGeneratedPrompt] = useState<string>('');
+  const [promptId, setPromptId] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [dataAnalysis, setDataAnalysis] = useState<{
     totalSessions?: number;
@@ -434,6 +524,79 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
       averageMessageLength?: number;
     };
   } | null>(null);
+  const [existingPrompt, setExistingPrompt] = useState<{
+    id: string;
+    title: string;
+    version: number;
+    createdAt: string;
+  } | null>(null);
+
+  // Add basic useEffect to test if hooks work at all
+  useEffect(() => {
+    console.log('🎯 [DEBUG] Basic useEffect running on every render');
+  });
+
+  // Add useEffect to track when component mounts/unmounts
+  useEffect(() => {
+    console.log('🚀 [DEBUG] Component mounted or isOpen/therapist.id changed');
+    return () => {
+      console.log('🧹 [DEBUG] Component cleanup or dependencies changed');
+    };
+  }, [isOpen, therapist?.id]);
+
+  // Load existing prompt when modal opens
+  useEffect(() => {
+    console.log(`💡 [DEBUG] Main useEffect triggered - isOpen: ${isOpen}, therapist.id: ${therapist?.id}`);
+
+    const loadExistingPrompt = async () => {
+      console.log(`[s2_preview] useEffect triggered - isOpen: ${isOpen}, therapist.id: ${therapist?.id}`);
+
+      if (!isOpen || !therapist?.id) {
+        console.log(`[s2_preview] Skipping load - modal not open (${isOpen}) or no therapist ID (${therapist?.id})`);
+        return;
+      }
+
+      // Small delay to ensure modal is fully open before loading data
+      console.log(`[s2_preview] Adding 100ms delay before API call`);
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      try {
+        console.log(`[s2_preview] Checking for existing prompts for therapist: ${therapist.id}`);
+
+        // Simple fetch to our API to check for existing prompts
+        const response = await fetch(`/api/admin/s2/therapist-prompts?therapistId=${therapist.id}`);
+        console.log(`[s2_preview] API response status: ${response.status}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          console.log(`[s2_preview] API response data:`, data);
+
+          if (data.prompts && data.prompts.length > 0) {
+            const latestPrompt = data.prompts[0]; // API should return sorted by latest
+            const existingPromptData = {
+              id: latestPrompt.id,
+              title: latestPrompt.prompt_title,
+              version: latestPrompt.prompt_version,
+              createdAt: latestPrompt.created_at
+            };
+
+            console.log(`[s2_preview] Setting existing prompt:`, existingPromptData);
+            setExistingPrompt(existingPromptData);
+            setPromptId(latestPrompt.id); // Set promptId so Start AI Preview button appears
+            console.log(`[s2_preview] ✅ Found existing prompt: ${latestPrompt.prompt_title}, promptId set to: ${latestPrompt.id}`);
+          } else {
+            console.log(`[s2_preview] No prompts found in response`);
+          }
+        } else {
+          console.log(`[s2_preview] API request failed with status: ${response.status}`);
+        }
+      } catch (err) {
+        console.error(`[s2_preview] Error loading existing prompts:`, err);
+      }
+    };
+
+    loadExistingPrompt();
+  }, [isOpen, therapist?.id]);
 
   const handleGeneratePrompt = async () => {
     try {
@@ -459,6 +622,7 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
 
       const data = await response.json();
       setGeneratedPrompt(data.prompt);
+      setPromptId(data.promptId);
       setDataAnalysis(data.dataAnalysis);
 
       console.log(`[s2_prompt_generation] ✅ Prompt generated successfully`);
@@ -480,10 +644,26 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
     }
   };
 
-  if (!isOpen) return null;
+  const handleStartPreview = () => {
+    if (!promptId) {
+      console.error('No prompt ID available for preview');
+      return;
+    }
+
+    // Open AI Preview in new tab
+    const previewUrl = `/admin/s2/preview/${promptId}`;
+    window.open(previewUrl, '_blank');
+
+    console.log(`[s2_preview] Starting AI Preview for prompt: ${promptId}`);
+  };
+
+  console.log(`🎨 [DEBUG] About to render modal - isOpen: ${isOpen}, existingPrompt:`, existingPrompt, `promptId: ${promptId}`);
+
+  // Temporarily disable conditional return to debug
+  // if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+    <div className={`fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 ${!isOpen ? 'hidden' : ''}`}>
       <div className="bg-white rounded-lg shadow-xl max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="px-6 py-4 border-b border-gray-200">
@@ -509,15 +689,55 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
         <div className="flex-1 overflow-y-auto p-6">
           {!generatedPrompt && !isGenerating && !error && (
             <div className="text-center py-8">
+              {/* Show existing prompt info if available */}
+              {existingPrompt && (
+                <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center justify-center mb-3">
+                    <svg className="w-6 h-6 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <h4 className="text-lg font-medium text-green-900">Existing AI Prompt Found</h4>
+                  </div>
+                  <p className="text-green-700 mb-3">
+                    <strong>{existingPrompt.title}</strong>
+                  </p>
+                  <p className="text-sm text-green-600 mb-4">
+                    Created: {new Date(existingPrompt.createdAt).toLocaleDateString()} at {new Date(existingPrompt.createdAt).toLocaleTimeString()}
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <button
+                      onClick={handleStartPreview}
+                      disabled={!promptId}
+                      className={`inline-flex items-center px-4 py-2 text-sm rounded transition-colors ${
+                        promptId
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      title={promptId ? 'Start AI Preview with existing prompt' : 'Loading prompt...'}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Start AI Preview
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="mb-6">
                 <div className="mx-auto h-16 w-16 rounded-full bg-blue-100 flex items-center justify-center">
                   <svg className="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to Generate</h3>
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {existingPrompt ? 'Generate New Version' : 'Ready to Generate'}
+                </h3>
                 <p className="text-gray-600 mb-6">
-                  This will analyze all of {therapist.full_name}&apos;s profile data, therapy sessions, and conversation patterns to create a detailed AI roleplay prompt.
+                  {existingPrompt
+                    ? `Generate version ${existingPrompt.version + 1} with latest data analysis`
+                    : `This will analyze all of ${therapist.full_name}'s profile data, therapy sessions, and conversation patterns to create a detailed AI roleplay prompt.`
+                  }
                 </p>
                 <button
                   onClick={handleGeneratePrompt}
@@ -526,7 +746,7 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
                   <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                   </svg>
-                  Generate AI Prompt
+                  {existingPrompt ? 'Generate New Version' : 'Generate AI Prompt'}
                 </button>
               </div>
             </div>
@@ -591,15 +811,32 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <h4 className="font-medium text-gray-900">Generated AI Therapist Prompt</h4>
-                  <button
-                    onClick={handleCopyPrompt}
-                    className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
-                  >
-                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    Copy Prompt
-                  </button>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={handleCopyPrompt}
+                      className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm rounded hover:bg-green-700 transition-colors"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copy Prompt
+                    </button>
+                    <button
+                      onClick={handleStartPreview}
+                      disabled={!promptId}
+                      className={`inline-flex items-center px-4 py-2 text-sm rounded transition-colors ${
+                        promptId
+                          ? 'bg-blue-600 text-white hover:bg-blue-700'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                      title={promptId ? 'Start AI Preview with this prompt' : 'Generate a prompt first'}
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Start AI Preview
+                    </button>
+                  </div>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
                   <pre className="text-sm text-gray-800 whitespace-pre-wrap font-mono">
@@ -630,6 +867,90 @@ const PromptGenerationModal: React.FC<PromptGenerationModalProps> = ({ therapist
 // Profile Information Component
 const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist }) => {
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
+  const [isCloningVoice, setIsCloningVoice] = useState(false);
+  const [isDeletingVoice, setIsDeletingVoice] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [voiceSuccess, setVoiceSuccess] = useState<string | null>(null);
+
+  console.log(`🏠 [DEBUG] ProfileInformation render - isPromptModalOpen: ${isPromptModalOpen}`);
+
+  const handleCloneVoice = async () => {
+    try {
+      setIsCloningVoice(true);
+      setVoiceError(null);
+      setVoiceSuccess(null);
+
+      const response = await fetch('/api/admin/s2/clone-voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          therapistProfileId: therapist.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Voice cloning failed');
+      }
+
+      setVoiceSuccess(data.message);
+
+      // Update therapist data to reflect the new voice
+      therapist.cloned_voice_id = data.voice_id;
+
+      setTimeout(() => setVoiceSuccess(null), 5000);
+
+    } catch (error) {
+      setVoiceError(error instanceof Error ? error.message : 'Voice cloning failed');
+      setTimeout(() => setVoiceError(null), 8000);
+    } finally {
+      setIsCloningVoice(false);
+    }
+  };
+
+  const handleDeleteVoice = async () => {
+    if (!confirm(`Are you sure you want to delete the cloned voice for ${therapist.full_name}? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      setIsDeletingVoice(true);
+      setVoiceError(null);
+      setVoiceSuccess(null);
+
+      const response = await fetch('/api/admin/s2/delete-voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          therapistProfileId: therapist.id
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Voice deletion failed');
+      }
+
+      setVoiceSuccess(data.message);
+
+      // Update therapist data to reflect the removed voice
+      therapist.cloned_voice_id = undefined;
+
+      setTimeout(() => setVoiceSuccess(null), 5000);
+
+    } catch (error) {
+      setVoiceError(error instanceof Error ? error.message : 'Voice deletion failed');
+      setTimeout(() => setVoiceError(null), 8000);
+    } finally {
+      setIsDeletingVoice(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -644,7 +965,11 @@ const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist 
           </div>
           <div className="ml-6">
             <button
-              onClick={() => setIsPromptModalOpen(true)}
+              onClick={() => {
+                console.log(`🔴 [DEBUG] Button clicked - opening modal`);
+                setIsPromptModalOpen(true);
+                console.log(`🔴 [DEBUG] setIsPromptModalOpen(true) called`);
+              }}
               className="inline-flex items-center px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors shadow-md"
             >
               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -654,6 +979,103 @@ const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist 
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Voice Cloning Card */}
+      <div className="bg-gradient-to-r from-green-50 to-teal-50 rounded-lg shadow p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Voice Cloning</h3>
+            <p className="text-gray-600 mb-4">
+              Clone {therapist.full_name}&apos;s voice using their therapy session audio recordings. Requires minimum 1 minute of audio data.
+            </p>
+            {therapist.cloned_voice_id && (
+              <p className="text-sm text-green-700 bg-green-100 px-3 py-1 rounded-full inline-block">
+                🎤 Voice already cloned (ID: {therapist.cloned_voice_id.substring(0, 12)}...)
+              </p>
+            )}
+          </div>
+          <div className="ml-6 flex flex-col space-y-3">
+            {!therapist.cloned_voice_id ? (
+              <button
+                onClick={handleCloneVoice}
+                disabled={isCloningVoice}
+                className={`inline-flex items-center px-6 py-3 rounded-lg transition-colors shadow-md ${
+                  isCloningVoice
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'bg-green-600 text-white hover:bg-green-700'
+                }`}
+              >
+                {isCloningVoice ? (
+                  <>
+                    <svg className="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
+                      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" />
+                    </svg>
+                    Cloning Voice...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                    </svg>
+                    Clone Voice
+                  </>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={handleDeleteVoice}
+                disabled={isDeletingVoice}
+                className={`inline-flex items-center px-6 py-3 rounded-lg transition-colors shadow-md ${
+                  isDeletingVoice
+                    ? 'bg-gray-400 cursor-not-allowed text-white'
+                    : 'bg-red-600 text-white hover:bg-red-700'
+                }`}
+              >
+                {isDeletingVoice ? (
+                  <>
+                    <svg className="w-5 h-5 mr-2 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" opacity="0.25" />
+                      <path fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" opacity="0.75" />
+                    </svg>
+                    Deleting Voice...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete Cloned Voice
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Status Messages */}
+        {voiceSuccess && (
+          <div className="mt-4 p-3 bg-green-100 border border-green-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-green-800">{voiceSuccess}</p>
+            </div>
+          </div>
+        )}
+
+        {voiceError && (
+          <div className="mt-4 p-3 bg-red-100 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-red-800">{voiceError}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <PromptGenerationModal

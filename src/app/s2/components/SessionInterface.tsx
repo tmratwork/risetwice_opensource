@@ -40,7 +40,11 @@ interface SessionData {
 }
 
 interface SessionInterfaceProps {
-  sessionData: SessionData & { scenarioId?: string };
+  sessionData: SessionData & {
+    scenarioId?: string;
+    sessionId?: string;
+    adminPreview?: boolean;
+  };
   onEndSession: () => void;
 }
 
@@ -231,7 +235,7 @@ Stay in character as the patient throughout the session. Respond naturally to th
       return null;
     }
 
-    if (!sessionData.scenarioId) {
+    if (!sessionData.scenarioId && !sessionData.adminPreview) {
       console.error('[S2] Cannot create session - scenarioId missing');
       return null;
     }
@@ -297,12 +301,21 @@ Stay in character as the patient throughout the session. Respond naturally to th
         throw new Error('Generated AI personality prompt is empty - check sessionData');
       }
 
-      // Create S2 session in database
-      console.log('[DEBUG] About to call createS2Session...');
-      const createdSessionId = await createS2Session(aiPersonalityPrompt);
-      console.log('[DEBUG] createS2Session returned:', createdSessionId);
-      if (!createdSessionId) {
-        throw new Error('Failed to create S2 session in database');
+      // Create or use existing S2 session
+      let createdSessionId: string;
+
+      if (sessionData.adminPreview && sessionData.sessionId) {
+        // For admin preview, use the existing session
+        console.log('[DEBUG] Using existing admin preview session:', sessionData.sessionId);
+        createdSessionId = sessionData.sessionId;
+      } else {
+        // For normal sessions, create a new session
+        console.log('[DEBUG] About to call createS2Session...');
+        createdSessionId = await createS2Session(aiPersonalityPrompt);
+        console.log('[DEBUG] createS2Session returned:', createdSessionId);
+        if (!createdSessionId) {
+          throw new Error('Failed to create S2 session in database');
+        }
       }
 
       // Set S2 session in store - exactly like S1 pattern
