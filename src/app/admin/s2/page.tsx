@@ -455,7 +455,7 @@ const TherapistDetailView: React.FC<TherapistDetailViewProps> = ({ therapist, on
             </div>
           ) : (
             <div className="text-sm text-gray-500">
-              No AI therapist prompt generated yet. Use the "Generate AI Prompt" button to create one first.
+              No AI therapist prompt generated yet. Use the &quot;Generate AI Prompt&quot; button to create one first.
             </div>
           )}
         </div>

@@ -33,6 +33,7 @@ interface TherapistProfile {
   offers_online: boolean;
   phone_number?: string;
   email_address?: string;
+  cloned_voice_id?: string;
 }
 
 interface CompleteProfile {
@@ -83,7 +84,7 @@ interface AIPreviewPageProps {
 
 const AIPreviewPageContent: React.FC<AIPreviewPageProps> = ({ params }) => {
   const resolvedParams = use(params);
-  const { user, loading: authLoading } = useAuth();
+  const { loading: authLoading } = useAuth();
   const [previewData, setPreviewData] = useState<PreviewData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -140,9 +141,19 @@ const AIPreviewPageContent: React.FC<AIPreviewPageProps> = ({ params }) => {
       const generatedTherapistPrompt = previewData.prompt.text;
       console.log(`[s2_preview] Using generated prompt (${generatedTherapistPrompt.length} chars) as therapist personality`);
 
-      // Start V17 session with triage specialist + generated therapist prompt
-      // V17 AI will role-play as the therapist described in the generated prompt
-      await startSession('triage', 'EmtkmiOFoQVpKRVpXH2B', generatedTherapistPrompt);
+      // Determine voice ID - use cloned voice if available, otherwise default
+      const clonedVoiceId = previewData.therapistProfile.cloned_voice_id;
+      const voiceId = clonedVoiceId || 'EmtkmiOFoQVpKRVpXH2B'; // Default voice ID
+
+      if (clonedVoiceId) {
+        console.log(`[s2_preview] 🎤 Using cloned voice: ${clonedVoiceId} for ${previewData.therapistProfile.full_name}`);
+      } else {
+        console.log(`[s2_preview] 🎤 Using default voice: ${voiceId} (no cloned voice available for ${previewData.therapistProfile.full_name})`);
+      }
+
+      // Start V17 session with triage specialist + generated therapist prompt + cloned voice
+      // V17 AI will role-play as the therapist described in the generated prompt with their cloned voice
+      await startSession('triage', voiceId, generatedTherapistPrompt);
 
       console.log(`[s2_preview] ✅ V17 preview session started - AI now role-playing as: ${previewData.therapistProfile.full_name}`);
       setPreviewStarted(true);
@@ -340,6 +351,23 @@ const AIPreviewPageContent: React.FC<AIPreviewPageProps> = ({ params }) => {
                   </div>
                 </div>
               )}
+
+              {/* Voice Cloning Status */}
+              <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-1">Voice:</p>
+                {previewData.therapistProfile.cloned_voice_id ? (
+                  <div className="flex items-center space-x-2">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      🎤 Cloned Voice Available
+                    </span>
+                    <span className="text-xs text-gray-500">ID: {previewData.therapistProfile.cloned_voice_id.substring(0, 12)}...</span>
+                  </div>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    🔊 Using Default Voice
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -352,9 +380,15 @@ const AIPreviewPageContent: React.FC<AIPreviewPageProps> = ({ params }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               Start AI Preview Session
+              {previewData.therapistProfile.cloned_voice_id && <span className="ml-2">🎤</span>}
             </button>
             <p className="text-sm text-gray-500 mt-2">
               This will launch a WebRTC session using the generated AI prompt to simulate {previewData.therapistProfile.full_name}
+              {previewData.therapistProfile.cloned_voice_id ? (
+                <span className="text-green-600 font-medium"> with their cloned voice</span>
+              ) : (
+                <span className="text-yellow-600"> using a default voice</span>
+              )}
             </p>
           </div>
         </div>
