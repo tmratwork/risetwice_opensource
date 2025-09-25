@@ -19,13 +19,6 @@ interface VoiceSettings {
   use_speaker_boost: boolean;
 }
 
-interface PronunciationRule {
-  id: number;
-  grapheme: string;
-  phoneme?: string;
-  alias?: string;
-  alphabet: 'cmu' | 'ipa';
-}
 
 const MODEL_FAMILIES = [
   { id: 'same_as_agent', name: 'Same as Agent Default' },
@@ -88,7 +81,6 @@ function InfoTooltip({ content, position = 'top' }: { content: string; position?
 
 export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps) {
   const store = useElevenLabsStore();
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
@@ -105,18 +97,12 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
   const [modelFamily, setModelFamily] = useState('same_as_agent');
   const [language, setLanguage] = useState('en');
 
-  // Pronunciation dictionary state
-  const [pronunciationRules, setPronunciationRules] = useState<PronunciationRule[]>([]);
-  const [dictionaryName, setDictionaryName] = useState('Agent Pronunciation Dictionary');
-
   // Load current settings when modal opens
   useEffect(() => {
     const loadCurrentSettings = async () => {
       if (!isOpen) return;
 
       try {
-        setLoading(true);
-
         if (store.agentId) {
           // Load from active agent
           setStatus('📖 Loading agent settings...');
@@ -156,8 +142,6 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
       } catch (error) {
         console.error('Failed to load settings:', error);
         setStatus('⚠️ Using default settings');
-      } finally {
-        setLoading(false);
       }
     };
 
@@ -253,57 +237,6 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
     }
   };
 
-  const addPronunciationRule = () => {
-    setPronunciationRules(prev => [...prev, {
-      id: Date.now(),
-      grapheme: '',
-      phoneme: '',
-      alias: '',
-      alphabet: 'cmu'
-    }]);
-  };
-
-  const updatePronunciationRule = (id: number, field: keyof PronunciationRule, value: string) => {
-    setPronunciationRules(prev => prev.map(rule =>
-      rule.id === id ? { ...rule, [field]: value } : rule
-    ));
-  };
-
-  const removePronunciationRule = (id: number) => {
-    setPronunciationRules(prev => prev.filter(rule => rule.id !== id));
-  };
-
-  const savePronunciationDictionary = async () => {
-    try {
-      setSaving(true);
-      setStatus('📚 Saving pronunciation dictionary...');
-
-      const validRules = pronunciationRules.filter(rule =>
-        rule.grapheme.trim() && (rule.phoneme?.trim() || rule.alias?.trim())
-      );
-
-      const response = await fetch('/api/v17/pronunciation-dictionary', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: store.agentId,
-          name: dictionaryName,
-          rules: validRules
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to save pronunciation dictionary');
-      }
-
-      setStatus('✅ Pronunciation dictionary saved successfully!');
-    } catch (error) {
-      console.error('Dictionary save error:', error);
-      setStatus('❌ Error saving dictionary');
-    } finally {
-      setSaving(false);
-    }
-  };
 
   if (!isOpen) return null;
 
