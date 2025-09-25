@@ -63,6 +63,7 @@ export interface ElevenLabsStoreState {
   audioLevel: number;
   isAudioPlaying: boolean;
   isThinking: boolean;
+  isUserSpeaking: boolean;
 
   // Mute state
   isMuted: boolean;
@@ -95,6 +96,7 @@ export interface ElevenLabsStoreState {
   setAudioLevel: (level: number) => void;
   setIsAudioPlaying: (playing: boolean) => void;
   setIsThinking: (thinking: boolean) => void;
+  setIsUserSpeaking: (speaking: boolean) => void;
   setIsMuted: (muted: boolean) => void;
   setIsAudioOutputMuted: (muted: boolean) => void;
 
@@ -151,6 +153,7 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
   audioLevel: 0,
   isAudioPlaying: false,
   isThinking: false,
+  isUserSpeaking: false,
   
   // Mute state
   isMuted: false,
@@ -191,6 +194,7 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
   setAudioLevel: (level) => set({ audioLevel: level }),
   setIsAudioPlaying: (playing) => set({ isAudioPlaying: playing }),
   setIsThinking: (thinking) => set({ isThinking: thinking }),
+  setIsUserSpeaking: (speaking) => set({ isUserSpeaking: speaking }),
   setIsMuted: (muted) => set({ isMuted: muted }),
   setIsAudioOutputMuted: (muted) => set({ isAudioOutputMuted: muted }),
 
@@ -436,6 +440,7 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
       audioLevel: 0,
       isAudioPlaying: false,
       isThinking: false,
+      isUserSpeaking: false,
       isMuted: false,
       isAudioOutputMuted: false,
       conversationHistory: [],

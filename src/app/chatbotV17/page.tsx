@@ -110,6 +110,10 @@ export default function ChatBotV17Page() {
 
     console.log('[V17] 📤 Sending text message:', userMessage);
 
+    // Start thinking state immediately when user sends text message (equivalent to OpenAI's onAudioBufferCommitted)
+    store.setIsThinking(true);
+    console.log('[V17] 🧠 Text message sent - setting thinking state to true');
+
     // Add user message to conversation history
     const messageId = `v17-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     store.addMessage({
@@ -296,6 +300,44 @@ export default function ChatBotV17Page() {
                 </div>
               </div>
             ))}
+
+            {/* User speaking indicator with dancing dots - ElevenLabs VAD detection */}
+            {store.isUserSpeaking && (
+              <div className="message user" style={{
+                backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                border: '1px solid #22c55e',
+                minHeight: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px'
+              }}>
+                <div className="flex space-x-2 items-center">
+                  <span style={{ fontSize: '12px', marginRight: '10px', color: '#22c55e' }}>Speaking...</span>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDuration: '0.6s' }}></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s', animationDuration: '0.6s' }}></div>
+                  <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '0.6s' }}></div>
+                </div>
+              </div>
+            )}
+
+            {/* AI thinking indicator with dancing dots - matching S2 implementation */}
+            {store.isThinking && (
+              <div className="message assistant" style={{
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                border: '1px solid #3b82f6',
+                minHeight: '50px',
+                display: 'flex',
+                alignItems: 'center',
+                padding: '10px'
+              }}>
+                <div className="flex space-x-2 items-center">
+                  <span style={{ fontSize: '12px', marginRight: '10px', color: '#3b82f6' }}>Thinking...</span>
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDuration: '0.6s' }}></div>
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s', animationDuration: '0.6s' }}></div>
+                  <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '0.6s' }}></div>
+                </div>
+              </div>
+            )}
 
             {/* Show placeholder when connected but no messages yet */}
             {isConnected && store.conversationHistory.length === 0 && (

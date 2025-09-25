@@ -24,7 +24,10 @@ export function useElevenLabsConversation() {
   const isMicrophoneMutedRef = useRef<boolean>(store.isMuted);
   const originalGetUserMediaRef = useRef<typeof navigator.mediaDevices.getUserMedia | null>(null);
 
-  // Initialize ElevenLabs conversation hook with agent support and v0.6.1 features
+  // Message-based user speaking detection (more reliable than VAD)
+  const [isCurrentlyReceivingUserTranscript, setIsCurrentlyReceivingUserTranscript] = useState(false);
+
+  // Initialize ElevenLabs conversation hook with agent support and VAD for thinking dots
   const conversation = useConversation({
     onConnect: () => {
       logV17('🔌 Connected to ElevenLabs agent', {
@@ -36,7 +39,7 @@ export function useElevenLabsConversation() {
       store.setConnectionState('connected');
       setIsPreparing(false);
     },
-    
+
     onDisconnect: () => {
       logV17('🔌 Disconnected from ElevenLabs agent', {
         agentId: currentAgentId,
@@ -45,6 +48,17 @@ export function useElevenLabsConversation() {
       store.setIsConnected(false);
       store.setConnectionState('disconnected');
       setIsPreparing(false);
+
+      // Reset thinking states on disconnect
+      store.setIsUserSpeaking(false);
+      store.setIsThinking(false);
+    },
+
+
+    // Audio callback - equivalent to OpenAI's onAudioDone (agent starts responding)
+    onAudio: (audio: unknown) => {
+      logV17('🔊 Agent audio received - clearing thinking state', { hasAudio: !!audio });
+      store.setIsThinking(false); // Clear thinking when agent starts generating audio
     },
     
     onMessage: (message: unknown) => {
@@ -55,24 +69,47 @@ export function useElevenLabsConversation() {
         specialist: store.triageSession?.currentSpecialist,
         timestamp: new Date().toISOString()
       });
-      
+
       // Extract and process message content
       const messageData = extractMessageData(message);
       if (messageData.text) {
         // Determine if this is user or assistant message based on message structure
         const role = messageData.isUserMessage ? 'user' : 'assistant';
-        
-        logV17(`💬 Adding ${role} message to conversation`, {
+
+        logV17(`💬 ${role} message received`, {
           text: messageData.text,
           isFinal: messageData.isFinal,
           source: messageData.isUserMessage ? 'typed_or_voice' : 'ai_response',
           messageStructure: typeof message === 'object' ? Object.keys(message as object) : 'primitive'
         });
-        
+
+        // Message-based thinking dots state management (more reliable than VAD)
+        if (messageData.isUserMessage) {
+          if (!messageData.isFinal) {
+            // User is currently speaking (tentative transcript) - equivalent to OpenAI's onSpeechStarted
+            if (!isCurrentlyReceivingUserTranscript) {
+              logV17('🎤 MSG: User started speaking (tentative transcript)');
+              store.setIsUserSpeaking(true);
+              store.setIsThinking(false);
+              setIsCurrentlyReceivingUserTranscript(true);
+            }
+          } else {
+            // User finished speaking (final transcript) - equivalent to OpenAI's onSpeechStopped
+            logV17('🎤 MSG: User finished speaking (final transcript) - starting AI thinking');
+            store.setIsUserSpeaking(false);
+            store.setIsThinking(true);
+            setIsCurrentlyReceivingUserTranscript(false);
+          }
+        } else if (!messageData.isUserMessage && messageData.isFinal) {
+          // AI response is final - stop thinking
+          logV17('🧠 AI response completed - clearing thinking state');
+          store.setIsThinking(false);
+        }
+
         // Prevent duplicate messages (same text within 2 seconds)
         const recentMessages = store.conversationHistory.slice(-3); // Check last 3 messages
-        const isDuplicate = recentMessages.some(msg => 
-          msg.text === messageData.text && 
+        const isDuplicate = recentMessages.some(msg =>
+          msg.text === messageData.text &&
           msg.role === role &&
           (Date.now() - new Date(msg.timestamp).getTime()) < 2000
         );
@@ -200,11 +237,11 @@ export function useElevenLabsConversation() {
     }
   }, [store.isMuted]);
 
-  // Real-time audio monitoring for orb visualization (based on WebAI research)
+  // Real-time audio monitoring for orb visualization and thinking state management
   useEffect(() => {
     if (!store.isConnected || !conversation) return;
 
-    logV17('🎵 Starting real-time audio monitoring for blue orb visualization');
+    logV17('🎵 Starting real-time audio monitoring for blue orb and thinking dots');
 
     let animationFrameId: number;
     let lastOutputVolume = 0;
@@ -215,6 +252,13 @@ export function useElevenLabsConversation() {
         // Get real-time audio data from ElevenLabs SDK
         const outputVolume = conversation.getOutputVolume?.() || 0;
         const isSpeaking = conversation.isSpeaking || false;
+
+        // Agent speaking state change detection for thinking dots
+        if (isSpeaking && !lastIsSpeaking) {
+          // Agent just started speaking - clear thinking state
+          logV17('🔊 Agent started speaking - clearing thinking state');
+          store.setIsThinking(false);
+        }
 
         // Only update store if values actually changed (reduce unnecessary re-renders)
         if (Math.abs(outputVolume - lastOutputVolume) > 0.01 || isSpeaking !== lastIsSpeaking) {
@@ -259,7 +303,7 @@ export function useElevenLabsConversation() {
         logV17('🎵 Audio monitoring stopped');
       }
     };
-  }, [store.isConnected, conversation, store]);
+  }, [store.isConnected, conversation]);
 
   // Client-side tools integration - disabled for now as registerTool is not available in current SDK
   // useEffect(() => {
@@ -445,7 +489,10 @@ export function useElevenLabsConversation() {
     conversation: store.conversationHistory,
     
     // Raw conversation object for advanced usage
-    conversationInstance: conversation
+    conversationInstance: conversation,
+
+    // Message-based debugging info
+    isReceivingUserTranscript: isCurrentlyReceivingUserTranscript
   };
 }
 
