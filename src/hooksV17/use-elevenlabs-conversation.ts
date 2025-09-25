@@ -220,7 +220,24 @@ export function useElevenLabsConversation() {
         demoPromptLength: demoPromptAppend?.length || 0
       });
 
-      // 1. Create or get agent for specialist
+      // 1. Load saved voice preferences from localStorage
+      let voicePreferences = null;
+      try {
+        const savedPrefs = localStorage.getItem('v17_voice_preferences');
+        if (savedPrefs) {
+          voicePreferences = JSON.parse(savedPrefs);
+          logV17('📖 Loaded voice preferences from localStorage', {
+            hasPreferences: true,
+            speed: voicePreferences.voice_settings?.speed,
+            stability: voicePreferences.voice_settings?.stability,
+            modelFamily: voicePreferences.model_family
+          });
+        }
+      } catch (error) {
+        logV17('⚠️ Failed to load voice preferences', { error });
+      }
+
+      // 2. Create or get agent for specialist with voice preferences
       const agentResponse = await fetch('/api/v17/agents/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -228,7 +245,8 @@ export function useElevenLabsConversation() {
           specialistType,
           userId: user?.uid || null,
           voiceId: demoVoiceId || 'EmtkmiOFoQVpKRVpXH2B', // Use demo voice or V17 default
-          demoPromptAppend // Pass demo prompt append if provided
+          demoPromptAppend, // Pass demo prompt append if provided
+          voicePreferences // ✅ Pass saved voice preferences to API
         })
       });
 

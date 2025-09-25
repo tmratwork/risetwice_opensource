@@ -89,14 +89,15 @@ async function getExistingV17Tools(): Promise<string[]> {
 
 export async function POST(request: NextRequest) {
   console.log(`[V17] 🚨 FORCE LOG: API ENDPOINT CALLED - /api/v17/agents/create`);
-  
+
   try {
     const body = await request.json();
-    const { 
-      specialistType = 'triage', 
+    const {
+      specialistType = 'triage',
       voiceId = 'EmtkmiOFoQVpKRVpXH2B', // V17 specified voice by default
       userId,
-      demoPromptAppend // Optional demo prompt to append to base instructions
+      demoPromptAppend, // Optional demo prompt to append to base instructions
+      voicePreferences // Optional voice preferences from localStorage
     } = body;
     
     console.log(`[V17] 🚨 FORCE LOG: Request body parsed - voiceId: ${voiceId}, specialistType: ${specialistType}, hasDemo: ${!!demoPromptAppend}`);
@@ -157,15 +158,36 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // 2. SET VOICE CONFIGURATION
-    const voiceConfig = {
-      voice_id: voiceId,
-      model_id: "eleven_turbo_v2",  // ✅ Change from v2_5 to v2 for English agent compatibility
+    // 2. SET VOICE CONFIGURATION - Use preferences if provided, otherwise defaults
+    const defaultVoiceSettings = {
       stability: 0.5,
       similarity_boost: 0.8,
       style: 0.0,
-      use_speaker_boost: true
+      use_speaker_boost: true,
+      speed: 1.0
     };
+
+    // Apply user voice preferences if provided
+    const voiceSettings = voicePreferences?.voice_settings || defaultVoiceSettings;
+    const modelFamily = voicePreferences?.model_family || 'eleven_turbo_v2';
+    const language = voicePreferences?.language || 'en';
+
+    const voiceConfig = {
+      voice_id: voiceId,
+      model_id: modelFamily === 'same_as_agent' ? 'eleven_turbo_v2' : modelFamily,
+      stability: voiceSettings.stability,
+      similarity_boost: voiceSettings.similarity_boost,
+      style: voiceSettings.style,
+      use_speaker_boost: voiceSettings.use_speaker_boost,
+      speed: voiceSettings.speed,  // ✅ Now uses user preference!
+      ...(language !== 'en' && { language }) // Add language if not English
+    };
+
+    logV17('🎛️ Voice configuration applied', {
+      userPreferencesProvided: !!voicePreferences,
+      finalVoiceConfig: voiceConfig,
+      modelFamily: modelFamily
+    });
 
     // V17: Update the existing ElevenLabs agent with Supabase instructions
     const existingAgentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
