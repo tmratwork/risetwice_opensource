@@ -200,6 +200,67 @@ export function useElevenLabsConversation() {
     }
   }, [store.isMuted]);
 
+  // Real-time audio monitoring for orb visualization (based on WebAI research)
+  useEffect(() => {
+    if (!store.isConnected || !conversation) return;
+
+    logV17('🎵 Starting real-time audio monitoring for blue orb visualization');
+
+    let animationFrameId: number;
+    let lastOutputVolume = 0;
+    let lastIsSpeaking = false;
+
+    const monitorAudio = () => {
+      try {
+        // Get real-time audio data from ElevenLabs SDK
+        const outputVolume = conversation.getOutputVolume?.() || 0;
+        const isSpeaking = conversation.isSpeaking || false;
+
+        // Only update store if values actually changed (reduce unnecessary re-renders)
+        if (Math.abs(outputVolume - lastOutputVolume) > 0.01 || isSpeaking !== lastIsSpeaking) {
+          logV17('🎵 Audio levels updated', {
+            outputVolume: outputVolume.toFixed(3),
+            isSpeaking,
+            previousVolume: lastOutputVolume.toFixed(3),
+            previousSpeaking: lastIsSpeaking
+          });
+
+          // Update store with real-time audio data
+          store.setCurrentVolume(outputVolume);
+          store.setAudioLevel(Math.floor(outputVolume * 100)); // Convert to 0-100 scale like S2
+          store.setIsAudioPlaying(isSpeaking);
+
+          lastOutputVolume = outputVolume;
+          lastIsSpeaking = isSpeaking;
+        }
+
+        // Continue monitoring if still connected
+        if (store.isConnected) {
+          animationFrameId = requestAnimationFrame(monitorAudio);
+        }
+
+      } catch (error) {
+        logV17('❌ Error in audio monitoring', { error });
+
+        // Continue monitoring despite errors (might be temporary)
+        if (store.isConnected) {
+          animationFrameId = requestAnimationFrame(monitorAudio);
+        }
+      }
+    };
+
+    // Start monitoring loop
+    animationFrameId = requestAnimationFrame(monitorAudio);
+
+    // Cleanup function
+    return () => {
+      if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+        logV17('🎵 Audio monitoring stopped');
+      }
+    };
+  }, [store.isConnected, conversation, store]);
+
   // Client-side tools integration - disabled for now as registerTool is not available in current SDK
   // useEffect(() => {
   //   if (conversation && store.isConnected) {
