@@ -46,6 +46,46 @@ const LANGUAGES = [
   { code: 'zh', name: 'Chinese' },
 ];
 
+// Tooltip component for voice settings information
+function InfoTooltip({ content, position = 'top' }: { content: string; position?: 'top' | 'bottom' }) {
+  const [isVisible, setIsVisible] = useState(false);
+
+  return (
+    <div className="relative inline-block ml-2">
+      <button
+        type="button"
+        className="w-4 h-4 bg-gray-400 text-white rounded-full text-xs font-bold hover:bg-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+        onMouseEnter={() => setIsVisible(true)}
+        onMouseLeave={() => setIsVisible(false)}
+        onFocus={() => setIsVisible(true)}
+        onBlur={() => setIsVisible(false)}
+        onClick={(e) => {
+          e.preventDefault();
+          setIsVisible(!isVisible);
+        }}
+      >
+        i
+      </button>
+      {isVisible && (
+        <div className={`absolute right-0 w-80 bg-gray-800 text-white text-xs rounded-lg p-3 shadow-lg z-[9999] ${
+          position === 'top'
+            ? 'bottom-full mb-2'
+            : 'top-full mt-2'
+        }`}>
+          <div className="whitespace-normal leading-relaxed">
+            {content}
+          </div>
+          {position === 'top' ? (
+            <div className="absolute top-full right-4 w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-800"></div>
+          ) : (
+            <div className="absolute bottom-full right-4 w-0 h-0 border-l-4 border-r-4 border-b-4 border-l-transparent border-r-transparent border-b-gray-800"></div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps) {
   const store = useElevenLabsStore();
   const [loading, setLoading] = useState(false);
@@ -329,6 +369,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
                       {voiceSettings.speed < 1 ? '(Slower)' :
                        voiceSettings.speed > 1 ? '(Faster)' : '(Normal)'}
                     </span>
+                    <InfoTooltip content="Controls how fast or slow the AI speaks. 0.7x: Much slower, deliberate speech—good for accessibility or complex topics. 1.0x: Normal conversational speed. 1.2x: Faster, more energetic speech—useful for dynamic conversations or when you want to save time." />
                   </label>
                   <input
                     type="range"
@@ -356,6 +397,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
                   <label className="block text-sm font-medium mb-2 text-gray-700">
                     Stability: {voiceSettings.stability.toFixed(2)}
                     <span className="text-gray-500 text-xs ml-2">(Consistency vs Expression)</span>
+                    <InfoTooltip content="Controls how consistent your AI voice sounds between responses. Low values (0.0-0.4): More expressive and emotional—perfect for storytelling or dynamic conversations where you want variety, but it might sound slightly different each time. High values (0.6-1.0): Very consistent and predictable—ideal for professional settings, tutorials, or when you need the same tone every time, though it may sound somewhat monotonous." />
                   </label>
                   <input
                     type="range"
@@ -373,6 +415,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
                   <label className="block text-sm font-medium mb-2 text-gray-700">
                     Similarity: {voiceSettings.similarity_boost.toFixed(2)}
                     <span className="text-gray-500 text-xs ml-2">(Clarity + Enhancement)</span>
+                    <InfoTooltip content="Determines how closely the AI tries to match your original cloned voice. Low values (0.0-0.4): The voice sounds cleaner and more generic—great if your original recording had background noise or imperfections. High values (0.6-1.0): Stays very faithful to your original voice's unique characteristics—perfect when you want it to sound exactly like you, but it might also replicate any quirks or artifacts from your training audio." />
                   </label>
                   <input
                     type="range"
@@ -390,6 +433,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
                   <label className="block text-sm font-medium mb-2 text-gray-700">
                     Style: {voiceSettings.style.toFixed(2)}
                     <span className="text-gray-500 text-xs ml-2">(Style Amplification)</span>
+                    <InfoTooltip content="Amplifies your original speaker's natural delivery patterns and vocal characteristics. Low values (0.0): Maintains a natural, unmodified delivery. Higher values (0.3-1.0): Exaggerates your speaking style—useful for character voices or when you want a more dramatic, emphasized delivery, though it uses more processing power." />
                   </label>
                   <input
                     type="range"
@@ -411,9 +455,13 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
                     onChange={(e) => updateVoiceSetting('use_speaker_boost', e.target.checked)}
                     className="mr-2"
                   />
-                  <label htmlFor="speaker-boost" className="text-sm font-medium text-gray-700">
+                  <label htmlFor="speaker-boost" className="text-sm font-medium text-gray-700 flex items-center">
                     Speaker Boost
                     <span className="text-gray-500 text-xs ml-2">(Enhanced similarity - may increase latency)</span>
+                    <InfoTooltip
+                      position="bottom"
+                      content="Enhanced similarity mode that makes the voice sound even more like the original speaker, but it increases processing time and may cause slight delays. Use this only when you need the highest possible voice fidelity and can tolerate the extra latency."
+                    />
                   </label>
                 </div>
               </div>
