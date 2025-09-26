@@ -237,31 +237,27 @@ export function useElevenLabsConversation() {
     }
   }, [store.isMuted]);
 
-  // Real-time audio monitoring - Simple, stable approach
+  // Real-time audio monitoring - Stable implementation
   const audioMonitoringRef = useRef<{
     animationFrameId?: number;
     isRunning: boolean;
     conversation?: any;
   }>({ isRunning: false });
 
-  // Create a stable conversation ID to prevent recreated objects from triggering effects
-  const conversationId = conversation?.id || null;
+  // Fix conversation ID detection - try multiple possible ID properties
+  const conversationId = conversation?.id || conversation?.conversationId || conversation?.sessionId || null;
   const isConnected = store.isConnected;
 
-  // DEBUGGING: Add temporary logging to see what's triggering the effect
+  // Monitor for excessive parent re-renders (performance warning)
   const renderCount = useRef(0);
   renderCount.current++;
-  console.log('[DEBUG] Hook render #', renderCount.current, {
-    conversationId,
-    isConnected
-  });
+
+  // Only log excessive renders to identify parent component issues
+  if (renderCount.current > 50 && renderCount.current % 50 === 0) {
+    console.warn(`[DEBUG] EXCESSIVE RENDERS: Hook rendered ${renderCount.current} times - parent component issue`);
+  }
 
   useEffect(() => {
-    console.log('[DEBUG] Audio effect triggered:', {
-      conversationId,
-      isConnected,
-      timestamp: Date.now()
-    });
 
     // Early exit if no connection or conversation
     if (!isConnected || !conversation) {
