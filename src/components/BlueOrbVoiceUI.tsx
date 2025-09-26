@@ -766,9 +766,7 @@ function BlueOrbVoiceUI({
     console.log('[DragBlueOrb] State changed - draggable:', draggable, 'isDragging:', isDragging, 'position:', position, 'isInitialized:', isInitialized);
   }, [draggable, isDragging, position.x, position.y, isInitialized]);
 
-  useEffect(() => {
-    console.log('[DragBlueOrb] Style changed:', debugStyle);
-  }, [debugStyle]);
+  // Removed excessive style logging since there's no dragging in the UX
 
   return (
     <div

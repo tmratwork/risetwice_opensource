@@ -238,72 +238,123 @@ export function useElevenLabsConversation() {
   }, [store.isMuted]);
 
   // Real-time audio monitoring for orb visualization and thinking state management
+  const audioMonitoringRef = useRef<{
+    animationFrameId?: number;
+    isRunning: boolean;
+    conversation?: any
+  }>({ isRunning: false });
+
+  // Stabilize the isConnected reference to prevent dependency changes
+  const isConnectedRef = useRef(store.isConnected);
+  isConnectedRef.current = store.isConnected;
+
+  // Stabilize store methods to prevent re-render cycles
+  const storeMethodsRef = useRef({
+    setIsThinking: store.setIsThinking,
+    setCurrentVolume: store.setCurrentVolume,
+    setAudioLevel: store.setAudioLevel,
+    setIsAudioPlaying: store.setIsAudioPlaying
+  });
+
+  // Update store method refs on each render to get latest methods
   useEffect(() => {
-    if (!store.isConnected || !conversation) return;
+    storeMethodsRef.current = {
+      setIsThinking: store.setIsThinking,
+      setCurrentVolume: store.setCurrentVolume,
+      setAudioLevel: store.setAudioLevel,
+      setIsAudioPlaying: store.setIsAudioPlaying
+    };
+  }, [store.setIsThinking, store.setCurrentVolume, store.setAudioLevel, store.setIsAudioPlaying]);
 
-    logV17('🎵 Starting real-time audio monitoring for blue orb and thinking dots');
+  useEffect(() => {
+    // Early return if already monitoring this exact conversation
+    if (audioMonitoringRef.current.isRunning &&
+        audioMonitoringRef.current.conversation === conversation) {
+      return;
+    }
 
-    let animationFrameId: number;
+    // Clean up previous monitoring
+    if (audioMonitoringRef.current.isRunning && audioMonitoringRef.current.animationFrameId) {
+      cancelAnimationFrame(audioMonitoringRef.current.animationFrameId);
+      audioMonitoringRef.current.isRunning = false;
+    }
+
+    // Check connection using ref to avoid dependency issues
+    if (!isConnectedRef.current || !conversation) return;
+
+    audioMonitoringRef.current.isRunning = true;
+    audioMonitoringRef.current.conversation = conversation;
+
+    // Only log if V17 logs are enabled (reduce noise)
+    if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
+      console.log('[V17] 🎵 Audio monitoring started');
+    }
+
     let lastOutputVolume = 0;
     let lastIsSpeaking = false;
 
     const monitorAudio = () => {
+      // Always check current connection status using ref
+      if (!audioMonitoringRef.current.isRunning || !isConnectedRef.current) {
+        return;
+      }
+
       try {
         // Get real-time audio data from ElevenLabs SDK
         const outputVolume = conversation.getOutputVolume?.() || 0;
         const isSpeaking = conversation.isSpeaking || false;
 
-        // Agent speaking state change detection for thinking dots
+        // Agent speaking state change detection
         if (isSpeaking && !lastIsSpeaking) {
-          // Agent just started speaking - clear thinking state
-          logV17('🔊 Agent started speaking - clearing thinking state');
-          store.setIsThinking(false);
+          storeMethodsRef.current.setIsThinking(false);
+          // Only log speaking transitions if V17 logs enabled
+          if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
+            console.log('[V17] 🔊 Agent started speaking');
+          }
+        } else if (!isSpeaking && lastIsSpeaking) {
+          // Only log speaking transitions if V17 logs enabled
+          if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
+            console.log('[V17] 🔇 Agent stopped speaking');
+          }
         }
 
-        // Only update store if values actually changed (reduce unnecessary re-renders)
+        // Only update store if values actually changed
         if (Math.abs(outputVolume - lastOutputVolume) > 0.01 || isSpeaking !== lastIsSpeaking) {
-          logV17('🎵 Audio levels updated', {
-            outputVolume: outputVolume.toFixed(3),
-            isSpeaking,
-            previousVolume: lastOutputVolume.toFixed(3),
-            previousSpeaking: lastIsSpeaking
-          });
-
-          // Update store with real-time audio data
-          store.setCurrentVolume(outputVolume);
-          store.setAudioLevel(Math.floor(outputVolume * 100)); // Convert to 0-100 scale like S2
-          store.setIsAudioPlaying(isSpeaking);
+          storeMethodsRef.current.setCurrentVolume(outputVolume);
+          storeMethodsRef.current.setAudioLevel(Math.floor(outputVolume * 100));
+          storeMethodsRef.current.setIsAudioPlaying(isSpeaking);
 
           lastOutputVolume = outputVolume;
           lastIsSpeaking = isSpeaking;
         }
 
-        // Continue monitoring if still connected
-        if (store.isConnected) {
-          animationFrameId = requestAnimationFrame(monitorAudio);
+        // Continue monitoring
+        if (audioMonitoringRef.current.isRunning) {
+          audioMonitoringRef.current.animationFrameId = requestAnimationFrame(monitorAudio);
         }
 
       } catch (error) {
-        logV17('❌ Error in audio monitoring', { error });
-
-        // Continue monitoring despite errors (might be temporary)
-        if (store.isConnected) {
-          animationFrameId = requestAnimationFrame(monitorAudio);
+        if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
+          console.error('[V17] ❌ Error in audio monitoring', error);
+        }
+        if (audioMonitoringRef.current.isRunning) {
+          audioMonitoringRef.current.animationFrameId = requestAnimationFrame(monitorAudio);
         }
       }
     };
 
-    // Start monitoring loop
-    animationFrameId = requestAnimationFrame(monitorAudio);
+    audioMonitoringRef.current.animationFrameId = requestAnimationFrame(monitorAudio);
 
-    // Cleanup function
     return () => {
-      if (animationFrameId) {
-        cancelAnimationFrame(animationFrameId);
-        logV17('🎵 Audio monitoring stopped');
+      audioMonitoringRef.current.isRunning = false;
+      if (audioMonitoringRef.current.animationFrameId) {
+        cancelAnimationFrame(audioMonitoringRef.current.animationFrameId);
+        if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
+          console.log('[V17] 🎵 Audio monitoring stopped');
+        }
       }
     };
-  }, [store.isConnected, conversation]);
+  }, [conversation]); // Removed store.isConnected from dependencies
 
   // Client-side tools integration - disabled for now as registerTool is not available in current SDK
   // useEffect(() => {

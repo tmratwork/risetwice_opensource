@@ -152,9 +152,9 @@ const AIPreviewPageContent: React.FC<AIPreviewPageProps> = ({ params }) => {
         console.log(`[s2_preview] 🎤 Using default voice: ${voiceId} (no cloned voice available for ${previewData.therapistProfile.full_name})`);
       }
 
-      // Start V17 session with triage specialist + generated therapist prompt + cloned voice
+      // Start V17 session with ai_preview specialist + generated therapist prompt + cloned voice
       // V17 AI will role-play as the therapist described in the generated prompt with their cloned voice
-      await startSession('triage', voiceId, generatedTherapistPrompt);
+      await startSession('ai_preview', voiceId, generatedTherapistPrompt);
 
       console.log(`[s2_preview] ✅ V17 preview session started - AI now role-playing as: ${previewData.therapistProfile.full_name}`);
       setPreviewStarted(true);
