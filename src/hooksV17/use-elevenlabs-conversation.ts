@@ -241,11 +241,15 @@ export function useElevenLabsConversation() {
   const audioMonitoringRef = useRef<{
     animationFrameId?: number;
     isRunning: boolean;
-    conversation?: any;
+    conversation?: unknown;
   }>({ isRunning: false });
 
-  // Fix conversation ID detection - try multiple possible ID properties
-  const conversationId = conversation?.id || conversation?.conversationId || conversation?.sessionId || null;
+  // Fix conversation ID detection - try multiple possible ID properties with proper type handling
+  const conversationId = (() => {
+    if (!conversation) return null;
+    const conv = conversation as Record<string, unknown>;
+    return conv.id || conv.conversationId || conv.sessionId || null;
+  })();
   const isConnected = store.isConnected;
 
   // Monitor for excessive parent re-renders (performance warning)
