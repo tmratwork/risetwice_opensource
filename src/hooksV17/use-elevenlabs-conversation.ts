@@ -237,51 +237,60 @@ export function useElevenLabsConversation() {
     }
   }, [store.isMuted]);
 
-  // Real-time audio monitoring for orb visualization and thinking state management
+  // Real-time audio monitoring - Simple, stable approach
   const audioMonitoringRef = useRef<{
     animationFrameId?: number;
     isRunning: boolean;
-    conversation?: any
+    conversation?: any;
   }>({ isRunning: false });
 
-  // Stabilize the isConnected reference to prevent dependency changes
-  const isConnectedRef = useRef(store.isConnected);
-  isConnectedRef.current = store.isConnected;
+  // Create a stable conversation ID to prevent recreated objects from triggering effects
+  const conversationId = conversation?.id || null;
+  const isConnected = store.isConnected;
 
-  // Stabilize store methods to prevent re-render cycles
-  const storeMethodsRef = useRef({
-    setIsThinking: store.setIsThinking,
-    setCurrentVolume: store.setCurrentVolume,
-    setAudioLevel: store.setAudioLevel,
-    setIsAudioPlaying: store.setIsAudioPlaying
+  // DEBUGGING: Add temporary logging to see what's triggering the effect
+  const renderCount = useRef(0);
+  renderCount.current++;
+  console.log('[DEBUG] Hook render #', renderCount.current, {
+    conversationId,
+    isConnected
   });
 
-  // Update store method refs on each render to get latest methods
   useEffect(() => {
-    storeMethodsRef.current = {
-      setIsThinking: store.setIsThinking,
-      setCurrentVolume: store.setCurrentVolume,
-      setAudioLevel: store.setAudioLevel,
-      setIsAudioPlaying: store.setIsAudioPlaying
-    };
-  }, [store.setIsThinking, store.setCurrentVolume, store.setAudioLevel, store.setIsAudioPlaying]);
+    console.log('[DEBUG] Audio effect triggered:', {
+      conversationId,
+      isConnected,
+      timestamp: Date.now()
+    });
 
-  useEffect(() => {
-    // Early return if already monitoring this exact conversation
+    // Early exit if no connection or conversation
+    if (!isConnected || !conversation) {
+      // Stop monitoring if it's running
+      if (audioMonitoringRef.current.isRunning) {
+        audioMonitoringRef.current.isRunning = false;
+        if (audioMonitoringRef.current.animationFrameId) {
+          cancelAnimationFrame(audioMonitoringRef.current.animationFrameId);
+          // Only log if V17 logs are enabled (reduce noise)
+          if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
+            console.log('[V17] 🎵 Audio monitoring stopped');
+          }
+        }
+      }
+      return;
+    }
+
+    // If already monitoring this conversation, don't restart
     if (audioMonitoringRef.current.isRunning &&
         audioMonitoringRef.current.conversation === conversation) {
       return;
     }
 
-    // Clean up previous monitoring
-    if (audioMonitoringRef.current.isRunning && audioMonitoringRef.current.animationFrameId) {
+    // Stop any existing monitoring
+    if (audioMonitoringRef.current.animationFrameId) {
       cancelAnimationFrame(audioMonitoringRef.current.animationFrameId);
-      audioMonitoringRef.current.isRunning = false;
     }
 
-    // Check connection using ref to avoid dependency issues
-    if (!isConnectedRef.current || !conversation) return;
-
+    // Start fresh monitoring
     audioMonitoringRef.current.isRunning = true;
     audioMonitoringRef.current.conversation = conversation;
 
@@ -294,19 +303,17 @@ export function useElevenLabsConversation() {
     let lastIsSpeaking = false;
 
     const monitorAudio = () => {
-      // Always check current connection status using ref
-      if (!audioMonitoringRef.current.isRunning || !isConnectedRef.current) {
+      // Only continue if still supposed to be running and connected
+      if (!audioMonitoringRef.current.isRunning || !isConnected) {
         return;
       }
 
       try {
-        // Get real-time audio data from ElevenLabs SDK
         const outputVolume = conversation.getOutputVolume?.() || 0;
         const isSpeaking = conversation.isSpeaking || false;
 
-        // Agent speaking state change detection
         if (isSpeaking && !lastIsSpeaking) {
-          storeMethodsRef.current.setIsThinking(false);
+          store.setIsThinking(false);
           // Only log speaking transitions if V17 logs enabled
           if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
             console.log('[V17] 🔊 Agent started speaking');
@@ -318,21 +325,18 @@ export function useElevenLabsConversation() {
           }
         }
 
-        // Only update store if values actually changed
         if (Math.abs(outputVolume - lastOutputVolume) > 0.01 || isSpeaking !== lastIsSpeaking) {
-          storeMethodsRef.current.setCurrentVolume(outputVolume);
-          storeMethodsRef.current.setAudioLevel(Math.floor(outputVolume * 100));
-          storeMethodsRef.current.setIsAudioPlaying(isSpeaking);
+          store.setCurrentVolume(outputVolume);
+          store.setAudioLevel(Math.floor(outputVolume * 100));
+          store.setIsAudioPlaying(isSpeaking);
 
           lastOutputVolume = outputVolume;
           lastIsSpeaking = isSpeaking;
         }
 
-        // Continue monitoring
         if (audioMonitoringRef.current.isRunning) {
           audioMonitoringRef.current.animationFrameId = requestAnimationFrame(monitorAudio);
         }
-
       } catch (error) {
         if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
           console.error('[V17] ❌ Error in audio monitoring', error);
@@ -349,12 +353,13 @@ export function useElevenLabsConversation() {
       audioMonitoringRef.current.isRunning = false;
       if (audioMonitoringRef.current.animationFrameId) {
         cancelAnimationFrame(audioMonitoringRef.current.animationFrameId);
+        // Only log if V17 logs are enabled (reduce noise)
         if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
           console.log('[V17] 🎵 Audio monitoring stopped');
         }
       }
     };
-  }, [conversation]); // Removed store.isConnected from dependencies
+  }, [conversationId, isConnected]); // Use stable conversationId instead of conversation object
 
   // Client-side tools integration - disabled for now as registerTool is not available in current SDK
   // useEffect(() => {
