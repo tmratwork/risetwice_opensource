@@ -11,6 +11,10 @@ import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
 import { DemoButtons } from './components/DemoButtons';
 import { VoiceSettingsModal } from './components/VoiceSettingsModal';
+import SearchBar from './components/therapist-matching/SearchBar';
+import FilterTags, { FilterTag } from './components/therapist-matching/FilterTags';
+import TherapistList from './components/therapist-matching/TherapistList';
+import { Therapist } from './components/therapist-matching/TherapistCard';
 
 // Type for pending demo data
 interface PendingDemo {
@@ -32,6 +36,14 @@ export default function ChatBotV17Page() {
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
   const [userMessage, setUserMessage] = useState('');
   const conversationHistoryRef = useRef<HTMLDivElement>(null);
+
+  // Therapist matching state
+  const [showMatching, setShowMatching] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [therapists, setTherapists] = useState<Therapist[]>([]);
+  const [filterTags, setFilterTags] = useState<FilterTag[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const store = useElevenLabsStore();
   const {
     startSession,
@@ -70,6 +82,18 @@ export default function ChatBotV17Page() {
     }
   }, [user, handleLetsTalk]);
 
+  // Handle therapist AI preview (replaces demo buttons)
+  const handleTryAIPreview = useCallback((therapist: Therapist) => {
+    console.log('[V17] Starting AI preview for therapist:', therapist.fullName);
+    setSelectedTherapist(therapist);
+    setShowMatching(false);
+
+    // Use therapist info for AI conversation
+    const voiceId = 'default'; // Use default voice for now
+    const promptAppend = `You are now speaking as a therapist named ${therapist.fullName}. ${therapist.personalStatement ? `Your approach: ${therapist.personalStatement}` : ''}`;
+    handleDemoStart(voiceId, promptAppend, therapist.fullName, false);
+  }, []);
+
   // Handle demo button clicks (Dr Mattu, Dr Judy)
   const handleDemoStart = useCallback((voiceId: string, promptAppend: string, doctorName: string, forceStart = false) => {
     const startDemo = async () => {
@@ -98,6 +122,67 @@ export default function ChatBotV17Page() {
       startDemo();
     }
   }, [user, store, startSession]);
+
+  // Search therapists
+  const searchTherapists = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (searchQuery.trim()) {
+        params.set('q', searchQuery.trim());
+      }
+
+      // Add filter tags as parameters
+      filterTags.forEach(tag => {
+        params.set(tag.type, tag.label);
+      });
+
+      const response = await fetch(`/api/therapists/search?${params}`);
+      if (!response.ok) {
+        throw new Error('Failed to search therapists');
+      }
+
+      const data = await response.json();
+      if (data.success) {
+        setTherapists(data.therapists);
+      } else {
+        console.error('[V17] Therapist search failed:', data.error);
+        setTherapists([]);
+      }
+    } catch (error) {
+      console.error('[V17] Therapist search error:', error);
+      setTherapists([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchQuery, filterTags]);
+
+  // Load therapists on page load (browse mode)
+  useEffect(() => {
+    console.log('[V17] Loading default therapists on page load');
+    searchTherapists();
+  }, []);
+
+  // Debounce search when query/filters change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      searchTherapists();
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, filterTags]);
+
+  // Handle filter tag removal
+  const handleRemoveTag = useCallback((tagId: string) => {
+    setFilterTags(prev => prev.filter(tag => tag.id !== tagId));
+  }, []);
+
+  // Handle back to matching
+  const handleBackToMatching = useCallback(() => {
+    setShowMatching(true);
+    setSelectedTherapist(null);
+    // Reset conversation state if needed
+    store.clearConversation();
+  }, [store]);
 
   // Handle text message input
   const handleInputChange = useCallback((value: string) => {
@@ -207,8 +292,82 @@ export default function ChatBotV17Page() {
     }
   }, [store.conversationHistory]);
 
+  // Show matching interface first, then conversation
+  if (showMatching) {
+    return (
+      <div className="chatbot-v16-wrapper">
+        <div className="main-container" style={{ backgroundColor: 'var(--bg-primary)' }}>
+          {/* Header */}
+          <div className="text-center mb-8">
+            <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+              Find Your Perfect Therapist
+            </h1>
+            <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
+              Browse our network of qualified mental health professionals and start your journey with a personalized AI preview.
+            </p>
+          </div>
+
+          {/* Search and Filters */}
+          <div className="mb-8">
+            <SearchBar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              placeholder="Search by name, location, specialty..."
+            />
+            <FilterTags
+              activeTags={filterTags}
+              onRemoveTag={handleRemoveTag}
+            />
+          </div>
+
+          {/* Therapist Results */}
+          <div className="flex-1 overflow-y-auto">
+            <TherapistList
+              therapists={therapists}
+              onTryAIPreview={handleTryAIPreview}
+              loading={loading}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="chatbot-v16-wrapper">
+      {/* Back to matching button */}
+      {!isConnected && selectedTherapist && (
+        <div className="absolute top-4 left-4 z-10">
+          <button
+            onClick={handleBackToMatching}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Matching
+          </button>
+        </div>
+      )}
+
+      {/* Show selected therapist info */}
+      {selectedTherapist && !isConnected && (
+        <div className="absolute top-4 right-4 z-10 bg-white border border-gray-200 rounded-lg p-4 max-w-sm">
+          <div className="flex items-center gap-3">
+            {selectedTherapist.profilePhotoUrl && (
+              <img
+                src={selectedTherapist.profilePhotoUrl}
+                alt={selectedTherapist.fullName}
+                className="w-12 h-12 rounded-full object-cover"
+              />
+            )}
+            <div>
+              <h3 className="font-semibold text-gray-900">{selectedTherapist.fullName}</h3>
+              <p className="text-sm text-gray-600">{selectedTherapist.title}</p>
+            </div>
+          </div>
+        </div>
+      )}
       {/* Main container - exact copy from V16 structure */}
       {/* Main container - exact structure as V16 */}
       <div className="main-container">
