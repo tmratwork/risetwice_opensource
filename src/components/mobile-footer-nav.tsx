@@ -21,59 +21,26 @@ export function MobileFooterNav({ onToggleDebugPanel, showDebugPanel }: MobileFo
   return (
     <nav className="bg-[#131314] border-t border-gray-800 flex justify-around items-center px-4 py-3">
       <Link
-        href="/chatbotV11"
-        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV11' ? 'text-white' : 'text-gray-400'}`}
+        href="/chatbotV16"
+        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV16' || pathname.startsWith('/chatbotV16/') ? 'text-white' : 'text-gray-400'}`}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1">
           <path d="M14 9a2 2 0 0 1-2 2H6l-4 4V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2z" />
           <path d="M18 9h2a2 2 0 0 1 2 2v11l-4-4h-6a2 2 0 0 1-2-2v-1" />
         </svg>
-        <span>Let&rsquo;s Talk</span>
+        <span>AI Companion</span>
       </Link>
 
       <Link
-        href="/chatbotV11/resources"
-        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV11/resources' ? 'text-white' : 'text-gray-400'}`}
+        href="/chatbotV17"
+        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV17' || pathname.startsWith('/chatbotV17/') ? 'text-white' : 'text-gray-400'}`}
       >
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1">
           <path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0" />
           <path d="M12 7v6" />
           <path d="M9 10h6" />
         </svg>
-        <span>Resources</span>
-      </Link>
-
-      <Link
-        href="/chatbotV11/quests"
-        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV11/quests' ? 'text-white' : 'text-gray-400'}`}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1">
-          <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
-          <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
-          <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
-          <path d="M17.599 6.5a3 3 0 0 0 .399-1.375" />
-          <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5" />
-          <path d="M3.477 10.896a4 4 0 0 1 .585-.396" />
-          <path d="M19.938 10.5a4 4 0 0 1 .585.396" />
-          <path d="M6 18a4 4 0 0 1-1.967-.516" />
-          <path d="M19.967 17.484A4 4 0 0 1 18 18" />
-        </svg>
-        <span>Mental Health</span>
-      </Link>
-
-      <Link
-        href="/chatbotV11/pathways"
-        className={`flex flex-col items-center text-xs ${pathname === '/chatbotV11/pathways' ? 'text-white' : 'text-gray-400'}`}
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mb-1">
-          <path d="M12 16v5" />
-          <path d="M16 14v7" />
-          <path d="M20 10v11" />
-          <path d="m22 3-8.646 8.646a.5.5 0 0 1-.708 0L9.354 8.354a.5.5 0 0 0-.707 0L2 15" />
-          <path d="M4 18v3" />
-          <path d="M8 14v7" />
-        </svg>
-        <span>Future Pathways</span>
+        <span>Therapy Match</span>
       </Link>
 
       {/* Menu overflow button */}
