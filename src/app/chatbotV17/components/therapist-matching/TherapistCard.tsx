@@ -163,7 +163,11 @@ const TherapistCard: React.FC<TherapistCardProps> = ({ therapist, onTryAIPreview
 
             <button
               onClick={() => onTryAIPreview(therapist)}
-              className="control-button primary font-semibold px-6 py-2"
+              className="font-bold px-6 py-2 rounded-lg transition-colors hover:opacity-80"
+              style={{
+                backgroundColor: '#fbbf24',
+                color: '#000000'
+              }}
             >
               Try AI Preview
             </button>
