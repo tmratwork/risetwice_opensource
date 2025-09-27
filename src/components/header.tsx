@@ -2,7 +2,7 @@
 
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send, Phone } from 'lucide-react';
+import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send, Phone, Flag } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/theme-context';
@@ -11,6 +11,7 @@ import SmartSendDialog from './SmartSendDialog';
 import DisplayNameDialog from './DisplayNameDialog';
 import ContributorsModal from './ContributorsModal';
 import PhoneAuth from './PhoneAuth';
+import BugReportModal from './BugReportModal';
 import { createPortal } from 'react-dom';
 import {
   SUPPORTED_LANGUAGES,
@@ -229,6 +230,7 @@ function AuthButtons() {
     const [showContributorsModal, setShowContributorsModal] = useState(false);
     const [showPhoneAuth, setShowPhoneAuth] = useState(false);
     const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
+    const [showBugReportModal, setShowBugReportModal] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState('en');
     const dropdownTriggerRef = useRef<HTMLButtonElement>(null);
     const languageTriggerRef = useRef<HTMLButtonElement>(null);
@@ -292,6 +294,12 @@ function AuthButtons() {
     // Handle Contributors modal
     const handleContributorsClick = () => {
         setShowContributorsModal(true);
+        setShowDropdown(false); // Close dropdown when opening modal
+    };
+
+    // Handle Send Feedback modal
+    const handleSendFeedbackClick = () => {
+        setShowBugReportModal(true);
         setShowDropdown(false); // Close dropdown when opening modal
     };
 
@@ -459,6 +467,14 @@ function AuthButtons() {
                             </svg>
                         </button>
                         <button
+                            onClick={handleSendFeedbackClick}
+                            className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
+                            role="menuitem"
+                        >
+                            <Flag className="w-5 h-5 mr-2" />
+                            Send Feedback
+                        </button>
+                        <button
                             onClick={handleSignOut}
                             className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
                             role="menuitem"
@@ -511,6 +527,13 @@ function AuthButtons() {
                     isOpen={showContributorsModal}
                     onClose={() => setShowContributorsModal(false)}
                 />
+
+                {/* Bug Report Modal */}
+                {showBugReportModal && (
+                    <BugReportModal
+                        onClose={() => setShowBugReportModal(false)}
+                    />
+                )}
             </>);
     }
 
