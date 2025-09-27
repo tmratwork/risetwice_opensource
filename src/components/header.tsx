@@ -779,7 +779,7 @@ export function Header() {
                 {pathname === '/chatbotV17' && (
                     <Link
                         href="/s2"
-                        className="px-4 py-2 text-sm font-medium text-sage-700 dark:text-gray-200 bg-sage-200 dark:bg-gray-700 border border-sage-300 dark:border-gray-600 rounded-lg hover:bg-sage-300 dark:hover:bg-gray-600 transition-colors"
+                        className="px-4 py-3 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
                     >
                         Provider Sign Up
                     </Link>
