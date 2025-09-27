@@ -59,18 +59,27 @@ export async function POST(request: NextRequest) {
 
     console.log('[S2] Creating/updating complete profile for user:', data.userId);
 
-    // First, deactivate any existing active complete profile for this user
-    await supabase
-      .from('s2_complete_profiles')
-      .update({ is_active: false })
+    // Get the therapist profile ID for this user
+    const { data: therapistProfile, error: therapistError } = await supabase
+      .from('s2_therapist_profiles')
+      .select('id')
       .eq('user_id', data.userId)
-      .eq('is_active', true);
+      .single();
 
-    // Insert new complete profile
+    if (therapistError || !therapistProfile) {
+      console.error('[S2] No therapist profile found for user:', data.userId, therapistError);
+      return NextResponse.json(
+        { error: 'Therapist profile must be created before complete profile' },
+        { status: 400 }
+      );
+    }
+
+    // Use upsert to update existing profile or create new one (prevents duplicate records)
     const { data: profileData, error } = await supabase
       .from('s2_complete_profiles')
-      .insert({
+      .upsert({
         user_id: data.userId,
+        therapist_profile_id: therapistProfile.id,
         profile_photo_url: data.profilePhoto || null,
         personal_statement: data.personalStatement,
         mental_health_specialties: data.mentalHealthSpecialties,
@@ -91,6 +100,9 @@ export async function POST(request: NextRequest) {
         professional_memberships: data.professionalMemberships || null,
         is_active: true,
         completion_date: new Date().toISOString()
+      }, {
+        onConflict: 'therapist_profile_id',
+        ignoreDuplicates: false
       })
       .select()
       .single();

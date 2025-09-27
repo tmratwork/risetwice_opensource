@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ThemeProvider } from '@/contexts/theme-context';
+import { ChatStateProvider } from '@/contexts/chat-state-context';
 import { ClientHeader } from '@/components/client-header';
 import { MobileFooterNavV15 } from './components/MobileFooterNavV15';
 import SearchProgressToast from './components/SearchProgressToast';
@@ -105,7 +106,8 @@ export default function ChatBotV17Layout({
   return (
     <AuthProvider>
       <ThemeProvider>
-        <div className="v16-layout-root">
+        <ChatStateProvider>
+          <div className="v16-layout-root">
           <AuthUserIdSync />
           <ElevenLabsMonitoringInit />
 
@@ -130,6 +132,7 @@ export default function ChatBotV17Layout({
         
         {/* Move Toaster outside grid - positioned absolutely */}
         <Toaster position="top-center" />
+        </ChatStateProvider>
       </ThemeProvider>
     </AuthProvider>
   );

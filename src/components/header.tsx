@@ -12,12 +12,13 @@ import DisplayNameDialog from './DisplayNameDialog';
 import ContributorsModal from './ContributorsModal';
 import PhoneAuth from './PhoneAuth';
 import { createPortal } from 'react-dom';
-import { 
-  SUPPORTED_LANGUAGES, 
-  getStoredLanguagePreference, 
+import {
+  SUPPORTED_LANGUAGES,
+  getStoredLanguagePreference,
   setStoredLanguagePreference,
-  getLanguageByCode 
+  getLanguageByCode
 } from '@/lib/language-utils';
+import { ArrowLeft } from 'lucide-react';
 
 interface DropdownPortalProps {
   isOpen: boolean;
@@ -681,9 +682,32 @@ function BookSelector() {
 export function Header() {
     const { theme } = useTheme();
 
+    // Try to get chat state if available (only on chatbotV17)
+    let chatState;
+    try {
+        const { useChatState } = require('@/contexts/chat-state-context');
+        chatState = useChatState();
+    } catch {
+        // Context not available - not on chatbotV17 page
+        chatState = null;
+    }
+
+    const showBackButton = chatState?.isConnected || false;
+    const handleEndChat = chatState?.onEndChat || (() => {});
+
     return (
         <header className="fixed top-0 left-0 right-0 flex justify-between items-center px-6 py-3 bg-sage-100 dark:bg-[#131314] z-50">
             <div className="flex items-center gap-2">
+                {showBackButton && (
+                    <button
+                        onClick={handleEndChat}
+                        className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors hover:bg-sage-200 dark:hover:bg-gray-700"
+                        style={{ color: 'var(--text-primary)' }}
+                    >
+                        <ArrowLeft size={16} />
+                        End Chat
+                    </button>
+                )}
                 <Link href="/" className="hover:opacity-80 transition-opacity block">
                     <img
                         key={theme}

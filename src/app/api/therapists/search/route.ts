@@ -26,101 +26,79 @@ export async function GET(request: NextRequest) {
       query, specialty, title, gender, experience, language, location
     });
 
-    // Build base query for therapist profiles first
-    let therapistQuery = supabase
+    // Build the query using proper foreign key relationship
+    let supabaseQuery = supabase
       .from('s2_therapist_profiles')
-      .select('*')
-      .eq('is_active', true);
+      .select(`
+        id,
+        user_id,
+        full_name,
+        title,
+        degrees,
+        primary_location,
+        gender_identity,
+        years_of_experience,
+        languages_spoken,
+        created_at,
+        s2_complete_profiles!fk_therapist_profile(
+          profile_photo_url,
+          personal_statement,
+          mental_health_specialties,
+          treatment_approaches,
+          age_ranges_treated,
+          lgbtq_affirming,
+          session_fees
+        )
+      `)
+      .eq('is_active', true)
+      .eq('s2_complete_profiles.is_active', true);
 
-    // Apply filters to therapist table
+    // Apply filters
     if (query) {
-      therapistQuery = therapistQuery.or(
+      // Search in name, location, or specialties
+      supabaseQuery = supabaseQuery.or(
         `full_name.ilike.%${query}%,primary_location.ilike.%${query}%`
       );
     }
 
     if (location) {
-      therapistQuery = therapistQuery.ilike('primary_location', `%${location}%`);
+      supabaseQuery = supabaseQuery.ilike('primary_location', `%${location}%`);
     }
 
     if (title) {
-      therapistQuery = therapistQuery.eq('title', title);
+      supabaseQuery = supabaseQuery.eq('title', title);
     }
 
     if (gender) {
-      therapistQuery = therapistQuery.eq('gender_identity', gender);
+      supabaseQuery = supabaseQuery.eq('gender_identity', gender);
     }
 
     if (experience) {
-      therapistQuery = therapistQuery.eq('years_of_experience', experience);
+      supabaseQuery = supabaseQuery.eq('years_of_experience', experience);
     }
 
     if (language) {
-      therapistQuery = therapistQuery.contains('languages_spoken', [language]);
+      supabaseQuery = supabaseQuery.contains('languages_spoken', [language]);
     }
 
     // If no search query or filters, show recent therapists (browse mode)
     const hasBrowseMode = !query && !specialty && !title && !gender && !experience && !language && !location;
     if (hasBrowseMode) {
       console.log('[Therapist Search] Browse mode: showing recent therapists');
-      therapistQuery = therapistQuery
+      supabaseQuery = supabaseQuery
         .order('created_at', { ascending: false })
         .limit(20);
     }
 
-    const { data: therapistProfiles, error: therapistError } = await therapistQuery;
+    const { data: therapists, error } = await supabaseQuery;
 
-    if (therapistError) {
-      console.error('[Therapist Search] Therapist query error:', therapistError);
+    if (error) {
+      console.error('[Therapist Search] Database error:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch therapists', details: therapistError.message },
+        { error: 'Failed to fetch therapists', details: error.message },
         { status: 500 }
       );
     }
-
-    if (!therapistProfiles || therapistProfiles.length === 0) {
-      return NextResponse.json({
-        success: true,
-        therapists: [],
-        total: 0
-      });
-    }
-
-    // Get user IDs from therapist profiles
-    const userIds = therapistProfiles.map(profile => profile.user_id);
-
-    // Fetch complete profiles for these users
-    const { data: completeProfiles, error: completeError } = await supabase
-      .from('s2_complete_profiles')
-      .select('*')
-      .in('user_id', userIds)
-      .eq('is_active', true);
-
-    if (completeError) {
-      console.error('[Therapist Search] Complete profiles error:', completeError);
-      return NextResponse.json(
-        { error: 'Failed to fetch complete profiles', details: completeError.message },
-        { status: 500 }
-      );
-    }
-
-    // Create a map for easy lookup
-    const completeProfileMap = new Map();
-    (completeProfiles || []).forEach(profile => {
-      completeProfileMap.set(profile.user_id, profile);
-    });
-
-    // Combine the data
-    const therapists = therapistProfiles
-      .map(therapist => {
-        const completeProfile = completeProfileMap.get(therapist.user_id);
-        if (!completeProfile) {
-          console.warn(`[Therapist Search] No complete profile found for user_id: ${therapist.user_id}`);
-          return null;
-        }
-        return { ...therapist, s2_complete_profiles: [completeProfile] };
-      })
-      .filter(Boolean); // Remove null entries
 
     // Transform the data to match our frontend interface
     const transformedTherapists = therapists.map((therapist: any) => {

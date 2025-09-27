@@ -7,6 +7,7 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useElevenLabsStore } from '@/stores/elevenlabs-store';
 import { useElevenLabsConversation } from '@/hooksV17/use-elevenlabs-conversation';
+import { useChatState } from '@/contexts/chat-state-context';
 import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
 import { DemoButtons } from './components/DemoButtons';
@@ -32,6 +33,7 @@ declare global {
 
 export default function ChatBotV17Page() {
   const { user } = useAuth();
+  const { setIsConnected, setSelectedTherapist: setChatStateTherapist, setOnEndChat } = useChatState();
   const [isSignInDialogOpen, setIsSignInDialogOpen] = useState(false);
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
   const [userMessage, setUserMessage] = useState('');
@@ -180,9 +182,24 @@ export default function ChatBotV17Page() {
   const handleBackToMatching = useCallback(() => {
     setShowMatching(true);
     setSelectedTherapist(null);
+    setChatStateTherapist(null);
     // Reset conversation state if needed
     store.clearConversation();
-  }, [store]);
+  }, [store, setChatStateTherapist]);
+
+  // Sync chat state with context for header
+  useEffect(() => {
+    setIsConnected(isConnected);
+  }, [isConnected, setIsConnected]);
+
+  useEffect(() => {
+    setChatStateTherapist(selectedTherapist);
+  }, [selectedTherapist, setChatStateTherapist]);
+
+  // Set the end chat handler for header button
+  useEffect(() => {
+    setOnEndChat(() => handleBackToMatching);
+  }, [handleBackToMatching, setOnEndChat]);
 
   // Handle text message input
   const handleInputChange = useCallback((value: string) => {
