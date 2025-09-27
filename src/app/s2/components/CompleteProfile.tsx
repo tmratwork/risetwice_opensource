@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
+import CustomMultiSelect from './CustomMultiSelect';
 // Removed direct Supabase import - now using server-side upload API
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
@@ -28,6 +29,12 @@ interface CompleteProfileData {
     insurancePlans: string[];
     outOfNetworkSupported: boolean;
   };
+  clientTypesServed?: string[];
+  lgbtqAffirming?: boolean;
+  religiousSpiritualIntegration?: string;
+  sessionFees?: string;
+  boardCertifications?: string[];
+  professionalMemberships?: string[];
 }
 
 interface CompleteProfileProps {
@@ -52,6 +59,27 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  // Options for multi-select fields
+  const boardCertificationOptions = [
+    { value: 'ABPP', label: 'ABPP - American Board of Professional Psychology' },
+    { value: 'NBE', label: 'NBE - National Board for Certified Counselors' },
+    { value: 'ABMHC', label: 'ABMHC - American Board of Mental Health Counselors' },
+    { value: 'AASECT', label: 'AASECT - American Association of Sexuality Educators' },
+    { value: 'EMDR International', label: 'EMDR International Association' },
+    { value: 'IASP', label: 'IASP - International Association for the Study of Pain' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  const professionalMembershipOptions = [
+    { value: 'APA', label: 'APA - American Psychological Association' },
+    { value: 'NASW', label: 'NASW - National Association of Social Workers' },
+    { value: 'ACA', label: 'ACA - American Counseling Association' },
+    { value: 'AAMFT', label: 'AAMFT - American Association for Marriage and Family Therapy' },
+    { value: 'NAADAC', label: 'NAADAC - Association for Addiction Professionals' },
+    { value: 'ASERVIC', label: 'ASERVIC - Association for Spiritual, Ethical, Religious Values in Counseling' },
+    { value: 'Other', label: 'Other' }
+  ];
 
   // Profile photo uploads now use server-side API with service role key
   // This bypasses the Firebase UID → PostgreSQL UUID conversion issue
@@ -86,7 +114,13 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               availabilityHours: data.completeProfile.practiceDetails.availabilityHours || '',
               emergencyProtocol: data.completeProfile.practiceDetails.emergencyProtocol || ''
             },
-            insuranceInformation: data.completeProfile.insuranceInformation
+            insuranceInformation: data.completeProfile.insuranceInformation,
+            clientTypesServed: data.completeProfile.clientTypesServed,
+            lgbtqAffirming: data.completeProfile.lgbtqAffirming,
+            religiousSpiritualIntegration: data.completeProfile.religiousSpiritualIntegration,
+            sessionFees: data.completeProfile.sessionFees,
+            boardCertifications: data.completeProfile.boardCertifications,
+            professionalMemberships: data.completeProfile.professionalMemberships
           });
         }
       } catch (error) {
@@ -628,6 +662,118 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                 </label>
               </div>
             </div>
+          </div>
+
+          {/* Client Types Served */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-4">
+              Client Types Served <span className="text-gray-400">(optional)</span>
+            </label>
+            <div className="space-y-3">
+              {['Individuals', 'Couples', 'Families', 'Groups'].map((type) => (
+                <div key={type} className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id={`clientType-${type}`}
+                    checked={profileData.clientTypesServed?.includes(type) || false}
+                    onChange={(e) => handleMultiSelectChange('clientTypesServed', type, e.target.checked)}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor={`clientType-${type}`} className="ml-2 text-sm text-gray-700">
+                    {type}
+                  </label>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* LGBTQ+ Affirming */}
+          <div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="lgbtqAffirming"
+                checked={profileData.lgbtqAffirming || false}
+                onChange={(e) => handleInputChange('lgbtqAffirming', e.target.checked)}
+                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+              />
+              <label htmlFor="lgbtqAffirming" className="ml-2 text-sm text-gray-700">
+                LGBTQ+ Affirming Practice
+              </label>
+            </div>
+          </div>
+
+          {/* Religious/Spiritual Integration */}
+          <div>
+            <label htmlFor="religiousSpiritualIntegration" className="block text-sm font-medium text-gray-700 mb-2">
+              Religious/Spiritual Integration <span className="text-gray-400">(optional)</span>
+            </label>
+            <select
+              id="religiousSpiritualIntegration"
+              value={profileData.religiousSpiritualIntegration || ''}
+              onChange={(e) => handleInputChange('religiousSpiritualIntegration', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">Select approach</option>
+              <option value="None">None - Secular approach only</option>
+              <option value="Christian">Christian</option>
+              <option value="Jewish">Jewish</option>
+              <option value="Buddhist">Buddhist</option>
+              <option value="Hindu">Hindu</option>
+              <option value="Islamic">Islamic</option>
+              <option value="General Spiritual">General Spiritual</option>
+              <option value="Client-Led">Client-Led Integration</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          {/* Session Fees */}
+          <div>
+            <label htmlFor="sessionFees" className="block text-sm font-medium text-gray-700 mb-2">
+              Session Fees <span className="text-gray-400">(optional)</span>
+            </label>
+            <select
+              id="sessionFees"
+              value={profileData.sessionFees || ''}
+              onChange={(e) => handleInputChange('sessionFees', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">Select fee range</option>
+              <option value="$50-$75">$50-$75 per session</option>
+              <option value="$76-$100">$76-$100 per session</option>
+              <option value="$101-$150">$101-$150 per session</option>
+              <option value="$151-$200">$151-$200 per session</option>
+              <option value="$201-$300">$201-$300 per session</option>
+              <option value="$301+">$301+ per session</option>
+              <option value="Sliding scale">Sliding scale available</option>
+              <option value="Contact for rates">Contact for rates</option>
+            </select>
+          </div>
+
+          {/* Board Certifications */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Board Certifications <span className="text-gray-400">(optional)</span>
+            </label>
+            <CustomMultiSelect
+              options={boardCertificationOptions}
+              value={profileData.boardCertifications || []}
+              onChange={(value) => handleInputChange('boardCertifications', value)}
+              placeholder="Select board certifications..."
+            />
+          </div>
+
+          {/* Professional Memberships */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Professional Memberships <span className="text-gray-400">(optional)</span>
+            </label>
+            <CustomMultiSelect
+              options={professionalMembershipOptions}
+              value={profileData.professionalMemberships || []}
+              onChange={(value) => handleInputChange('professionalMemberships', value)}
+              placeholder="Select professional memberships..."
+            />
           </div>
 
           {/* Action Buttons */}

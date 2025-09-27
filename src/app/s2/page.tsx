@@ -29,6 +29,10 @@ interface TherapistProfile {
   phoneNumber?: string;
   emailAddress?: string;
   dateOfBirth?: string;
+  genderIdentity?: string;
+  yearsOfExperience?: string;
+  languagesSpoken?: string[];
+  culturalBackgrounds?: string[];
 }
 
 interface PatientDescription {
@@ -72,6 +76,12 @@ interface CompleteProfileData {
     insurancePlans: string[];
     outOfNetworkSupported: boolean;
   };
+  clientTypesServed?: string[];
+  lgbtqAffirming?: boolean;
+  religiousSpiritualIntegration?: string;
+  sessionFees?: string;
+  boardCertifications?: string[];
+  professionalMemberships?: string[];
 }
 
 interface SessionData {

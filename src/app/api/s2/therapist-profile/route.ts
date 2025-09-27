@@ -19,6 +19,10 @@ interface TherapistProfileRequest {
   phoneNumber?: string;
   emailAddress?: string;
   dateOfBirth?: string;
+  genderIdentity?: string;
+  yearsOfExperience?: string;
+  languagesSpoken?: string[];
+  culturalBackgrounds?: string[];
 }
 
 export async function POST(request: NextRequest) {
@@ -48,6 +52,10 @@ export async function POST(request: NextRequest) {
         phone_number: data.phoneNumber || null,
         email_address: data.emailAddress || null,
         date_of_birth: data.dateOfBirth || null,
+        gender_identity: data.genderIdentity || null,
+        years_of_experience: data.yearsOfExperience || null,
+        languages_spoken: data.languagesSpoken || null,
+        cultural_backgrounds: data.culturalBackgrounds || null,
         profile_completion_status: 'profile_complete'
       }, {
         onConflict: 'user_id'
@@ -78,6 +86,10 @@ export async function POST(request: NextRequest) {
         phoneNumber: profile.phone_number,
         emailAddress: profile.email_address,
         dateOfBirth: profile.date_of_birth,
+        genderIdentity: profile.gender_identity,
+        yearsOfExperience: profile.years_of_experience,
+        languagesSpoken: profile.languages_spoken,
+        culturalBackgrounds: profile.cultural_backgrounds,
         completionStatus: profile.profile_completion_status,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at
@@ -132,6 +144,10 @@ export async function GET(request: NextRequest) {
         phoneNumber: profile.phone_number,
         emailAddress: profile.email_address,
         dateOfBirth: profile.date_of_birth,
+        genderIdentity: profile.gender_identity,
+        yearsOfExperience: profile.years_of_experience,
+        languagesSpoken: profile.languages_spoken,
+        culturalBackgrounds: profile.cultural_backgrounds,
         completionStatus: profile.profile_completion_status,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at

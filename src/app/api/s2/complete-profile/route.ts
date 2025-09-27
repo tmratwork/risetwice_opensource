@@ -27,6 +27,12 @@ interface CompleteProfileRequest {
     insurancePlans: string[];
     outOfNetworkSupported: boolean;
   };
+  clientTypesServed?: string[];
+  lgbtqAffirming?: boolean;
+  religiousSpiritualIntegration?: string;
+  sessionFees?: string;
+  boardCertifications?: string[];
+  professionalMemberships?: string[];
 }
 
 export async function POST(request: NextRequest) {
@@ -77,6 +83,12 @@ export async function POST(request: NextRequest) {
         accepts_insurance: data.insuranceInformation.acceptsInsurance,
         insurance_plans: data.insuranceInformation.insurancePlans,
         out_of_network_supported: data.insuranceInformation.outOfNetworkSupported,
+        client_types_served: data.clientTypesServed || null,
+        lgbtq_affirming: data.lgbtqAffirming || false,
+        religious_spiritual_integration: data.religiousSpiritualIntegration || null,
+        session_fees: data.sessionFees || null,
+        board_certifications: data.boardCertifications || null,
+        professional_memberships: data.professionalMemberships || null,
         is_active: true,
         completion_date: new Date().toISOString()
       })
@@ -177,6 +189,12 @@ export async function GET(request: NextRequest) {
           insurancePlans: profileData.insurance_plans,
           outOfNetworkSupported: profileData.out_of_network_supported
         },
+        clientTypesServed: profileData.client_types_served,
+        lgbtqAffirming: profileData.lgbtq_affirming,
+        religiousSpiritualIntegration: profileData.religious_spiritual_integration,
+        sessionFees: profileData.session_fees,
+        boardCertifications: profileData.board_certifications,
+        professionalMemberships: profileData.professional_memberships,
         completionDate: profileData.completion_date,
         createdAt: profileData.created_at,
         updatedAt: profileData.updated_at

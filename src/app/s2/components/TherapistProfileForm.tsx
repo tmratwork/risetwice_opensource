@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
+import CustomMultiSelect from './CustomMultiSelect';
 
 interface TherapistProfile {
   fullName: string;
@@ -18,6 +19,10 @@ interface TherapistProfile {
   phoneNumber?: string;
   emailAddress?: string;
   dateOfBirth?: string;
+  genderIdentity?: string;
+  yearsOfExperience?: string;
+  languagesSpoken?: string[];
+  culturalBackgrounds?: string[];
 }
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
@@ -50,8 +55,15 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   useEffect(() => {
     const loadExistingProfile = async () => {
       if (!user?.uid) return;
+      // Only load if profile is empty to prevent overwriting user selections
+      if (profile.fullName && profile.fullName.trim()) {
+        console.log('[S2] Profile already loaded, skipping fetch');
+        setLoadingProfile(false);
+        return;
+      }
 
       try {
+        console.log('[S2] Loading existing profile for user:', user.uid);
         const response = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
         const data = await response.json();
 
@@ -75,7 +87,11 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
             offersOnline: data.profile.offersOnline,
             phoneNumber: data.profile.phoneNumber,
             emailAddress: data.profile.emailAddress,
-            dateOfBirth: data.profile.dateOfBirth
+            dateOfBirth: data.profile.dateOfBirth,
+            genderIdentity: data.profile.genderIdentity,
+            yearsOfExperience: data.profile.yearsOfExperience,
+            languagesSpoken: data.profile.languagesSpoken || [],
+            culturalBackgrounds: data.profile.culturalBackgrounds || []
           });
         }
       } catch (error) {
@@ -88,6 +104,40 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
     loadExistingProfile();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.uid]); // Remove onUpdate from dependencies to prevent infinite loop
+
+  // Options for multi-select fields
+  const languageOptions = [
+    { value: 'English', label: 'English' },
+    { value: 'Spanish', label: 'Spanish' },
+    { value: 'French', label: 'French' },
+    { value: 'German', label: 'German' },
+    { value: 'Italian', label: 'Italian' },
+    { value: 'Portuguese', label: 'Portuguese' },
+    { value: 'Mandarin', label: 'Mandarin' },
+    { value: 'Cantonese', label: 'Cantonese' },
+    { value: 'Japanese', label: 'Japanese' },
+    { value: 'Korean', label: 'Korean' },
+    { value: 'Arabic', label: 'Arabic' },
+    { value: 'Hindi', label: 'Hindi' },
+    { value: 'Russian', label: 'Russian' },
+    { value: 'Hebrew', label: 'Hebrew' },
+    { value: 'Other', label: 'Other' }
+  ];
+
+  const culturalOptions = [
+    { value: 'African American/Black', label: 'African American/Black' },
+    { value: 'Asian', label: 'Asian' },
+    { value: 'Hispanic/Latino', label: 'Hispanic/Latino' },
+    { value: 'Native American', label: 'Native American' },
+    { value: 'Pacific Islander', label: 'Pacific Islander' },
+    { value: 'Middle Eastern', label: 'Middle Eastern' },
+    { value: 'White/Caucasian', label: 'White/Caucasian' },
+    { value: 'Multiracial', label: 'Multiracial' },
+    { value: 'LGBTQ+ Community', label: 'LGBTQ+ Community' },
+    { value: 'Religious/Spiritual Communities', label: 'Religious/Spiritual Communities' },
+    { value: 'Military/Veteran Community', label: 'Military/Veteran Community' },
+    { value: 'Other', label: 'Other' }
+  ];
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -152,7 +202,11 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           offersOnline: profile.offersOnline,
           phoneNumber: profile.phoneNumber,
           emailAddress: profile.emailAddress,
-          dateOfBirth: profile.dateOfBirth
+          dateOfBirth: profile.dateOfBirth,
+          genderIdentity: profile.genderIdentity,
+          yearsOfExperience: profile.yearsOfExperience,
+          languagesSpoken: profile.languagesSpoken,
+          culturalBackgrounds: profile.culturalBackgrounds
         })
       });
 
@@ -176,7 +230,16 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   };
 
   const handleInputChange = (field: keyof TherapistProfile, value: string | boolean | string[]) => {
-    onUpdate({ [field]: value });
+    // For array fields, ensure we have a stable array reference
+    let processedValue = value;
+    if (Array.isArray(value)) {
+      processedValue = [...value]; // Create a new array to avoid reference issues
+    }
+
+    console.log(`[S2] Updating ${field}:`, processedValue);
+    console.log('[S2] Current profile state:', profile);
+
+    onUpdate({ [field]: processedValue });
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -438,6 +501,77 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               value={profile.dateOfBirth || ''}
               onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            />
+          </div>
+
+          {/* Gender Identity - Optional */}
+          <div>
+            <label htmlFor="genderIdentity" className="block text-sm font-medium text-gray-700 mb-2">
+              Gender Identity <span className="text-gray-400">(optional)</span>
+            </label>
+            <select
+              id="genderIdentity"
+              value={profile.genderIdentity || ''}
+              onChange={(e) => handleInputChange('genderIdentity', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">Select gender identity</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Non-binary">Non-binary</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+          </div>
+
+          {/* Years of Experience */}
+          <div>
+            <label htmlFor="yearsOfExperience" className="block text-sm font-medium text-gray-700 mb-2">
+              Years of Experience <span className="text-gray-400">(optional)</span>
+            </label>
+            <select
+              id="yearsOfExperience"
+              value={profile.yearsOfExperience || ''}
+              onChange={(e) => handleInputChange('yearsOfExperience', e.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+            >
+              <option value="">Select experience level</option>
+              <option value="0-2 years">0-2 years</option>
+              <option value="3-5 years">3-5 years</option>
+              <option value="6-10 years">6-10 years</option>
+              <option value="11-15 years">11-15 years</option>
+              <option value="16+ years">16+ years</option>
+            </select>
+          </div>
+
+          {/* Languages Spoken - Optional */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Languages Spoken <span className="text-gray-400">(optional)</span>
+            </label>
+            <CustomMultiSelect
+              options={languageOptions}
+              value={profile.languagesSpoken || []}
+              onChange={(value) => {
+                console.log('[S2] Languages selected:', value);
+                handleInputChange('languagesSpoken', value);
+              }}
+              placeholder="Select languages you speak..."
+            />
+          </div>
+
+          {/* Cultural Backgrounds - Optional */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Cultural Background/Identities <span className="text-gray-400">(optional)</span>
+            </label>
+            <CustomMultiSelect
+              options={culturalOptions}
+              value={profile.culturalBackgrounds || []}
+              onChange={(value) => {
+                console.log('[S2] Cultural backgrounds selected:', value);
+                handleInputChange('culturalBackgrounds', value);
+              }}
+              placeholder="Select cultural backgrounds..."
             />
           </div>
 
