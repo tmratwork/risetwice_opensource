@@ -7,6 +7,7 @@ import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/theme-context';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import SmartSendDialog from './SmartSendDialog';
 import DisplayNameDialog from './DisplayNameDialog';
 import ContributorsModal from './ContributorsModal';
@@ -703,6 +704,7 @@ function BookSelector() {
 // Remove empty interface and empty props object
 export function Header() {
     const { theme } = useTheme();
+    const pathname = usePathname();
     const [showBackButton, setShowBackButton] = useState(false);
     const [endChatHandler, setEndChatHandler] = useState<(() => void) | null>(null);
 
@@ -773,7 +775,15 @@ export function Header() {
                 </div>
                 {/* Navigation icons removed and moved to footer */}
             </nav>
-            <div className="flex items-center">
+            <div className="flex items-center gap-3">
+                {pathname === '/chatbotV17' && (
+                    <Link
+                        href="/s2"
+                        className="px-4 py-2 text-sm font-medium text-sage-700 dark:text-gray-200 bg-sage-200 dark:bg-gray-700 border border-sage-300 dark:border-gray-600 rounded-lg hover:bg-sage-300 dark:hover:bg-gray-600 transition-colors"
+                    >
+                        Provider Sign Up
+                    </Link>
+                )}
                 <ErrorBoundary FallbackComponent={FallbackComponent}>
                     <AuthButtons />
                 </ErrorBoundary>
