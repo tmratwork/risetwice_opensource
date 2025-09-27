@@ -338,7 +338,7 @@ export default function ChatBotV17Page() {
   if (showMatching) {
     return (
       <div className="chatbot-v16-wrapper">
-        <div className="main-container" style={{ backgroundColor: 'var(--bg-primary)', paddingTop: '80px' }}>
+        <div className="main-container" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '80px' }}>
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>

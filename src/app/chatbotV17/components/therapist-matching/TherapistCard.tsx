@@ -42,7 +42,7 @@ const TherapistCard: React.FC<TherapistCardProps> = ({ therapist, onTryAIPreview
     <div
       className="rounded-lg shadow-sm border p-6 hover:shadow-md transition-shadow"
       style={{
-        backgroundColor: 'var(--bg-secondary)',
+        backgroundColor: 'var(--bg-primary)',
         borderColor: 'var(--border-color)'
       }}>
       <div className="flex items-start gap-4">
