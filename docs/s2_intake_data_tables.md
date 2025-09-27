@@ -50,4 +50,4 @@
   ADD COLUMN religious_spiritual_integration VARCHAR(100),
   ADD COLUMN session_fees VARCHAR(100),
   ADD COLUMN board_certifications TEXT[],
-  ADD COLUMN professional_memberships TEXT[];
+  ADD COLUMN professional_memberships TEXT[];       

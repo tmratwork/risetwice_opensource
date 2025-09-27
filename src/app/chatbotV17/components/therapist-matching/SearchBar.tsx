@@ -33,11 +33,12 @@ const SearchBar: React.FC<SearchBarProps> = ({
         value={searchQuery}
         onChange={(e) => onSearchChange(e.target.value)}
         placeholder={placeholder}
-        className="text-input w-full pl-12 pr-4 py-4 text-lg"
+        className="text-input w-full pl-16 pr-4 py-4 text-lg"
         style={{
           backgroundColor: 'var(--bg-secondary)',
           borderColor: 'var(--border-color)',
-          color: 'var(--text-primary)'
+          color: 'var(--text-primary)',
+          paddingLeft: '30px'
         }}
       />
     </div>
