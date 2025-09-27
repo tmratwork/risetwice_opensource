@@ -254,11 +254,11 @@ export default function ChatBotV17Page() {
 
     // Send via ElevenLabs conversation instance (not conversation history)
     const messageText = userMessage.trim();
-    
+
     // Try different method names based on SDK version
     if (conversationInstance) {
       console.log('[V17] 🔍 Available conversation methods:', Object.keys(conversationInstance));
-      
+
       // Try sendUserMessage first (most likely)
       if (typeof conversationInstance.sendUserMessage === 'function') {
         console.log('[V17] ✅ Using sendUserMessage method');
@@ -338,11 +338,11 @@ export default function ChatBotV17Page() {
   if (showMatching) {
     return (
       <div className="chatbot-v16-wrapper">
-        <div className="main-container" style={{ backgroundColor: 'var(--bg-primary)' }}>
+        <div className="main-container" style={{ backgroundColor: 'var(--bg-primary)', paddingTop: '80px' }}>
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Find Your Perfect Therapist
+              Find Your Therapist
             </h1>
             <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
               Browse our network of qualified mental health professionals and start your journey with a personalized AI preview.
@@ -417,10 +417,10 @@ export default function ChatBotV17Page() {
         {/* Start button overlay - positioned as sibling to conversation-container, just like V16 */}
         {!isConnected && (
           <div className="start-button-overlay flex flex-col items-center">
-            
+
             {/* Demo Buttons */}
             <DemoButtons onDemoStart={handleDemoStart} isPreparing={isPreparing} />
-            
+
             <button
               className="control-button primary large-button"
               aria-label="Start a new conversation with RiseTwice AI assistant"
