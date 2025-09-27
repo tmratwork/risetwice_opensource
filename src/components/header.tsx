@@ -18,7 +18,6 @@ import {
   setStoredLanguagePreference,
   getLanguageByCode
 } from '@/lib/language-utils';
-import { ArrowLeft } from 'lucide-react';
 
 interface DropdownPortalProps {
   isOpen: boolean;
@@ -681,31 +680,49 @@ function BookSelector() {
 // Remove empty interface and empty props object
 export function Header() {
     const { theme } = useTheme();
+    const [showBackButton, setShowBackButton] = useState(false);
+    const [endChatHandler, setEndChatHandler] = useState<(() => void) | null>(null);
 
-    // Try to get chat state if available (only on chatbotV17)
-    let chatState;
-    try {
-        const { useChatState } = require('@/contexts/chat-state-context');
-        chatState = useChatState();
-    } catch {
-        // Context not available - not on chatbotV17 page
-        chatState = null;
-    }
+    useEffect(() => {
+        const { ChatEvents } = require('@/utils/chat-events');
+        const chatEvents = ChatEvents.getInstance();
+        let hasHandler = false;
+        let isConnected = false;
 
-    const showBackButton = chatState?.isConnected || false;
-    const handleEndChat = chatState?.onEndChat || (() => {});
+        // Update visibility when either handler or connection changes
+        const updateVisibility = () => {
+            setShowBackButton(hasHandler && isConnected);
+        };
+
+        // Listen for handler changes
+        const unsubscribeHandler = chatEvents.onEndChatHandlerChange((handler: (() => void) | null) => {
+            hasHandler = !!handler;
+            setEndChatHandler(() => handler);
+            updateVisibility();
+        });
+
+        // Listen for connection changes
+        const unsubscribeConnection = chatEvents.onConnectionStateChange((connected: boolean) => {
+            isConnected = connected;
+            updateVisibility();
+        });
+
+        return () => {
+            unsubscribeHandler();
+            unsubscribeConnection();
+        };
+    }, []);
 
     return (
         <header className="fixed top-0 left-0 right-0 flex justify-between items-center px-6 py-3 bg-sage-100 dark:bg-[#131314] z-50">
             <div className="flex items-center gap-2">
-                {showBackButton && (
+                {showBackButton && endChatHandler && (
                     <button
-                        onClick={handleEndChat}
+                        onClick={endChatHandler}
                         className="flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors hover:bg-sage-200 dark:hover:bg-gray-700"
                         style={{ color: 'var(--text-primary)' }}
                     >
-                        <ArrowLeft size={16} />
-                        End Chat
+                        ← End Session
                     </button>
                 )}
                 <Link href="/" className="hover:opacity-80 transition-opacity block">

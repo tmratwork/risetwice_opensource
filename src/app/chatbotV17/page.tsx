@@ -33,7 +33,7 @@ declare global {
 
 export default function ChatBotV17Page() {
   const { user } = useAuth();
-  const { setIsConnected, setSelectedTherapist: setChatStateTherapist, setOnEndChat } = useChatState();
+  const { setSelectedTherapist: setChatStateTherapist } = useChatState();
   const [isSignInDialogOpen, setIsSignInDialogOpen] = useState(false);
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
   const [userMessage, setUserMessage] = useState('');
@@ -49,6 +49,7 @@ export default function ChatBotV17Page() {
   const store = useElevenLabsStore();
   const {
     startSession,
+    endSession,
     isConnected,
     setVolume,
     conversationInstance,
@@ -179,27 +180,51 @@ export default function ChatBotV17Page() {
   }, []);
 
   // Handle back to matching
-  const handleBackToMatching = useCallback(() => {
+  const handleBackToMatching = useCallback(async () => {
+    console.log('[V17] Ending chat and returning to matching');
+
+    try {
+      // End the WebRTC session first
+      if (isConnected) {
+        console.log('[V17] Ending WebRTC session...');
+        await endSession();
+      }
+    } catch (error) {
+      console.error('[V17] Error ending session:', error);
+    }
+
+    // Reset UI state
     setShowMatching(true);
     setSelectedTherapist(null);
     setChatStateTherapist(null);
-    // Reset conversation state if needed
+
+    // Clear conversation history
     store.clearConversation();
-  }, [store, setChatStateTherapist]);
 
-  // Sync chat state with context for header
+    console.log('[V17] ✅ Chat ended, returned to matching screen');
+  }, [store, isConnected, endSession, setChatStateTherapist]);
+
+  // Register/unregister handler using custom events
   useEffect(() => {
-    setIsConnected(isConnected);
-  }, [isConnected, setIsConnected]);
+    const { ChatEvents } = require('@/utils/chat-events');
+    const chatEvents = ChatEvents.getInstance();
+    chatEvents.setEndChatHandler(handleBackToMatching);
 
+    return () => chatEvents.setEndChatHandler(null);
+  }, [handleBackToMatching]);
+
+  // Update connection state using custom events
+  useEffect(() => {
+    const { ChatEvents } = require('@/utils/chat-events');
+    const chatEvents = ChatEvents.getInstance();
+    chatEvents.setConnectionState(isConnected);
+  }, [isConnected]);
+
+  // Only sync therapist info - don't sync isConnected (causes infinite loop)
   useEffect(() => {
     setChatStateTherapist(selectedTherapist);
-  }, [selectedTherapist, setChatStateTherapist]);
+  }, [selectedTherapist]);
 
-  // Set the end chat handler for header button
-  useEffect(() => {
-    setOnEndChat(() => handleBackToMatching);
-  }, [handleBackToMatching, setOnEndChat]);
 
   // Handle text message input
   const handleInputChange = useCallback((value: string) => {

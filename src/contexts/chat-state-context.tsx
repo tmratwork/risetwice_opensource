@@ -7,8 +7,6 @@ interface ChatStateContextType {
   setIsConnected: (connected: boolean) => void;
   selectedTherapist: any | null;
   setSelectedTherapist: (therapist: any | null) => void;
-  onEndChat: (() => void) | null;
-  setOnEndChat: (handler: (() => void) | null) => void;
 }
 
 const ChatStateContext = createContext<ChatStateContextType | undefined>(undefined);
@@ -20,15 +18,12 @@ interface ChatStateProviderProps {
 export function ChatStateProvider({ children }: ChatStateProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [selectedTherapist, setSelectedTherapist] = useState<any | null>(null);
-  const [onEndChat, setOnEndChat] = useState<(() => void) | null>(null);
 
   const value: ChatStateContextType = {
     isConnected,
     setIsConnected,
     selectedTherapist,
     setSelectedTherapist,
-    onEndChat,
-    setOnEndChat,
   };
 
   return (
