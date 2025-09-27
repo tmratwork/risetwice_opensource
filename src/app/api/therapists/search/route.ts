@@ -9,6 +9,27 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+// Database result interface
+interface DatabaseTherapist {
+  id: string;
+  full_name: string;
+  title: string;
+  degrees: string[] | null;
+  primary_location: string;
+  gender_identity: string;
+  years_of_experience: string;
+  languages_spoken: string[] | null;
+  s2_complete_profiles?: Array<{
+    profile_photo_url?: string;
+    personal_statement?: string;
+    mental_health_specialties?: string[];
+    treatment_approaches?: string[];
+    age_ranges_treated?: string[];
+    lgbtq_affirming?: boolean;
+    session_fees?: string;
+  }>;
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -101,7 +122,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Transform the data to match our frontend interface
-    const transformedTherapists = therapists.map((therapist: any) => {
+    const transformedTherapists = therapists.map((therapist: DatabaseTherapist) => {
       const completeProfile = therapist.s2_complete_profiles?.[0] || {};
 
       return {

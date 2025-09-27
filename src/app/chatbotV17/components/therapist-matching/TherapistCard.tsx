@@ -81,7 +81,7 @@ const TherapistCard: React.FC<TherapistCardProps> = ({ therapist, onTryAIPreview
           {therapist.personalStatement && (
             <div className="mb-4">
               <p className="leading-relaxed" style={{ color: 'var(--text-primary)' }}>
-                "{isExpanded ? therapist.personalStatement : truncateStatement(therapist.personalStatement)}"
+                &ldquo;{isExpanded ? therapist.personalStatement : truncateStatement(therapist.personalStatement)}&rdquo;
               </p>
             </div>
           )}

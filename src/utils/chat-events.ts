@@ -22,9 +22,9 @@ export class ChatEvents {
 
   // Subscribe to handler changes
   onEndChatHandlerChange(callback: (handler: (() => void) | null) => void) {
-    const listener = (event: any) => callback(event.detail.handler);
-    this.eventTarget.addEventListener('endChatHandlerChanged', listener);
-    return () => this.eventTarget.removeEventListener('endChatHandlerChanged', listener);
+    const listener = (event: CustomEvent<{ handler: (() => void) | null }>) => callback(event.detail.handler);
+    this.eventTarget.addEventListener('endChatHandlerChanged', listener as EventListener);
+    return () => this.eventTarget.removeEventListener('endChatHandlerChanged', listener as EventListener);
   }
 
   // Set connection state
@@ -36,8 +36,8 @@ export class ChatEvents {
 
   // Subscribe to connection changes
   onConnectionStateChange(callback: (connected: boolean) => void) {
-    const listener = (event: any) => callback(event.detail.connected);
-    this.eventTarget.addEventListener('connectionStateChanged', listener);
-    return () => this.eventTarget.removeEventListener('connectionStateChanged', listener);
+    const listener = (event: CustomEvent<{ connected: boolean }>) => callback(event.detail.connected);
+    this.eventTarget.addEventListener('connectionStateChanged', listener as EventListener);
+    return () => this.eventTarget.removeEventListener('connectionStateChanged', listener as EventListener);
   }
 }

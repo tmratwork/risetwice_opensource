@@ -85,18 +85,6 @@ export default function ChatBotV17Page() {
     }
   }, [user, handleLetsTalk]);
 
-  // Handle therapist AI preview (replaces demo buttons)
-  const handleTryAIPreview = useCallback((therapist: Therapist) => {
-    console.log('[V17] Starting AI preview for therapist:', therapist.fullName);
-    setSelectedTherapist(therapist);
-    setShowMatching(false);
-
-    // Use therapist info for AI conversation
-    const voiceId = 'default'; // Use default voice for now
-    const promptAppend = `You are now speaking as a therapist named ${therapist.fullName}. ${therapist.personalStatement ? `Your approach: ${therapist.personalStatement}` : ''}`;
-    handleDemoStart(voiceId, promptAppend, therapist.fullName, false);
-  }, []);
-
   // Handle demo button clicks (Dr Mattu, Dr Judy)
   const handleDemoStart = useCallback((voiceId: string, promptAppend: string, doctorName: string, forceStart = false) => {
     const startDemo = async () => {
@@ -125,6 +113,18 @@ export default function ChatBotV17Page() {
       startDemo();
     }
   }, [user, store, startSession]);
+
+  // Handle therapist AI preview (replaces demo buttons)
+  const handleTryAIPreview = useCallback((therapist: Therapist) => {
+    console.log('[V17] Starting AI preview for therapist:', therapist.fullName);
+    setSelectedTherapist(therapist);
+    setShowMatching(false);
+
+    // Use therapist info for AI conversation
+    const voiceId = 'default'; // Use default voice for now
+    const promptAppend = `You are now speaking as a therapist named ${therapist.fullName}. ${therapist.personalStatement ? `Your approach: ${therapist.personalStatement}` : ''}`;
+    handleDemoStart(voiceId, promptAppend, therapist.fullName, false);
+  }, [handleDemoStart]);
 
   // Search therapists
   const searchTherapists = useCallback(async () => {
@@ -164,7 +164,7 @@ export default function ChatBotV17Page() {
   useEffect(() => {
     console.log('[V17] Loading default therapists on page load');
     searchTherapists();
-  }, []);
+  }, [searchTherapists]);
 
   // Debounce search when query/filters change
   useEffect(() => {
@@ -172,7 +172,7 @@ export default function ChatBotV17Page() {
       searchTherapists();
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterTags]);
+  }, [searchQuery, filterTags, searchTherapists]);
 
   // Handle filter tag removal
   const handleRemoveTag = useCallback((tagId: string) => {
@@ -206,18 +206,26 @@ export default function ChatBotV17Page() {
 
   // Register/unregister handler using custom events
   useEffect(() => {
-    const { ChatEvents } = require('@/utils/chat-events');
-    const chatEvents = ChatEvents.getInstance();
-    chatEvents.setEndChatHandler(handleBackToMatching);
+    let chatEvents: InstanceType<typeof import('@/utils/chat-events').ChatEvents> | null = null;
 
-    return () => chatEvents.setEndChatHandler(null);
+    import('@/utils/chat-events').then(({ ChatEvents }) => {
+      chatEvents = ChatEvents.getInstance();
+      chatEvents.setEndChatHandler(handleBackToMatching);
+    });
+
+    return () => {
+      if (chatEvents) {
+        chatEvents.setEndChatHandler(null);
+      }
+    };
   }, [handleBackToMatching]);
 
   // Update connection state using custom events
   useEffect(() => {
-    const { ChatEvents } = require('@/utils/chat-events');
-    const chatEvents = ChatEvents.getInstance();
-    chatEvents.setConnectionState(isConnected);
+    import('@/utils/chat-events').then(({ ChatEvents }) => {
+      const chatEvents = ChatEvents.getInstance();
+      chatEvents.setConnectionState(isConnected);
+    });
   }, [isConnected]);
 
   // Only sync therapist info - don't sync isConnected (causes infinite loop)

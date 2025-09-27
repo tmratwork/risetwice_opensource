@@ -1,12 +1,27 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode } from 'react';
+
+export interface Therapist {
+  id: string;
+  fullName: string;
+  title: string;
+  degrees: string[];
+  primaryLocation: string;
+  personalStatement?: string;
+  mentalHealthSpecialties?: string[];
+  treatmentApproaches?: string[];
+  profilePhotoUrl?: string;
+  yearsOfExperience?: string;
+  languagesSpoken?: string[];
+  genderIdentity?: string;
+}
 
 interface ChatStateContextType {
   isConnected: boolean;
   setIsConnected: (connected: boolean) => void;
-  selectedTherapist: any | null;
-  setSelectedTherapist: (therapist: any | null) => void;
+  selectedTherapist: Therapist | null;
+  setSelectedTherapist: (therapist: Therapist | null) => void;
 }
 
 const ChatStateContext = createContext<ChatStateContextType | undefined>(undefined);
@@ -17,7 +32,7 @@ interface ChatStateProviderProps {
 
 export function ChatStateProvider({ children }: ChatStateProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
-  const [selectedTherapist, setSelectedTherapist] = useState<any | null>(null);
+  const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
 
   const value: ChatStateContextType = {
     isConnected,

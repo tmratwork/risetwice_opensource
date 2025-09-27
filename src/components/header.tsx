@@ -707,32 +707,36 @@ export function Header() {
     const [endChatHandler, setEndChatHandler] = useState<(() => void) | null>(null);
 
     useEffect(() => {
-        const { ChatEvents } = require('@/utils/chat-events');
-        const chatEvents = ChatEvents.getInstance();
-        let hasHandler = false;
-        let isConnected = false;
+        let unsubscribeHandler: (() => void) | null = null;
+        let unsubscribeConnection: (() => void) | null = null;
 
-        // Update visibility when either handler or connection changes
-        const updateVisibility = () => {
-            setShowBackButton(hasHandler && isConnected);
-        };
+        import('@/utils/chat-events').then(({ ChatEvents }) => {
+            const chatEvents = ChatEvents.getInstance();
+            let hasHandler = false;
+            let isConnected = false;
 
-        // Listen for handler changes
-        const unsubscribeHandler = chatEvents.onEndChatHandlerChange((handler: (() => void) | null) => {
-            hasHandler = !!handler;
-            setEndChatHandler(() => handler);
-            updateVisibility();
-        });
+            // Update visibility when either handler or connection changes
+            const updateVisibility = () => {
+                setShowBackButton(hasHandler && isConnected);
+            };
 
-        // Listen for connection changes
-        const unsubscribeConnection = chatEvents.onConnectionStateChange((connected: boolean) => {
-            isConnected = connected;
-            updateVisibility();
+            // Listen for handler changes
+            unsubscribeHandler = chatEvents.onEndChatHandlerChange((handler: (() => void) | null) => {
+                hasHandler = !!handler;
+                setEndChatHandler(() => handler);
+                updateVisibility();
+            });
+
+            // Listen for connection changes
+            unsubscribeConnection = chatEvents.onConnectionStateChange((connected: boolean) => {
+                isConnected = connected;
+                updateVisibility();
+            });
         });
 
         return () => {
-            unsubscribeHandler();
-            unsubscribeConnection();
+            if (unsubscribeHandler) unsubscribeHandler();
+            if (unsubscribeConnection) unsubscribeConnection();
         };
     }, []);
 
