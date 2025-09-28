@@ -33,8 +33,8 @@ export function DemoButtons({ onDemoStart, isPreparing }: DemoButtonsProps) {
   return (
     <div className="demo-buttons-container mb-6">
       <div className="text-center mb-4">
-        <h3 className="text-lg font-medium text-gray-700 mb-2">AI Preview Demo</h3>
-        <p className="text-sm text-gray-600">Experience different AI personalities</p>
+        <h3 className="text-lg font-medium text-gray-700 mb-2">AI Previews</h3>
+        <p className="text-sm text-gray-600">Discover which mental health professional feels like a match</p>
       </div>
 
       <div className="flex flex-col gap-3 items-center">

@@ -353,7 +353,7 @@ export default function ChatBotV17Page() {
               Find Your Therapist
             </h1>
             <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Browse our network of qualified mental health professionals and start your journey with a personalized AI preview.
+              Browse our network of qualified mental health professionals and start your journey by trying their AI Previews.
             </p>
           </div>
 
