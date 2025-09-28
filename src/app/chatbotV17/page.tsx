@@ -427,7 +427,7 @@ export default function ChatBotV17Page() {
           <div className="start-button-overlay flex flex-col items-center">
 
             {/* Demo Buttons */}
-            <DemoButtons onDemoStart={handleDemoStart} isPreparing={isPreparing} />
+            <DemoButtons />
 
             <button
               className="control-button primary large-button"

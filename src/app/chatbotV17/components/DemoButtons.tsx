@@ -5,12 +5,8 @@
 
 import React from 'react';
 
-interface DemoButtonsProps {
-  onDemoStart: (voiceId: string, promptAppend: string, doctorName: string) => void;
-  isPreparing: boolean;
-}
 
-export function DemoButtons({ onDemoStart, isPreparing }: DemoButtonsProps) {
+export function DemoButtons() {
   return (
     <div className="demo-buttons-container mb-6">
     </div>
