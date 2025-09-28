@@ -1,0 +1,308 @@
+/* Portal Modal Styles - Guaranteed to be on top */
+.portal-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000; /* High z-index works because it's at document.body level */
+  opacity: 0;
+  animation: fadeIn 0.2s ease-out forwards;
+}
+
+.portal-modal-content {
+  background: var(--bg-primary, white);
+  color: var(--text-primary, #1f2937);
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow-y: auto;
+  transform: scale(0.9);
+  animation: scaleIn 0.2s ease-out forwards;
+}
+
+/* Bug Report Form Specific Styles */
+.bug-report-portal-form {
+  padding: 24px;
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.bug-report-portal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.bug-report-portal-header h2 {
+  margin: 0;
+  color: var(--text-primary, #1f2937);
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.portal-close-button {
+  background: none;
+  border: none;
+  font-size: 28px;
+  cursor: pointer;
+  color: var(--text-secondary, #6b7280);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  line-height: 1;
+}
+
+.portal-close-button:hover {
+  background-color: var(--hover-bg, #f3f4f6);
+  color: var(--text-primary, #374151);
+}
+
+.portal-feedback-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.portal-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.portal-form-group label {
+  font-weight: 500;
+  color: var(--text-primary, #374151);
+  font-size: 14px;
+}
+
+.portal-form-group input,
+.portal-form-group textarea {
+  padding: 12px;
+  border: 1px solid var(--border-color, #d1d5db);
+  border-radius: 6px;
+  font-size: 14px;
+  background-color: var(--input-bg, white);
+  color: var(--text-primary, #374151);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.portal-form-group input:focus,
+.portal-form-group textarea:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.portal-form-group textarea {
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+}
+
+.feedback-checkboxes {
+  display: flex;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.checkbox-label input[type="checkbox"] {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.disclosure-checkbox {
+  flex-direction: row;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.disclosure-checkbox .checkbox-text {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary, #6b7280);
+}
+
+.bug-report-contact-section {
+  border-top: 1px solid var(--border-color, #e5e7eb);
+  padding-top: 20px;
+}
+
+.bug-report-contact-section h3 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary, #1f2937);
+}
+
+.bug-report-contact-explanation {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.portal-form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
+.portal-form-actions button {
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.portal-button-cancel {
+  background-color: var(--secondary-bg, #f3f4f6);
+  color: var(--text-primary, #374151);
+  border-color: var(--border-color, #d1d5db);
+}
+
+.portal-button-cancel:hover {
+  background-color: var(--hover-bg, #e5e7eb);
+  border-color: var(--text-secondary, #9ca3af);
+}
+
+.portal-button-submit {
+  background-color: #3b82f6;
+  color: white;
+  border-color: #3b82f6;
+}
+
+.portal-button-submit:hover:not(:disabled) {
+  background-color: #2563eb;
+  border-color: #2563eb;
+}
+
+.portal-button-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.portal-form-actions button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+.bug-report-info-text {
+  font-size: 12px;
+  color: var(--text-secondary, #6b7280);
+  text-align: center;
+  margin: 16px 0 8px 0;
+}
+
+/* Success/Error Messages */
+.portal-success-message {
+  padding: 12px;
+  background-color: #d1fae5;
+  color: #065f46;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #a7f3d0;
+}
+
+.portal-error-message {
+  padding: 12px;
+  background-color: #fef2f2;
+  color: #991b1b;
+  border-radius: 6px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  border: 1px solid #fecaca;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .portal-modal-content {
+    --bg-primary: #1f2937;
+    --text-primary: #f9fafb;
+    --text-secondary: #9ca3af;
+    --border-color: #374151;
+    --input-bg: #374151;
+    --hover-bg: #374151;
+    --secondary-bg: #374151;
+  }
+}
+
+/* Dark mode class-based (for manual theme switching) */
+.dark .portal-modal-content {
+  --bg-primary: #1f2937;
+  --text-primary: #f9fafb;
+  --text-secondary: #9ca3af;
+  --border-color: #374151;
+  --input-bg: #374151;
+  --hover-bg: #374151;
+  --secondary-bg: #374151;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .bug-report-portal-form {
+    min-width: unset;
+    width: 100%;
+    margin: 16px;
+    padding: 20px;
+  }
+
+  .portal-modal-content {
+    margin: 16px;
+    max-width: calc(100vw - 32px);
+  }
+
+  .portal-form-actions {
+    flex-direction: column;
+  }
+
+  .portal-form-actions button {
+    width: 100%;
+  }
+
+  .feedback-checkboxes {
+    flex-direction: column;
+    gap: 12px;
+  }
+}

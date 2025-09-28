@@ -12,7 +12,7 @@ import SmartSendDialog from './SmartSendDialog';
 import DisplayNameDialog from './DisplayNameDialog';
 import ContributorsModal from './ContributorsModal';
 import PhoneAuth from './PhoneAuth';
-import BugReportModal from './BugReportModal';
+import BugReportModalPortal from './BugReportModalPortal';
 import { createPortal } from 'react-dom';
 import {
   SUPPORTED_LANGUAGES,
@@ -531,7 +531,7 @@ function AuthButtons() {
 
                 {/* Bug Report Modal */}
                 {showBugReportModal && (
-                    <BugReportModal
+                    <BugReportModalPortal
                         onClose={() => setShowBugReportModal(false)}
                     />
                 )}
