@@ -14,7 +14,9 @@ interface CompleteProfileRequest {
   profilePhoto?: string;
   personalStatement: string;
   mentalHealthSpecialties: string[];
+  otherMentalHealthSpecialty?: string;
   treatmentApproaches: string[];
+  otherTreatmentApproach?: string;
   ageRangesTreated: string[];
   practiceDetails: {
     practiceType: string;
@@ -30,14 +32,18 @@ interface CompleteProfileRequest {
   clientTypesServed?: string[];
   lgbtqAffirming?: boolean;
   religiousSpiritualIntegration?: string;
+  otherReligiousSpiritualIntegration?: string;
   sessionFees?: string;
   boardCertifications?: string[];
+  otherBoardCertification?: string;
   professionalMemberships?: string[];
+  otherProfessionalMembership?: string;
 }
 
 export async function POST(request: NextRequest) {
   try {
     const data: CompleteProfileRequest = await request.json();
+    console.log('[S2] Complete profile request data:', JSON.stringify(data, null, 2));
 
     // Validate required fields
     if (!data.userId || !data.personalStatement || !data.mentalHealthSpecialties?.length || 
@@ -74,41 +80,70 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Use upsert to update existing profile or create new one (prevents duplicate records)
-    const { data: profileData, error } = await supabase
+    // Check if a complete profile already exists for this therapist
+    const { data: existingProfile } = await supabase
       .from('s2_complete_profiles')
-      .upsert({
-        user_id: data.userId,
-        therapist_profile_id: therapistProfile.id,
-        profile_photo_url: data.profilePhoto || null,
-        personal_statement: data.personalStatement,
-        mental_health_specialties: data.mentalHealthSpecialties,
-        treatment_approaches: data.treatmentApproaches,
-        age_ranges_treated: data.ageRangesTreated,
-        practice_type: data.practiceDetails.practiceType,
-        session_length: data.practiceDetails.sessionLength || null,
-        availability_hours: data.practiceDetails.availabilityHours || null,
-        emergency_protocol: data.practiceDetails.emergencyProtocol || null,
-        accepts_insurance: data.insuranceInformation.acceptsInsurance,
-        insurance_plans: data.insuranceInformation.insurancePlans,
-        out_of_network_supported: data.insuranceInformation.outOfNetworkSupported,
-        client_types_served: data.clientTypesServed || null,
-        lgbtq_affirming: data.lgbtqAffirming || false,
-        religious_spiritual_integration: data.religiousSpiritualIntegration || null,
-        session_fees: data.sessionFees || null,
-        board_certifications: data.boardCertifications || null,
-        professional_memberships: data.professionalMemberships || null,
-        is_active: true,
-        completion_date: new Date().toISOString()
-      }, {
-        onConflict: 'therapist_profile_id',
-        ignoreDuplicates: false
-      })
-      .select()
+      .select('id')
+      .eq('therapist_profile_id', therapistProfile.id)
+      .eq('is_active', true)
       .single();
+
+    const profilePayload = {
+      user_id: data.userId,
+      therapist_profile_id: therapistProfile.id,
+      profile_photo_url: data.profilePhoto || null,
+      personal_statement: data.personalStatement,
+      mental_health_specialties: data.mentalHealthSpecialties,
+      treatment_approaches: data.treatmentApproaches,
+      age_ranges_treated: data.ageRangesTreated,
+      practice_type: data.practiceDetails.practiceType,
+      session_length: data.practiceDetails.sessionLength || null,
+      availability_hours: data.practiceDetails.availabilityHours || null,
+      emergency_protocol: data.practiceDetails.emergencyProtocol || null,
+      accepts_insurance: data.insuranceInformation.acceptsInsurance,
+      insurance_plans: data.insuranceInformation.insurancePlans,
+      out_of_network_supported: data.insuranceInformation.outOfNetworkSupported,
+      client_types_served: data.clientTypesServed || null,
+      lgbtq_affirming: data.lgbtqAffirming || false,
+      religious_spiritual_integration: data.religiousSpiritualIntegration || null,
+      session_fees: data.sessionFees || null,
+      board_certifications: data.boardCertifications || null,
+      professional_memberships: data.professionalMemberships || null,
+      other_mental_health_specialty: data.otherMentalHealthSpecialty || null,
+      other_treatment_approach: data.otherTreatmentApproach || null,
+      other_religious_spiritual_integration: data.otherReligiousSpiritualIntegration || null,
+      other_board_certification: data.otherBoardCertification || null,
+      other_professional_membership: data.otherProfessionalMembership || null,
+      is_active: true,
+      completion_date: new Date().toISOString()
+    };
+
+    let profileData, error;
+
+    if (existingProfile) {
+      // Update existing profile
+      const result = await supabase
+        .from('s2_complete_profiles')
+        .update(profilePayload)
+        .eq('id', existingProfile.id)
+        .select()
+        .single();
+      profileData = result.data;
+      error = result.error;
+    } else {
+      // Insert new profile
+      const result = await supabase
+        .from('s2_complete_profiles')
+        .insert(profilePayload)
+        .select()
+        .single();
+      profileData = result.data;
+      error = result.error;
+    }
 
     if (error) {
       console.error('[S2] Error saving complete profile:', error);
+      console.error('[S2] Error details:', JSON.stringify(error, null, 2));
       return NextResponse.json(
         { error: 'Failed to save complete profile', details: error.message },
         { status: 500 }
@@ -207,6 +242,11 @@ export async function GET(request: NextRequest) {
         sessionFees: profileData.session_fees,
         boardCertifications: profileData.board_certifications,
         professionalMemberships: profileData.professional_memberships,
+        otherMentalHealthSpecialty: profileData.other_mental_health_specialty,
+        otherTreatmentApproach: profileData.other_treatment_approach,
+        otherReligiousSpiritualIntegration: profileData.other_religious_spiritual_integration,
+        otherBoardCertification: profileData.other_board_certification,
+        otherProfessionalMembership: profileData.other_professional_membership,
         completionDate: profileData.completion_date,
         createdAt: profileData.created_at,
         updatedAt: profileData.updated_at
