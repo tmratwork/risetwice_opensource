@@ -13,6 +13,7 @@ interface LicenseVerificationData {
   licenseType: string;
   licenseNumber: string;
   stateOfLicensure: string;
+  otherLicenseType?: string;
 }
 
 interface LicenseVerificationProps {
@@ -37,6 +38,7 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingData, setLoadingData] = useState(true);
+  const [otherLicenseTypeInput, setOtherLicenseTypeInput] = useState('');
 
   // Load existing license data on mount
   useEffect(() => {
@@ -49,10 +51,15 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
 
         if (data.success && data.licenseData) {
           console.log('[S2] Loaded existing license data:', data.licenseData);
+          // Set otherLicenseTypeInput state if otherLicenseType exists
+          if (data.licenseData.otherLicenseType) {
+            setOtherLicenseTypeInput(data.licenseData.otherLicenseType);
+          }
           onUpdate({
             licenseType: data.licenseData.licenseType,
             licenseNumber: data.licenseData.licenseNumber,
-            stateOfLicensure: data.licenseData.stateOfLicensure
+            stateOfLicensure: data.licenseData.stateOfLicensure,
+            otherLicenseType: data.licenseData.otherLicenseType
           });
         }
       } catch (error) {
@@ -70,6 +77,11 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
 
     if (!licenseData.licenseType.trim()) {
       newErrors.licenseType = 'License type is required';
+    }
+
+    // If "Other" license type is selected, validate that custom type is provided
+    if (licenseData.licenseType === 'Other' && !otherLicenseTypeInput.trim()) {
+      newErrors.licenseType = 'Please specify your custom license type';
     }
 
     if (!licenseData.licenseNumber.trim()) {
@@ -105,7 +117,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
           userId: user.uid,
           licenseType: licenseData.licenseType,
           licenseNumber: licenseData.licenseNumber,
-          stateOfLicensure: licenseData.stateOfLicensure
+          stateOfLicensure: licenseData.stateOfLicensure,
+          otherLicenseType: licenseData.otherLicenseType
         })
       });
 
@@ -133,6 +146,39 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleLicenseTypeSelection = (selectedType: string) => {
+    const previousType = licenseData.licenseType;
+    const wasOtherSelected = previousType === 'Other';
+    const isOtherNowSelected = selectedType === 'Other';
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customLicenseType = window.prompt(
+        'Please specify your custom license type:\n\n(Examples: LCPC, LMHC, Board Certification, etc.)'
+      );
+
+      if (customLicenseType && customLicenseType.trim()) {
+        // User entered a custom license type
+        setOtherLicenseTypeInput(customLicenseType.trim());
+        handleInputChange('otherLicenseType', customLicenseType.trim());
+        handleInputChange('licenseType', selectedType);
+      } else {
+        // User cancelled or entered empty string, don't change selection
+        // Keep the previous selection
+        return;
+      }
+    } else {
+      // Normal license type selection (no "Other" involved)
+      handleInputChange('licenseType', selectedType);
+
+      // If "Other" was previously selected but now deselected, clear the custom type
+      if (wasOtherSelected && !isOtherNowSelected) {
+        setOtherLicenseTypeInput('');
+        handleInputChange('otherLicenseType', '');
+      }
     }
   };
 
@@ -205,7 +251,7 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
             <select
               id="licenseType"
               value={licenseData.licenseType}
-              onChange={(e) => handleInputChange('licenseType', e.target.value)}
+              onChange={(e) => handleLicenseTypeSelection(e.target.value)}
               className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.licenseType ? 'border-red-300' : 'border-gray-300'
                 }`}
             >
@@ -220,6 +266,15 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
             </select>
             {errors.licenseType && (
               <p className="mt-1 text-sm text-red-600">{errors.licenseType}</p>
+            )}
+
+            {/* Show custom license type when "Other" is selected */}
+            {licenseData.licenseType === 'Other' && otherLicenseTypeInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom License Type:</strong> {otherLicenseTypeInput}
+                </span>
+              </div>
             )}
           </div>
 

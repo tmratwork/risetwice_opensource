@@ -59,13 +59,16 @@ interface LicenseVerificationData {
   licenseType: string;
   licenseNumber: string;
   stateOfLicensure: string;
+  otherLicenseType?: string;
 }
 
 interface CompleteProfileData {
   profilePhoto?: string;
   personalStatement: string;
   mentalHealthSpecialties: string[];
+  otherMentalHealthSpecialty?: string;
   treatmentApproaches: string[];
+  otherTreatmentApproach?: string;
   ageRangesTreated: string[];
   practiceDetails: {
     practiceType: string;

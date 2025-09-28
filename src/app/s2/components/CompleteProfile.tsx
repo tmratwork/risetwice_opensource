@@ -16,7 +16,9 @@ interface CompleteProfileData {
   profilePhoto?: string;
   personalStatement: string;
   mentalHealthSpecialties: string[];
+  otherMentalHealthSpecialty?: string;
   treatmentApproaches: string[];
+  otherTreatmentApproach?: string;
   ageRangesTreated: string[];
   practiceDetails: {
     practiceType: string;
@@ -59,6 +61,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [otherMentalHealthSpecialtyInput, setOtherMentalHealthSpecialtyInput] = useState('');
+  const [otherTreatmentApproachInput, setOtherTreatmentApproachInput] = useState('');
 
   // Options for multi-select fields
   const boardCertificationOptions = [
@@ -96,6 +100,14 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
         if (data.success && data.completeProfile) {
           console.log('[S2] Loaded existing complete profile:', data.completeProfile);
 
+          // Set custom input states if they exist
+          if (data.completeProfile.otherMentalHealthSpecialty) {
+            setOtherMentalHealthSpecialtyInput(data.completeProfile.otherMentalHealthSpecialty);
+          }
+          if (data.completeProfile.otherTreatmentApproach) {
+            setOtherTreatmentApproachInput(data.completeProfile.otherTreatmentApproach);
+          }
+
           // Fix: Skip blob URLs entirely to prevent security errors
           const profilePhoto = data.completeProfile.profilePhoto &&
                                !data.completeProfile.profilePhoto.startsWith('blob:')
@@ -106,7 +118,9 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             profilePhoto,
             personalStatement: data.completeProfile.personalStatement,
             mentalHealthSpecialties: data.completeProfile.mentalHealthSpecialties,
+            otherMentalHealthSpecialty: data.completeProfile.otherMentalHealthSpecialty,
             treatmentApproaches: data.completeProfile.treatmentApproaches,
+            otherTreatmentApproach: data.completeProfile.otherTreatmentApproach,
             ageRangesTreated: data.completeProfile.ageRangesTreated,
             practiceDetails: {
               practiceType: data.completeProfile.practiceDetails.practiceType || '',
@@ -263,15 +277,15 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
   const handleMultiSelectChange = (field: string, value: string, checked: boolean) => {
     let currentValues: string[] = [];
-    
+
     if (field.includes('.')) {
       const [parent, child] = field.split('.');
       const parentObj = (profileData as CompleteProfileData)[parent as keyof CompleteProfileData] as Record<string, unknown>;
       currentValues = (parentObj?.[child] || []) as string[];
-      const newValues = checked 
+      const newValues = checked
         ? [...currentValues, value]
         : currentValues.filter((v: string) => v !== value);
-      
+
       onUpdate({
         [parent]: {
           ...((profileData as CompleteProfileData)[parent as keyof CompleteProfileData] as Record<string, unknown>),
@@ -280,15 +294,79 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       });
     } else {
       currentValues = ((profileData as CompleteProfileData)[field as keyof CompleteProfileData] || []) as string[];
-      const newValues = checked 
+      const newValues = checked
         ? [...currentValues, value]
         : currentValues.filter((v: string) => v !== value);
-      
+
       onUpdate({ [field]: newValues });
     }
-    
+
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleMentalHealthSpecialtySelection = (specialty: string, checked: boolean) => {
+    const currentSpecialties = profileData.mentalHealthSpecialties || [];
+    const wasOtherSelected = currentSpecialties.includes('Other');
+    const isOtherNowSelected = specialty === 'Other' && checked;
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customSpecialty = window.prompt(
+        'Please specify your custom mental health specialty:\n\n(Examples: Perinatal Mental Health, Neurofeedback, Play Therapy, etc.)'
+      );
+
+      if (customSpecialty && customSpecialty.trim()) {
+        // User entered a custom specialty
+        setOtherMentalHealthSpecialtyInput(customSpecialty.trim());
+        handleInputChange('otherMentalHealthSpecialty', customSpecialty.trim());
+        handleMultiSelectChange('mentalHealthSpecialties', specialty, checked);
+      } else {
+        // User cancelled or entered empty string, don't add "Other"
+        return;
+      }
+    } else {
+      // Normal specialty selection (no "Other" involved)
+      handleMultiSelectChange('mentalHealthSpecialties', specialty, checked);
+
+      // If "Other" was previously selected but now deselected, clear the custom specialty
+      if (wasOtherSelected && specialty === 'Other' && !checked) {
+        setOtherMentalHealthSpecialtyInput('');
+        handleInputChange('otherMentalHealthSpecialty', '');
+      }
+    }
+  };
+
+  const handleTreatmentApproachSelection = (approach: string, checked: boolean) => {
+    const currentApproaches = profileData.treatmentApproaches || [];
+    const wasOtherSelected = currentApproaches.includes('Other');
+    const isOtherNowSelected = approach === 'Other' && checked;
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customApproach = window.prompt(
+        'Please specify your custom treatment approach:\n\n(Examples: Somatic Therapy, IFS (Internal Family Systems), Music Therapy, etc.)'
+      );
+
+      if (customApproach && customApproach.trim()) {
+        // User entered a custom approach
+        setOtherTreatmentApproachInput(customApproach.trim());
+        handleInputChange('otherTreatmentApproach', customApproach.trim());
+        handleMultiSelectChange('treatmentApproaches', approach, checked);
+      } else {
+        // User cancelled or entered empty string, don't add "Other"
+        return;
+      }
+    } else {
+      // Normal approach selection (no "Other" involved)
+      handleMultiSelectChange('treatmentApproaches', approach, checked);
+
+      // If "Other" was previously selected but now deselected, clear the custom approach
+      if (wasOtherSelected && approach === 'Other' && !checked) {
+        setOtherTreatmentApproachInput('');
+        handleInputChange('otherTreatmentApproach', '');
+      }
     }
   };
 
@@ -459,13 +537,13 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               {[
                 'Anxiety Disorders', 'Depression', 'PTSD/Trauma', 'Relationship Issues',
                 'Addiction/Substance Abuse', 'Eating Disorders', 'ADHD', 'Bipolar Disorder',
-                'OCD', 'Grief & Loss', 'Life Transitions', 'Stress Management'
+                'OCD', 'Grief & Loss', 'Life Transitions', 'Stress Management', 'Other'
               ].map(specialty => (
                 <label key={specialty} className="flex items-center">
                   <input
                     type="checkbox"
                     checked={profileData.mentalHealthSpecialties.includes(specialty)}
-                    onChange={(e) => handleMultiSelectChange('mentalHealthSpecialties', specialty, e.target.checked)}
+                    onChange={(e) => handleMentalHealthSpecialtySelection(specialty, e.target.checked)}
                     className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                   />
                   <span className="ml-2 text-sm text-gray-700">{specialty}</span>
@@ -474,6 +552,15 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             </div>
             {errors.mentalHealthSpecialties && (
               <p className="mt-2 text-sm text-red-600">{errors.mentalHealthSpecialties}</p>
+            )}
+
+            {/* Show custom mental health specialty when "Other" is selected */}
+            {profileData.mentalHealthSpecialties.includes('Other') && otherMentalHealthSpecialtyInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom Mental Health Specialty:</strong> {otherMentalHealthSpecialtyInput}
+                </span>
+              </div>
             )}
           </div>
 
@@ -484,16 +571,16 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
               {[
-                'Cognitive Behavioral Therapy (CBT)', 'Dialectical Behavior Therapy (DBT)', 
+                'Cognitive Behavioral Therapy (CBT)', 'Dialectical Behavior Therapy (DBT)',
                 'Acceptance and Commitment Therapy (ACT)', 'Psychodynamic Therapy',
                 'Humanistic/Person-Centered', 'Family Systems', 'EMDR', 'Mindfulness-Based',
-                'Solution-Focused', 'Narrative Therapy', 'Gestalt Therapy', 'Art/Creative Therapy'
+                'Solution-Focused', 'Narrative Therapy', 'Gestalt Therapy', 'Art/Creative Therapy', 'Other'
               ].map(approach => (
                 <label key={approach} className="flex items-center">
                   <input
                     type="checkbox"
                     checked={profileData.treatmentApproaches.includes(approach)}
-                    onChange={(e) => handleMultiSelectChange('treatmentApproaches', approach, e.target.checked)}
+                    onChange={(e) => handleTreatmentApproachSelection(approach, e.target.checked)}
                     className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                   />
                   <span className="ml-2 text-sm text-gray-700">{approach}</span>
@@ -502,6 +589,15 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             </div>
             {errors.treatmentApproaches && (
               <p className="mt-2 text-sm text-red-600">{errors.treatmentApproaches}</p>
+            )}
+
+            {/* Show custom treatment approach when "Other" is selected */}
+            {profileData.treatmentApproaches.includes('Other') && otherTreatmentApproachInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom Treatment Approach:</strong> {otherTreatmentApproachInput}
+                </span>
+              </div>
             )}
           </div>
 

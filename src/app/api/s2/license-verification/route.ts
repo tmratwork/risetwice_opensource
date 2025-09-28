@@ -14,6 +14,7 @@ interface LicenseVerificationRequest {
   licenseType: string;
   licenseNumber: string;
   stateOfLicensure: string;
+  otherLicenseType?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -45,6 +46,7 @@ export async function POST(request: NextRequest) {
         license_type: data.licenseType,
         license_number: data.licenseNumber,
         state_of_licensure: data.stateOfLicensure,
+        other_license_type: data.otherLicenseType || null,
         verification_status: 'pending',
         is_active: true
       })
@@ -69,6 +71,7 @@ export async function POST(request: NextRequest) {
         licenseType: licenseData.license_type,
         licenseNumber: licenseData.license_number,
         stateOfLicensure: licenseData.state_of_licensure,
+        otherLicenseType: licenseData.other_license_type,
         verificationStatus: licenseData.verification_status,
         verificationDate: licenseData.verification_date,
         createdAt: licenseData.created_at,
@@ -120,6 +123,7 @@ export async function GET(request: NextRequest) {
         licenseType: licenseData.license_type,
         licenseNumber: licenseData.license_number,
         stateOfLicensure: licenseData.state_of_licensure,
+        otherLicenseType: licenseData.other_license_type,
         verificationStatus: licenseData.verification_status,
         verificationDate: licenseData.verification_date,
         createdAt: licenseData.created_at,
