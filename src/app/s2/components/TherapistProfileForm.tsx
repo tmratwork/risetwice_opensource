@@ -22,7 +22,9 @@ interface TherapistProfile {
   genderIdentity?: string;
   yearsOfExperience?: string;
   languagesSpoken?: string[];
+  otherLanguage?: string;
   culturalBackgrounds?: string[];
+  otherCulturalBackground?: string;
 }
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
@@ -50,6 +52,8 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [otherDegreeInput, setOtherDegreeInput] = useState('');
   const [otherTitleInput, setOtherTitleInput] = useState('');
+  const [otherLanguageInput, setOtherLanguageInput] = useState('');
+  const [otherCulturalInput, setOtherCulturalInput] = useState('');
 
   // Load existing profile on mount
   useEffect(() => {
@@ -77,6 +81,18 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           if (data.profile.otherTitle) {
             setOtherTitleInput(data.profile.otherTitle);
           }
+          // Set otherLanguageInput state if otherLanguage exists
+          console.log('[S2] Loading otherLanguage from profile:', data.profile.otherLanguage);
+          if (data.profile.otherLanguage) {
+            setOtherLanguageInput(data.profile.otherLanguage);
+            console.log('[S2] Set otherLanguageInput to:', data.profile.otherLanguage);
+          }
+          // Set otherCulturalInput state if otherCulturalBackground exists
+          console.log('[S2] Loading otherCulturalBackground from profile:', data.profile.otherCulturalBackground);
+          if (data.profile.otherCulturalBackground) {
+            setOtherCulturalInput(data.profile.otherCulturalBackground);
+            console.log('[S2] Set otherCulturalInput to:', data.profile.otherCulturalBackground);
+          }
           onUpdate({
             fullName: data.profile.fullName,
             title: data.profile.title,
@@ -91,7 +107,9 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
             genderIdentity: data.profile.genderIdentity,
             yearsOfExperience: data.profile.yearsOfExperience,
             languagesSpoken: data.profile.languagesSpoken || [],
-            culturalBackgrounds: data.profile.culturalBackgrounds || []
+            otherLanguage: data.profile.otherLanguage,
+            culturalBackgrounds: data.profile.culturalBackgrounds || [],
+            otherCulturalBackground: data.profile.otherCulturalBackground
           });
         }
       } catch (error) {
@@ -164,6 +182,16 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
       newErrors.degrees = 'Please specify your custom degree/credential';
     }
 
+    // If "Other" language is selected, validate that custom language is provided
+    if (profile.languagesSpoken?.includes('Other') && !otherLanguageInput.trim()) {
+      newErrors.languagesSpoken = 'Please specify your custom language';
+    }
+
+    // If "Other" cultural background is selected, validate that custom background is provided
+    if (profile.culturalBackgrounds?.includes('Other') && !otherCulturalInput.trim()) {
+      newErrors.culturalBackgrounds = 'Please specify your custom cultural background';
+    }
+
     if (!profile.primaryLocation.trim()) {
       newErrors.primaryLocation = 'Primary location is required';
     }
@@ -206,7 +234,9 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           genderIdentity: profile.genderIdentity,
           yearsOfExperience: profile.yearsOfExperience,
           languagesSpoken: profile.languagesSpoken,
-          culturalBackgrounds: profile.culturalBackgrounds
+          otherLanguage: profile.otherLanguage,
+          culturalBackgrounds: profile.culturalBackgrounds,
+          otherCulturalBackground: profile.otherCulturalBackground
         })
       });
 
@@ -243,6 +273,72 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  const handleLanguageSelection = (selectedLanguages: string[]) => {
+    const previousLanguages = profile.languagesSpoken || [];
+    const wasOtherSelected = previousLanguages.includes('Other');
+    const isOtherNowSelected = selectedLanguages.includes('Other');
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customLanguage = window.prompt(
+        'Please specify your custom language:\n\n(Examples: ASL (American Sign Language), Swahili, Tagalog, etc.)'
+      );
+
+      if (customLanguage && customLanguage.trim()) {
+        // User entered a custom language
+        setOtherLanguageInput(customLanguage.trim());
+        handleInputChange('otherLanguage', customLanguage.trim());
+        handleInputChange('languagesSpoken', selectedLanguages);
+      } else {
+        // User cancelled or entered empty string, remove "Other" from selection
+        const languagesWithoutOther = selectedLanguages.filter(lang => lang !== 'Other');
+        handleInputChange('languagesSpoken', languagesWithoutOther);
+      }
+    } else {
+      // Normal language selection (no "Other" involved)
+      handleInputChange('languagesSpoken', selectedLanguages);
+
+      // If "Other" was previously selected but now deselected, clear the custom language
+      if (wasOtherSelected && !isOtherNowSelected) {
+        setOtherLanguageInput('');
+        handleInputChange('otherLanguage', '');
+      }
+    }
+  };
+
+  const handleCulturalBackgroundSelection = (selectedBackgrounds: string[]) => {
+    const previousBackgrounds = profile.culturalBackgrounds || [];
+    const wasOtherSelected = previousBackgrounds.includes('Other');
+    const isOtherNowSelected = selectedBackgrounds.includes('Other');
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customBackground = window.prompt(
+        'Please specify your custom cultural background/identity:\n\n(Examples: Indigenous/Native, Mixed Heritage, Refugee Community, etc.)'
+      );
+
+      if (customBackground && customBackground.trim()) {
+        // User entered a custom background
+        setOtherCulturalInput(customBackground.trim());
+        handleInputChange('otherCulturalBackground', customBackground.trim());
+        handleInputChange('culturalBackgrounds', selectedBackgrounds);
+      } else {
+        // User cancelled or entered empty string, remove "Other" from selection
+        const backgroundsWithoutOther = selectedBackgrounds.filter(bg => bg !== 'Other');
+        handleInputChange('culturalBackgrounds', backgroundsWithoutOther);
+      }
+    } else {
+      // Normal background selection (no "Other" involved)
+      handleInputChange('culturalBackgrounds', selectedBackgrounds);
+
+      // If "Other" was previously selected but now deselected, clear the custom background
+      if (wasOtherSelected && !isOtherNowSelected) {
+        setOtherCulturalInput('');
+        handleInputChange('otherCulturalBackground', '');
+      }
     }
   };
 
@@ -553,10 +649,23 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               value={profile.languagesSpoken || []}
               onChange={(value) => {
                 console.log('[S2] Languages selected:', value);
-                handleInputChange('languagesSpoken', value);
+                handleLanguageSelection(value);
               }}
               placeholder="Select languages you speak..."
             />
+            {errors.languagesSpoken && (
+              <p className="mt-1 text-sm text-red-600">{errors.languagesSpoken}</p>
+            )}
+
+            {/* Show custom language when "Other" is selected */}
+            {profile.languagesSpoken?.includes('Other') && otherLanguageInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom Language:</strong> {otherLanguageInput}
+                </span>
+              </div>
+            )}
+
           </div>
 
           {/* Cultural Backgrounds - Optional */}
@@ -569,10 +678,22 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
               value={profile.culturalBackgrounds || []}
               onChange={(value) => {
                 console.log('[S2] Cultural backgrounds selected:', value);
-                handleInputChange('culturalBackgrounds', value);
+                handleCulturalBackgroundSelection(value);
               }}
               placeholder="Select cultural backgrounds..."
             />
+            {errors.culturalBackgrounds && (
+              <p className="mt-1 text-sm text-red-600">{errors.culturalBackgrounds}</p>
+            )}
+
+            {/* Show custom cultural background when "Other" is selected */}
+            {profile.culturalBackgrounds?.includes('Other') && otherCulturalInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom Cultural Background:</strong> {otherCulturalInput}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

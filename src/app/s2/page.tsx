@@ -32,7 +32,9 @@ interface TherapistProfile {
   genderIdentity?: string;
   yearsOfExperience?: string;
   languagesSpoken?: string[];
+  otherLanguage?: string;
   culturalBackgrounds?: string[];
+  otherCulturalBackground?: string;
 }
 
 interface PatientDescription {

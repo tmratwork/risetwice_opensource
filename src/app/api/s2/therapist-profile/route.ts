@@ -14,6 +14,8 @@ interface TherapistProfileRequest {
   fullName: string;
   title: string;
   degrees: string[];
+  otherDegree?: string;
+  otherTitle?: string;
   primaryLocation: string;
   offersOnline: boolean;
   phoneNumber?: string;
@@ -22,7 +24,9 @@ interface TherapistProfileRequest {
   genderIdentity?: string;
   yearsOfExperience?: string;
   languagesSpoken?: string[];
+  otherLanguage?: string;
   culturalBackgrounds?: string[];
+  otherCulturalBackground?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -47,6 +51,8 @@ export async function POST(request: NextRequest) {
         full_name: data.fullName,
         title: data.title,
         degrees: data.degrees,
+        other_degree: data.otherDegree || null,
+        other_title: data.otherTitle || null,
         primary_location: data.primaryLocation,
         offers_online: data.offersOnline,
         phone_number: data.phoneNumber || null,
@@ -55,7 +61,9 @@ export async function POST(request: NextRequest) {
         gender_identity: data.genderIdentity || null,
         years_of_experience: data.yearsOfExperience || null,
         languages_spoken: data.languagesSpoken || null,
+        other_language: data.otherLanguage || null,
         cultural_backgrounds: data.culturalBackgrounds || null,
+        other_cultural_background: data.otherCulturalBackground || null,
         profile_completion_status: 'profile_complete'
       }, {
         onConflict: 'user_id'
@@ -81,6 +89,8 @@ export async function POST(request: NextRequest) {
         fullName: profile.full_name,
         title: profile.title,
         degrees: profile.degrees,
+        otherDegree: profile.other_degree,
+        otherTitle: profile.other_title,
         primaryLocation: profile.primary_location,
         offersOnline: profile.offers_online,
         phoneNumber: profile.phone_number,
@@ -89,7 +99,9 @@ export async function POST(request: NextRequest) {
         genderIdentity: profile.gender_identity,
         yearsOfExperience: profile.years_of_experience,
         languagesSpoken: profile.languages_spoken,
+        otherLanguage: profile.other_language,
         culturalBackgrounds: profile.cultural_backgrounds,
+        otherCulturalBackground: profile.other_cultural_background,
         completionStatus: profile.profile_completion_status,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at
@@ -139,6 +151,8 @@ export async function GET(request: NextRequest) {
         fullName: profile.full_name,
         title: profile.title,
         degrees: profile.degrees,
+        otherDegree: profile.other_degree,
+        otherTitle: profile.other_title,
         primaryLocation: profile.primary_location,
         offersOnline: profile.offers_online,
         phoneNumber: profile.phone_number,
@@ -147,7 +161,9 @@ export async function GET(request: NextRequest) {
         genderIdentity: profile.gender_identity,
         yearsOfExperience: profile.years_of_experience,
         languagesSpoken: profile.languages_spoken,
+        otherLanguage: profile.other_language,
         culturalBackgrounds: profile.cultural_backgrounds,
+        otherCulturalBackground: profile.other_cultural_background,
         completionStatus: profile.profile_completion_status,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at
