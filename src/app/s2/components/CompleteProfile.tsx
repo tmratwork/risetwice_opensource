@@ -34,9 +34,12 @@ interface CompleteProfileData {
   clientTypesServed?: string[];
   lgbtqAffirming?: boolean;
   religiousSpiritualIntegration?: string;
+  otherReligiousSpiritualIntegration?: string;
   sessionFees?: string;
   boardCertifications?: string[];
+  otherBoardCertification?: string;
   professionalMemberships?: string[];
+  otherProfessionalMembership?: string;
 }
 
 interface CompleteProfileProps {
@@ -63,6 +66,9 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [otherMentalHealthSpecialtyInput, setOtherMentalHealthSpecialtyInput] = useState('');
   const [otherTreatmentApproachInput, setOtherTreatmentApproachInput] = useState('');
+  const [otherBoardCertificationInput, setOtherBoardCertificationInput] = useState('');
+  const [otherProfessionalMembershipInput, setOtherProfessionalMembershipInput] = useState('');
+  const [otherReligiousSpiritualInput, setOtherReligiousSpiritualInput] = useState('');
 
   // Options for multi-select fields
   const boardCertificationOptions = [
@@ -107,6 +113,15 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
           if (data.completeProfile.otherTreatmentApproach) {
             setOtherTreatmentApproachInput(data.completeProfile.otherTreatmentApproach);
           }
+          if (data.completeProfile.otherBoardCertification) {
+            setOtherBoardCertificationInput(data.completeProfile.otherBoardCertification);
+          }
+          if (data.completeProfile.otherProfessionalMembership) {
+            setOtherProfessionalMembershipInput(data.completeProfile.otherProfessionalMembership);
+          }
+          if (data.completeProfile.otherReligiousSpiritualIntegration) {
+            setOtherReligiousSpiritualInput(data.completeProfile.otherReligiousSpiritualIntegration);
+          }
 
           // Fix: Skip blob URLs entirely to prevent security errors
           const profilePhoto = data.completeProfile.profilePhoto &&
@@ -132,9 +147,12 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             clientTypesServed: data.completeProfile.clientTypesServed,
             lgbtqAffirming: data.completeProfile.lgbtqAffirming,
             religiousSpiritualIntegration: data.completeProfile.religiousSpiritualIntegration,
+            otherReligiousSpiritualIntegration: data.completeProfile.otherReligiousSpiritualIntegration,
             sessionFees: data.completeProfile.sessionFees,
             boardCertifications: data.completeProfile.boardCertifications,
-            professionalMemberships: data.completeProfile.professionalMemberships
+            otherBoardCertification: data.completeProfile.otherBoardCertification,
+            professionalMemberships: data.completeProfile.professionalMemberships,
+            otherProfessionalMembership: data.completeProfile.otherProfessionalMembership
           });
         }
       } catch (error) {
@@ -366,6 +384,104 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       if (wasOtherSelected && approach === 'Other' && !checked) {
         setOtherTreatmentApproachInput('');
         handleInputChange('otherTreatmentApproach', '');
+      }
+    }
+  };
+
+  const handleBoardCertificationSelection = (selectedCertifications: string[]) => {
+    const previousCertifications = profileData.boardCertifications || [];
+    const wasOtherSelected = previousCertifications.includes('Other');
+    const isOtherNowSelected = selectedCertifications.includes('Other');
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customCertification = window.prompt(
+        'Please specify your custom board certification:\n\n(Examples: Board Certified Psychiatrist, Certified Clinical Trauma Professional, etc.)'
+      );
+
+      if (customCertification && customCertification.trim()) {
+        // User entered a custom certification
+        setOtherBoardCertificationInput(customCertification.trim());
+        handleInputChange('otherBoardCertification', customCertification.trim());
+        handleInputChange('boardCertifications', selectedCertifications);
+      } else {
+        // User cancelled or entered empty string, remove "Other" from selection
+        const certificationsWithoutOther = selectedCertifications.filter(cert => cert !== 'Other');
+        handleInputChange('boardCertifications', certificationsWithoutOther);
+      }
+    } else {
+      // Normal certification selection (no "Other" involved)
+      handleInputChange('boardCertifications', selectedCertifications);
+
+      // If "Other" was previously selected but now deselected, clear the custom certification
+      if (wasOtherSelected && !isOtherNowSelected) {
+        setOtherBoardCertificationInput('');
+        handleInputChange('otherBoardCertification', '');
+      }
+    }
+  };
+
+  const handleProfessionalMembershipSelection = (selectedMemberships: string[]) => {
+    const previousMemberships = profileData.professionalMemberships || [];
+    const wasOtherSelected = previousMemberships.includes('Other');
+    const isOtherNowSelected = selectedMemberships.includes('Other');
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customMembership = window.prompt(
+        'Please specify your custom professional membership:\n\n(Examples: International Association for Play Therapy, Association for Applied Sport Psychology, etc.)'
+      );
+
+      if (customMembership && customMembership.trim()) {
+        // User entered a custom membership
+        setOtherProfessionalMembershipInput(customMembership.trim());
+        handleInputChange('otherProfessionalMembership', customMembership.trim());
+        handleInputChange('professionalMemberships', selectedMemberships);
+      } else {
+        // User cancelled or entered empty string, remove "Other" from selection
+        const membershipsWithoutOther = selectedMemberships.filter(membership => membership !== 'Other');
+        handleInputChange('professionalMemberships', membershipsWithoutOther);
+      }
+    } else {
+      // Normal membership selection (no "Other" involved)
+      handleInputChange('professionalMemberships', selectedMemberships);
+
+      // If "Other" was previously selected but now deselected, clear the custom membership
+      if (wasOtherSelected && !isOtherNowSelected) {
+        setOtherProfessionalMembershipInput('');
+        handleInputChange('otherProfessionalMembership', '');
+      }
+    }
+  };
+
+  const handleReligiousSpiritualIntegrationSelection = (selectedValue: string) => {
+    const previousValue = profileData.religiousSpiritualIntegration || '';
+    const wasOtherSelected = previousValue === 'Other';
+    const isOtherNowSelected = selectedValue === 'Other';
+
+    // If "Other" was just selected (wasn't selected before, but is now)
+    if (!wasOtherSelected && isOtherNowSelected) {
+      const customIntegration = window.prompt(
+        'Please specify your custom religious/spiritual integration approach:\n\n(Examples: Indigenous Practices, Interfaith Approach, Secular Humanism, etc.)'
+      );
+
+      if (customIntegration && customIntegration.trim()) {
+        // User entered a custom integration approach
+        setOtherReligiousSpiritualInput(customIntegration.trim());
+        handleInputChange('otherReligiousSpiritualIntegration', customIntegration.trim());
+        handleInputChange('religiousSpiritualIntegration', selectedValue);
+      } else {
+        // User cancelled or entered empty string, don't change selection
+        return;
+      }
+    } else {
+      // Normal selection (no "Other" involved)
+      handleInputChange('religiousSpiritualIntegration', selectedValue);
+
+      // If "Other" was previously selected but now deselected, clear the custom integration
+      if (wasOtherSelected && !isOtherNowSelected) {
+        setOtherReligiousSpiritualInput('');
+        handleInputChange('otherReligiousSpiritualIntegration', '');
       }
     }
   };
@@ -807,7 +923,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             <select
               id="religiousSpiritualIntegration"
               value={profileData.religiousSpiritualIntegration || ''}
-              onChange={(e) => handleInputChange('religiousSpiritualIntegration', e.target.value)}
+              onChange={(e) => handleReligiousSpiritualIntegrationSelection(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
             >
               <option value="">Select approach</option>
@@ -821,6 +937,15 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               <option value="Client-Led">Client-Led Integration</option>
               <option value="Other">Other</option>
             </select>
+
+            {/* Show custom religious/spiritual integration when "Other" is selected */}
+            {profileData.religiousSpiritualIntegration === 'Other' && otherReligiousSpiritualInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom Religious/Spiritual Integration:</strong> {otherReligiousSpiritualInput}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Session Fees */}
@@ -854,9 +979,18 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             <CustomMultiSelect
               options={boardCertificationOptions}
               value={profileData.boardCertifications || []}
-              onChange={(value) => handleInputChange('boardCertifications', value)}
+              onChange={(value) => handleBoardCertificationSelection(value)}
               placeholder="Select board certifications..."
             />
+
+            {/* Show custom board certification when "Other" is selected */}
+            {profileData.boardCertifications?.includes('Other') && otherBoardCertificationInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom Board Certification:</strong> {otherBoardCertificationInput}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Professional Memberships */}
@@ -867,9 +1001,18 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             <CustomMultiSelect
               options={professionalMembershipOptions}
               value={profileData.professionalMemberships || []}
-              onChange={(value) => handleInputChange('professionalMemberships', value)}
+              onChange={(value) => handleProfessionalMembershipSelection(value)}
               placeholder="Select professional memberships..."
             />
+
+            {/* Show custom professional membership when "Other" is selected */}
+            {profileData.professionalMemberships?.includes('Other') && otherProfessionalMembershipInput && (
+              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
+                <span className="text-green-800">
+                  <strong>Custom Professional Membership:</strong> {otherProfessionalMembershipInput}
+                </span>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}

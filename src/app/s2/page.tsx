@@ -84,9 +84,12 @@ interface CompleteProfileData {
   clientTypesServed?: string[];
   lgbtqAffirming?: boolean;
   religiousSpiritualIntegration?: string;
+  otherReligiousSpiritualIntegration?: string;
   sessionFees?: string;
   boardCertifications?: string[];
+  otherBoardCertification?: string;
   professionalMemberships?: string[];
+  otherProfessionalMembership?: string;
 }
 
 interface SessionData {
