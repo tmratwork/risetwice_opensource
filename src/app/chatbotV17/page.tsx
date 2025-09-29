@@ -442,6 +442,22 @@ export default function ChatBotV17Page() {
               isProviderMode={isProviderMode}
               loading={loading}
             />
+
+            {/* Playback Speed Settings - Patient Mode Only */}
+            {!isProviderMode && !loading && therapists.length > 0 && (
+              <div className="flex justify-center mt-8 mb-6">
+                <button
+                  onClick={() => {
+                    console.log('[V17] Patient settings button clicked');
+                    setIsVoiceSettingsOpen(true);
+                  }}
+                  className="px-6 py-3 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all shadow-sm"
+                  title="Adjust playback speed for AI Previews"
+                >
+                  <div className="text-sm font-medium text-gray-900">Playback Speed</div>
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
