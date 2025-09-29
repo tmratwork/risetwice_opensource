@@ -9,35 +9,6 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Database result interface
-interface DatabaseTherapist {
-  id: string;
-  user_id: string;
-  full_name: string;
-  title: string;
-  degrees: string[] | null;
-  primary_location: string;
-  gender_identity: string;
-  years_of_experience: string;
-  languages_spoken: string[] | null;
-  s2_complete_profiles?: Array<{
-    profile_photo_url?: string;
-    personal_statement?: string;
-    mental_health_specialties?: string[];
-    treatment_approaches?: string[];
-    age_ranges_treated?: string[];
-    lgbtq_affirming?: boolean;
-    session_fees?: string;
-  }>;
-  s2_ai_therapist_prompts?: Array<{
-    id: string;
-    prompt_text: string;
-    prompt_title?: string;
-    status?: string;
-    is_public?: boolean;
-  }>;
-}
-
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json();

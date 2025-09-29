@@ -98,7 +98,13 @@ export async function PUT(request: NextRequest) {
     );
 
     // Update user role using boolean columns
-    const updateData: any = {
+    const updateData: {
+      user_id: string;
+      updated_at: string;
+      is_patient: boolean;
+      is_provider: boolean;
+      is_admin: boolean;
+    } = {
       user_id: userId,
       updated_at: new Date().toISOString(),
       is_patient: role === 'patient',

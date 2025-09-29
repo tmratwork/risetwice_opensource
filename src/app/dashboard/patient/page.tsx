@@ -211,7 +211,7 @@ const PatientDashboard: React.FC = () => {
                   Crisis Support
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  If you're in crisis, reach out for immediate help:
+                  If you&apos;re in crisis, reach out for immediate help:
                 </p>
                 <p className="text-sm font-medium text-red-600 dark:text-red-400">
                   988 Suicide & Crisis Lifeline

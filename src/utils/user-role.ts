@@ -11,7 +11,7 @@ export interface UserWithRole {
     is_provider: boolean;
     is_admin: boolean;
   };
-  profile_data?: any;
+  profile_data?: Record<string, unknown>;
   created_at?: string;
   updated_at?: string;
 }

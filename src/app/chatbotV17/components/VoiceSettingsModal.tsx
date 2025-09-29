@@ -4,7 +4,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useElevenLabsStore } from '@/stores/elevenlabs-store';
 import { useAuth } from '@/contexts/auth-context';
 import { useSearchParams } from 'next/navigation';
 
@@ -94,7 +93,6 @@ function InfoTooltip({ content, position = 'top' }: { content: string; position?
 export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps) {
   console.log('[VoiceSettingsModal] Rendered with isOpen:', isOpen);
 
-  const store = useElevenLabsStore();
   const { user } = useAuth();
   const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
@@ -103,7 +101,6 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
 
   // Determine user type and settings mode
   const isProviderMode = searchParams.get('provider') === 'true';
-  const isPatientMode = !isProviderMode;
 
   // Voice configuration state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
@@ -534,7 +531,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
 
                 <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
                   <p className="text-sm text-blue-800">
-                    <strong>Note:</strong> This speed setting is just your personal preference and will override the provider's default speed setting. All other voice characteristics (tone, style, etc.) are set by each therapist.
+                    <strong>Note:</strong> This speed setting is just your personal preference and will override the provider&apos;s default speed setting. All other voice characteristics (tone, style, etc.) are set by each therapist.
                   </p>
                 </div>
               </div>

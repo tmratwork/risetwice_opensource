@@ -14,7 +14,7 @@ const ProviderDashboard: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
+  const [, setUserRole] = useState<UserRole | null>(null);
 
   useEffect(() => {
     async function checkAccess() {

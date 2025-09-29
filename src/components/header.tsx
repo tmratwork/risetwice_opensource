@@ -2,7 +2,7 @@
 
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send, Phone, Flag, LayoutDashboard } from 'lucide-react';
+import { LogOut, Apple, Settings, User, Languages, Trophy, Send, Phone, Flag, LayoutDashboard } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/theme-context';
