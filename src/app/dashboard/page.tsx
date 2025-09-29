@@ -52,7 +52,7 @@ const DashboardRouter: React.FC = () => {
     return (
       <>
         <Header />
-        <div className="flex-1 flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '80px' }}>
+        <div className="flex-1 flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '80px', paddingBottom: '80px' }}>
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p style={{ color: 'var(--text-secondary)' }}>Loading dashboard...</p>
@@ -71,7 +71,7 @@ const DashboardRouter: React.FC = () => {
   return (
     <>
       <Header />
-      <div className="flex-1 flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '80px' }}>
+      <div className="flex-1 flex items-center justify-center min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '80px', paddingBottom: '80px' }}>
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Dashboard</h2>
           <p style={{ color: 'var(--text-secondary)' }}>Redirecting...</p>

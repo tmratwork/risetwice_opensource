@@ -15,13 +15,11 @@ export default function DashboardLayout({
   return (
     <AuthProvider>
       <ThemeProvider>
-        <div className="dashboard-layout-root" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-          {/* Main Content */}
-          <div style={{ flex: '1' }}>
-            {children}
-          </div>
+        {/* Main Content */}
+        {children}
 
-          {/* Footer */}
+        {/* Fixed Footer */}
+        <div className="fixed bottom-0 left-0 right-0 z-50">
           <MobileFooterNavV15 />
         </div>
       </ThemeProvider>
