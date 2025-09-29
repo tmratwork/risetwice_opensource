@@ -3,8 +3,9 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 import ContactSupportModal from './ContactSupportModal';
 
 interface OnboardingCompleteProps {
@@ -15,8 +16,38 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
   onBack
 }) => {
   const router = useRouter();
+  const { user } = useAuth();
   const [isNavigating, setIsNavigating] = useState(false);
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
+  const [onboardingCompleted, setOnboardingCompleted] = useState(false);
+
+  // Complete onboarding and set provider role when component mounts
+  useEffect(() => {
+    const completeOnboarding = async () => {
+      if (!user || onboardingCompleted) return;
+
+      try {
+        const response = await fetch('/api/s2/complete-onboarding', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.uid }),
+        });
+
+        if (response.ok) {
+          setOnboardingCompleted(true);
+          console.log('S2 onboarding completed, user role set to provider');
+        } else {
+          console.error('Failed to complete onboarding');
+        }
+      } catch (error) {
+        console.error('Error completing onboarding:', error);
+      }
+    };
+
+    completeOnboarding();
+  }, [user, onboardingCompleted]);
 
   const handleViewProfile = () => {
     setIsNavigating(true);
@@ -25,11 +56,15 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
   };
 
   const handleGoToDashboard = () => {
-    alert('This feature is in beta. Please contact the developers to join the beta program.');
+    setIsNavigating(true);
+    // Navigate to dashboard
+    router.push('/dashboard');
   };
 
   const handleTestPreview = () => {
-    alert('This feature is in beta. Please contact the developers to join the beta program.');
+    setIsNavigating(true);
+    // Navigate to AI chat for testing
+    router.push('/chatbotV17');
   };
 
   const handleContactSupport = () => {

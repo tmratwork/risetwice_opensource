@@ -2,7 +2,7 @@
 
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send, Phone, Flag } from 'lucide-react';
+import { LogOut, Apple, Settings, Fingerprint, User, Languages, Trophy, Send, Phone, Flag, LayoutDashboard } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import { useTheme } from '@/contexts/theme-context';
@@ -411,6 +411,17 @@ function AuthButtons() {
                                 </>
                             )}
                         </button>
+                        <Link
+                            href="/dashboard"
+                            onClick={() => setShowDropdown(false)}
+                            className="block w-full"
+                            role="menuitem"
+                        >
+                            <span className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700">
+                                <LayoutDashboard className="w-5 h-5 mr-2" />
+                                Dashboard
+                            </span>
+                        </Link>
                         <Link
                             href="/chatbotV16/memory"
                             onClick={() => setShowDropdown(false)}
