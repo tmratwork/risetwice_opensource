@@ -422,17 +422,6 @@ function AuthButtons() {
                                 Dashboard
                             </span>
                         </Link>
-                        <Link
-                            href="/chatbotV16/memory"
-                            onClick={() => setShowDropdown(false)}
-                            className="block w-full"
-                            role="menuitem"
-                        >
-                            <span className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700">
-                                <Fingerprint className="w-5 h-5 mr-2" />
-                                Memory
-                            </span>
-                        </Link>
                         <button
                             onClick={handleDisplayNameClick}
                             className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700"
