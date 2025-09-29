@@ -1,0 +1,28 @@
+// src/app/profile/layout.tsx
+// Profile layout with ThemeProvider and Footer
+
+"use client";
+
+import { AuthProvider } from '@/contexts/auth-context';
+import { ThemeProvider } from '@/contexts/theme-context';
+import { MobileFooterNavV15 } from '@/app/chatbotV16/components/MobileFooterNavV15';
+
+export default function ProfileLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <AuthProvider>
+      <ThemeProvider>
+        {/* Main Content */}
+        {children}
+
+        {/* Fixed Footer */}
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <MobileFooterNavV15 />
+        </div>
+      </ThemeProvider>
+    </AuthProvider>
+  );
+}

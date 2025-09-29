@@ -112,10 +112,10 @@ const ProviderDashboard: React.FC = () => {
               Experience your AI Preview as patients would and refine your therapeutic approach.
             </p>
             <Link
-              href="/chatbotV17"
+              href="/chatbotV17?provider=true"
               className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
             >
-              Test Preview
+              Test My AI Preview
             </Link>
           </div>
 
@@ -203,6 +203,7 @@ const ProviderDashboard: React.FC = () => {
               </span>
             </div>
           </div>
+        </div>
         </div>
       </div>
     </>

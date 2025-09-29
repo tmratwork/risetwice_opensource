@@ -164,10 +164,10 @@ const ProfilePage: React.FC = () => {
                 Provider Dashboard
               </Link>
               <Link
-                href="/chatbotV17"
+                href="/chatbotV17?provider=true"
                 className="px-4 py-2 bg-green-100 text-green-800 text-sm font-medium rounded-lg hover:bg-green-200 transition-colors"
               >
-                Test AI Preview
+                Test My AI Preview
               </Link>
             </div>
           </div>
@@ -181,6 +181,7 @@ const ProfilePage: React.FC = () => {
           >
             ← Back to Dashboard
           </Link>
+        </div>
         </div>
       </div>
     </>

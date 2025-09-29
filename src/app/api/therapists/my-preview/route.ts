@@ -1,0 +1,156 @@
+// src/app/api/therapists/my-preview/route.ts
+// API endpoint for fetching the current user's own AI Preview
+
+import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+// Database result interface
+interface DatabaseTherapist {
+  id: string;
+  user_id: string;
+  full_name: string;
+  title: string;
+  degrees: string[] | null;
+  primary_location: string;
+  gender_identity: string;
+  years_of_experience: string;
+  languages_spoken: string[] | null;
+  s2_complete_profiles?: Array<{
+    profile_photo_url?: string;
+    personal_statement?: string;
+    mental_health_specialties?: string[];
+    treatment_approaches?: string[];
+    age_ranges_treated?: string[];
+    lgbtq_affirming?: boolean;
+    session_fees?: string;
+  }>;
+  s2_ai_therapist_prompts?: Array<{
+    id: string;
+    prompt_text: string;
+    prompt_title?: string;
+    status?: string;
+    is_public?: boolean;
+  }>;
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const { userId } = await request.json();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: 'userId is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('[My Preview] Fetching AI Preview for user:', userId);
+
+    // Query for the user's therapist profile and AI prompts
+    const { data: therapist, error } = await supabase
+      .from('s2_therapist_profiles')
+      .select(`
+        id,
+        user_id,
+        full_name,
+        title,
+        degrees,
+        primary_location,
+        gender_identity,
+        years_of_experience,
+        languages_spoken,
+        created_at,
+        s2_complete_profiles!fk_therapist_profile(
+          profile_photo_url,
+          personal_statement,
+          mental_health_specialties,
+          treatment_approaches,
+          age_ranges_treated,
+          lgbtq_affirming,
+          session_fees
+        ),
+        s2_ai_therapist_prompts!therapist_profile_id(
+          id,
+          prompt_text,
+          prompt_title,
+          status,
+          is_public
+        )
+      `)
+      .eq('user_id', userId)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      console.error('[My Preview] Database error:', error);
+
+      if (error.code === 'PGRST116') {
+        return NextResponse.json(
+          { error: 'No AI Preview found. Please complete your provider setup first.' },
+          { status: 404 }
+        );
+      }
+
+      return NextResponse.json(
+        { error: 'Failed to fetch AI Preview', details: error.message },
+        { status: 500 }
+      );
+    }
+
+    if (!therapist) {
+      return NextResponse.json(
+        { error: 'No AI Preview found. Please complete your provider setup first.' },
+        { status: 404 }
+      );
+    }
+
+    // Transform the data to match our frontend interface
+    const completeProfile = therapist.s2_complete_profiles?.[0] || {};
+    const aiPrompt = therapist.s2_ai_therapist_prompts?.[0] || {};
+
+    const transformedTherapist = {
+      id: therapist.id,
+      fullName: therapist.full_name,
+      title: therapist.title,
+      degrees: therapist.degrees || [],
+      primaryLocation: therapist.primary_location,
+      genderIdentity: therapist.gender_identity,
+      yearsOfExperience: therapist.years_of_experience,
+      languagesSpoken: therapist.languages_spoken || [],
+      profilePhotoUrl: completeProfile.profile_photo_url,
+      personalStatement: completeProfile.personal_statement,
+      mentalHealthSpecialties: completeProfile.mental_health_specialties || [],
+      treatmentApproaches: completeProfile.treatment_approaches || [],
+      ageRangesTreated: completeProfile.age_ranges_treated || [],
+      lgbtqAffirming: completeProfile.lgbtq_affirming,
+      sessionFees: completeProfile.session_fees,
+      // AI Preview specific data
+      aiPrompt: {
+        id: aiPrompt.id,
+        text: aiPrompt.prompt_text,
+        title: aiPrompt.prompt_title,
+        status: aiPrompt.status,
+        isPublic: aiPrompt.is_public
+      }
+    };
+
+    console.log(`[My Preview] Found AI Preview for ${therapist.full_name}`);
+
+    return NextResponse.json({
+      success: true,
+      therapist: transformedTherapist
+    });
+
+  } catch (error) {
+    console.error('[My Preview] API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

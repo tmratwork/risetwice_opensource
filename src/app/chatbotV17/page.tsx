@@ -16,6 +16,7 @@ import SearchBar from './components/therapist-matching/SearchBar';
 import FilterTags, { FilterTag } from './components/therapist-matching/FilterTags';
 import TherapistList from './components/therapist-matching/TherapistList';
 import { Therapist } from './components/therapist-matching/TherapistCard';
+import { useSearchParams } from 'next/navigation';
 
 // Type for pending demo data
 interface PendingDemo {
@@ -34,6 +35,10 @@ declare global {
 export default function ChatBotV17Page() {
   const { user } = useAuth();
   const { setSelectedTherapist: setChatStateTherapist } = useChatState();
+  const searchParams = useSearchParams();
+
+  // Check if in provider mode
+  const isProviderMode = searchParams.get('provider') === 'true';
   const [isSignInDialogOpen, setIsSignInDialogOpen] = useState(false);
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
   const [userMessage, setUserMessage] = useState('');
@@ -126,31 +131,61 @@ export default function ChatBotV17Page() {
     handleDemoStart(voiceId, promptAppend, therapist.fullName, false);
   }, [handleDemoStart]);
 
-  // Search therapists
+  // Search therapists (or fetch user's own AI Preview in provider mode)
   const searchTherapists = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (searchQuery.trim()) {
-        params.set('q', searchQuery.trim());
-      }
+      if (isProviderMode) {
+        // Provider mode: fetch user's own AI Preview
+        if (!user?.uid) {
+          console.log('[V17] Provider mode: No user authenticated');
+          setTherapists([]);
+          return;
+        }
 
-      // Add filter tags as parameters
-      filterTags.forEach(tag => {
-        params.set(tag.type, tag.label);
-      });
+        console.log('[V17] Provider mode: Fetching user AI Preview');
+        const response = await fetch('/api/therapists/my-preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId: user.uid })
+        });
 
-      const response = await fetch(`/api/therapists/search?${params}`);
-      if (!response.ok) {
-        throw new Error('Failed to search therapists');
-      }
+        if (!response.ok) {
+          throw new Error('Failed to fetch AI Preview');
+        }
 
-      const data = await response.json();
-      if (data.success) {
-        setTherapists(data.therapists);
+        const data = await response.json();
+        if (data.success && data.therapist) {
+          setTherapists([data.therapist]);
+          console.log('[V17] Provider mode: Loaded user AI Preview:', data.therapist.fullName);
+        } else {
+          console.error('[V17] Provider mode: No AI Preview found');
+          setTherapists([]);
+        }
       } else {
-        console.error('[V17] Therapist search failed:', data.error);
-        setTherapists([]);
+        // Patient mode: search all therapists
+        const params = new URLSearchParams();
+        if (searchQuery.trim()) {
+          params.set('q', searchQuery.trim());
+        }
+
+        // Add filter tags as parameters
+        filterTags.forEach(tag => {
+          params.set(tag.type, tag.label);
+        });
+
+        const response = await fetch(`/api/therapists/search?${params}`);
+        if (!response.ok) {
+          throw new Error('Failed to search therapists');
+        }
+
+        const data = await response.json();
+        if (data.success) {
+          setTherapists(data.therapists);
+        } else {
+          console.error('[V17] Therapist search failed:', data.error);
+          setTherapists([]);
+        }
       }
     } catch (error) {
       console.error('[V17] Therapist search error:', error);
@@ -158,7 +193,7 @@ export default function ChatBotV17Page() {
     } finally {
       setLoading(false);
     }
-  }, [searchQuery, filterTags]);
+  }, [searchQuery, filterTags, isProviderMode, user?.uid]);
 
   // Load therapists on page load (browse mode)
   useEffect(() => {
@@ -166,13 +201,15 @@ export default function ChatBotV17Page() {
     searchTherapists();
   }, [searchTherapists]);
 
-  // Debounce search when query/filters change
+  // Debounce search when query/filters change (patient mode only)
   useEffect(() => {
+    if (isProviderMode) return; // Skip search debouncing in provider mode
+
     const timer = setTimeout(() => {
       searchTherapists();
     }, 300);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterTags, searchTherapists]);
+  }, [searchQuery, filterTags, searchTherapists, isProviderMode]);
 
   // Handle filter tag removal
   const handleRemoveTag = useCallback((tagId: string) => {
@@ -349,26 +386,41 @@ export default function ChatBotV17Page() {
         <div className="main-container" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '80px' }}>
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Find Your Therapist
-            </h1>
-            <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-              Browse our network of qualified mental health professionals and start your journey by trying their AI Previews.
-            </p>
+            {isProviderMode ? (
+              <>
+                <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+                  Test Your AI Preview
+                </h1>
+                <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
+                  Experience your AI Preview as patients would see it and refine your therapeutic approach.
+                </p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
+                  Find Your Therapist
+                </h1>
+                <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
+                  Browse our network of qualified mental health professionals and start your journey by trying their AI Previews.
+                </p>
+              </>
+            )}
           </div>
 
-          {/* Search and Filters */}
-          <div className="mb-8">
-            <SearchBar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              placeholder="Search by name, location, specialty..."
-            />
-            <FilterTags
-              activeTags={filterTags}
-              onRemoveTag={handleRemoveTag}
-            />
-          </div>
+          {/* Search and Filters - Only show in patient mode */}
+          {!isProviderMode && (
+            <div className="mb-8">
+              <SearchBar
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                placeholder="Search by name, location, specialty..."
+              />
+              <FilterTags
+                activeTags={filterTags}
+                onRemoveTag={handleRemoveTag}
+              />
+            </div>
+          )}
 
           {/* Therapist Results */}
           <div className="flex-1 overflow-y-auto">

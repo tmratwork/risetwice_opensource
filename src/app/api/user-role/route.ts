@@ -25,10 +25,10 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Query user profile with role
+    // Query user profile with boolean role columns
     const { data, error } = await supabase
       .from('user_profiles')
-      .select('user_role, profile_data')
+      .select('is_patient, is_provider, is_admin, profile_data')
       .eq('user_id', userId)
       .single();
 
@@ -38,8 +38,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ role: 'patient' });
     }
 
+    // Determine primary role based on precedence: admin > provider > patient
+    let primaryRole = 'patient'; // default
+    if (data?.is_admin) {
+      primaryRole = 'admin';
+    } else if (data?.is_provider) {
+      primaryRole = 'provider';
+    } else if (data?.is_patient) {
+      primaryRole = 'patient';
+    }
+
     return NextResponse.json({
-      role: data?.user_role || 'patient',
+      role: primaryRole,
+      roles: {
+        is_patient: data?.is_patient || false,
+        is_provider: data?.is_provider || false,
+        is_admin: data?.is_admin || false
+      },
       profile_data: data?.profile_data
     });
 
@@ -82,14 +97,18 @@ export async function PUT(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Update user role
+    // Update user role using boolean columns
+    const updateData: any = {
+      user_id: userId,
+      updated_at: new Date().toISOString(),
+      is_patient: role === 'patient',
+      is_provider: role === 'provider',
+      is_admin: role === 'admin'
+    };
+
     const { error } = await supabase
       .from('user_profiles')
-      .upsert({
-        user_id: userId,
-        user_role: role,
-        updated_at: new Date().toISOString()
-      }, {
+      .upsert(updateData, {
         onConflict: 'user_id'
       });
 
