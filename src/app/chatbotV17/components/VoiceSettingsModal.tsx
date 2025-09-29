@@ -5,6 +5,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useElevenLabsStore } from '@/stores/elevenlabs-store';
+import { useAuth } from '@/contexts/auth-context';
+import { useSearchParams } from 'next/navigation';
 
 interface VoiceSettingsModalProps {
   isOpen: boolean;
@@ -17,6 +19,16 @@ interface VoiceSettings {
   similarity_boost: number;
   style: number;
   use_speaker_boost: boolean;
+}
+
+interface ProviderVoiceSettings {
+  speed: number;
+  stability: number;
+  similarity: number;
+  style: number;
+  speaker_boost: boolean;
+  model_family: string;
+  language: string;
 }
 
 
@@ -80,10 +92,18 @@ function InfoTooltip({ content, position = 'top' }: { content: string; position?
 }
 
 export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps) {
+  console.log('[VoiceSettingsModal] Rendered with isOpen:', isOpen);
+
   const store = useElevenLabsStore();
+  const { user } = useAuth();
+  const searchParams = useSearchParams();
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState('');
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Determine user type and settings mode
+  const isProviderMode = searchParams.get('provider') === 'true';
+  const isPatientMode = !isProviderMode;
 
   // Voice configuration state
   const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>({
@@ -97,46 +117,56 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
   const [modelFamily, setModelFamily] = useState('same_as_agent');
   const [language, setLanguage] = useState('en');
 
+  // Patient-specific state (playback speed only)
+  const [patientPlaybackSpeed, setPatientPlaybackSpeed] = useState(1.0);
+
   // Load current settings when modal opens
   useEffect(() => {
     const loadCurrentSettings = async () => {
-      if (!isOpen) return;
+      if (!isOpen || !user?.uid) return;
 
       try {
-        if (store.agentId) {
-          // Load from active agent
-          setStatus('📖 Loading agent settings...');
+        if (isProviderMode) {
+          // Provider mode: Load full voice settings for their AI Preview
+          setStatus('📖 Loading your AI Preview voice settings...');
 
-          const response = await fetch(`/api/v17/voice-settings?agent_id=${store.agentId}`);
+          const response = await fetch(`/api/voice-settings/provider?userId=${user.uid}`);
           if (response.ok) {
             const data = await response.json();
             if (data.success) {
-              setVoiceSettings(data.voice_settings);
-              setModelFamily(data.model_family || 'same_as_agent');
-              setLanguage(data.language || 'en');
-              setStatus('✅ Agent settings loaded successfully');
+              const settings = data.settings;
+              // Convert provider settings to modal format
+              setVoiceSettings({
+                speed: settings.speed,
+                stability: settings.stability,
+                similarity_boost: settings.similarity,
+                style: settings.style,
+                use_speaker_boost: settings.speaker_boost
+              });
+              setModelFamily(settings.model_family);
+              setLanguage(settings.language);
+              setStatus('✅ AI Preview voice settings loaded');
+            } else {
+              setStatus('⚠️ Using default provider settings');
             }
           } else {
-            setStatus('⚠️ Using default settings');
+            setStatus('⚠️ Could not load AI Preview settings - using defaults');
           }
         } else {
-          // Load from localStorage preferences
-          setStatus('📖 Loading saved preferences...');
+          // Patient mode: Load only playback speed preference
+          setStatus('📖 Loading your playback preferences...');
 
-          const savedPreferences = localStorage.getItem('v17_voice_preferences');
-          if (savedPreferences) {
-            try {
-              const preferences = JSON.parse(savedPreferences);
-              setVoiceSettings(preferences.voice_settings);
-              setModelFamily(preferences.model_family || 'same_as_agent');
-              setLanguage(preferences.language || 'en');
-              setStatus('✅ Saved preferences loaded successfully');
-            } catch (parseError) {
-              console.error('Failed to parse saved preferences:', parseError);
-              setStatus('⚠️ Using default settings');
+          const response = await fetch(`/api/voice-settings/patient?userId=${user.uid}`);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success) {
+              setPatientPlaybackSpeed(data.playbackSpeed);
+              setStatus('✅ Playback preferences loaded');
+            } else {
+              setStatus('⚠️ Using default playback speed');
             }
           } else {
-            setStatus('💡 No saved preferences found - using defaults');
+            setStatus('⚠️ Could not load preferences - using defaults');
           }
         }
       } catch (error) {
@@ -148,7 +178,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
     if (isOpen) {
       loadCurrentSettings();
     }
-  }, [isOpen, store.agentId]);
+  }, [isOpen, user?.uid, isProviderMode]);
 
   // Handle ESC key to close modal
   useEffect(() => {
@@ -187,47 +217,72 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
 
 
   const saveSettings = async () => {
+    if (!user?.uid) {
+      setStatus('❌ Please sign in to save settings');
+      return;
+    }
+
     try {
       setSaving(true);
 
-      if (store.agentId) {
-        // Save to active agent
-        setStatus('💾 Saving voice settings to active agent...');
+      if (isProviderMode) {
+        // Provider mode: Save full voice settings to their AI Preview
+        setStatus('💾 Saving AI Preview voice settings...');
 
-        const response = await fetch('/api/v17/voice-settings', {
-          method: 'PUT',
+        const providerSettings: ProviderVoiceSettings = {
+          speed: voiceSettings.speed,
+          stability: voiceSettings.stability,
+          similarity: voiceSettings.similarity_boost,
+          style: voiceSettings.style,
+          speaker_boost: voiceSettings.use_speaker_boost,
+          model_family: modelFamily,
+          language: language
+        };
+
+        const response = await fetch('/api/voice-settings/provider', {
+          method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            agent_id: store.agentId,
-            voice_settings: voiceSettings,
-            model_family: modelFamily,
-            language: language
+            userId: user.uid,
+            settings: providerSettings
           })
         });
 
         if (!response.ok) {
-          throw new Error('Failed to save voice settings');
+          throw new Error('Failed to save provider voice settings');
         }
 
-        setStatus('✅ Voice settings saved to active agent successfully!');
+        const data = await response.json();
+        if (data.success) {
+          setStatus('✅ AI Preview voice settings saved! All patients will hear these settings.');
+          setTimeout(() => onClose(), 2000);
+        } else {
+          setStatus('❌ Error saving AI Preview settings');
+        }
       } else {
-        // Save to localStorage as preferences
-        setStatus('💾 Saving voice preferences...');
+        // Patient mode: Save only playback speed preference
+        setStatus('💾 Saving your playback preference...');
 
-        const preferences = {
-          voice_settings: voiceSettings,
-          model_family: modelFamily,
-          language: language,
-          saved_at: new Date().toISOString()
-        };
+        const response = await fetch('/api/voice-settings/patient', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: user.uid,
+            playbackSpeed: patientPlaybackSpeed
+          })
+        });
 
-        localStorage.setItem('v17_voice_preferences', JSON.stringify(preferences));
-        setStatus('✅ Voice preferences saved! They will be applied when you start a conversation.');
+        if (!response.ok) {
+          throw new Error('Failed to save playback speed');
+        }
 
-        // Close modal after saving preferences
-        setTimeout(() => {
-          onClose();
-        }, 1500); // Give user time to see the success message
+        const data = await response.json();
+        if (data.success) {
+          setStatus('✅ Playback speed saved! This will apply to all AI Previews you use.');
+          setTimeout(() => onClose(), 2000);
+        } else {
+          setStatus('❌ Error saving playback preference');
+        }
       }
     } catch (error) {
       console.error('Save settings error:', error);
@@ -238,7 +293,12 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
   };
 
 
-  if (!isOpen) return null;
+  if (!isOpen) {
+    console.log('[VoiceSettingsModal] Not rendering - isOpen is false');
+    return null;
+  }
+
+  console.log('[VoiceSettingsModal] Rendering modal UI');
 
   return (
     <div
@@ -259,10 +319,13 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
           <div className="flex justify-between items-center border-b pb-4">
             <div>
               <h1 id="voice-settings-title" className="text-2xl font-bold text-gray-800">
-                Advanced Voice Settings
+                {isProviderMode ? 'AI Preview Voice Settings' : 'Playback Settings'}
               </h1>
               <p className="text-gray-600 mt-1">
-                Customize your ElevenLabs conversational AI voice
+                {isProviderMode
+                  ? 'Configure the voice characteristics for your AI Preview. These settings will apply to all patients who interact with your AI Preview.'
+                  : 'Adjust playback speed to your preference. This will apply to all AI Previews you interact with.'
+                }
               </p>
             </div>
             <button
@@ -287,9 +350,12 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
           )}
 
 
-          {/* Voice Quality Settings */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h2 className="text-lg font-semibold mb-4 text-gray-800">🎛️ Voice Quality Settings</h2>
+          {isProviderMode ? (
+            /* Provider Mode: Full Voice Settings */
+            <>
+              {/* Voice Quality Settings */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h2 className="text-lg font-semibold mb-4 text-gray-800">🎛️ Voice Quality Settings</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
               {/* Speed Control */}
@@ -435,6 +501,45 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
               </div>
             </div>
           </div>
+          </>
+          ) : (
+            /* Patient Mode: Playback Speed Only */
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h2 className="text-lg font-semibold mb-4 text-gray-800">🎧 Playback Settings</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    Playback Speed: {patientPlaybackSpeed.toFixed(2)}x
+                    <span className="text-gray-500 ml-2 text-xs">
+                      {patientPlaybackSpeed < 1 ? '(Slower)' :
+                       patientPlaybackSpeed > 1 ? '(Faster)' : '(Normal)'}
+                    </span>
+                    <InfoTooltip content="Adjust how fast or slow you want to hear the AI voice responses. This setting applies to all AI Previews you interact with." />
+                  </label>
+                  <input
+                    type="range"
+                    min="0.5"
+                    max="2.0"
+                    step="0.1"
+                    value={patientPlaybackSpeed}
+                    onChange={(e) => setPatientPlaybackSpeed(parseFloat(e.target.value))}
+                    className="w-full h-3 bg-gray-300 rounded-lg appearance-none cursor-pointer slider"
+                  />
+                  <div className="flex justify-between text-xs text-gray-500 mt-1">
+                    <span>0.5x (Much Slower)</span>
+                    <span>1.0x (Normal)</span>
+                    <span>2.0x (Much Faster)</span>
+                  </div>
+                </div>
+
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <strong>Note:</strong> This speed setting is just your personal preference and will override the provider's default speed setting. All other voice characteristics (tone, style, etc.) are set by each therapist.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex justify-end space-x-3 pt-4 border-t">
@@ -449,7 +554,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
               disabled={saving}
               className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 font-medium transition-colors"
             >
-              {saving ? '💾 Saving...' : store.agentId ? '💾 Save Settings' : '💾 Save as Preferences'}
+              {saving ? '💾 Saving...' : isProviderMode ? '💾 Save AI Preview Settings' : '💾 Save Playback Preference'}
             </button>
           </div>
         </div>

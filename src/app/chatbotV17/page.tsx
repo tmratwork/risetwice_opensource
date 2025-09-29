@@ -41,6 +41,17 @@ export default function ChatBotV17Page() {
   const isProviderMode = searchParams.get('provider') === 'true';
   const [isSignInDialogOpen, setIsSignInDialogOpen] = useState(false);
   const [isVoiceSettingsOpen, setIsVoiceSettingsOpen] = useState(false);
+
+  // Debug modal state
+  useEffect(() => {
+    console.log('[V17] Voice settings modal state changed:', isVoiceSettingsOpen);
+  }, [isVoiceSettingsOpen]);
+
+  // Handler for opening advanced voice settings
+  const handleAdvancedSettings = useCallback(() => {
+    console.log('[V17] Advanced settings button clicked, opening modal');
+    setIsVoiceSettingsOpen(true);
+  }, []);
   const [userMessage, setUserMessage] = useState('');
   const conversationHistoryRef = useRef<HTMLDivElement>(null);
 
@@ -427,10 +438,21 @@ export default function ChatBotV17Page() {
             <TherapistList
               therapists={therapists}
               onTryAIPreview={handleTryAIPreview}
+              onAdvancedSettings={isProviderMode ? handleAdvancedSettings : undefined}
+              isProviderMode={isProviderMode}
               loading={loading}
             />
           </div>
         </div>
+
+        {/* Voice Settings Modal - Also render in matching view */}
+        <VoiceSettingsModal
+          isOpen={isVoiceSettingsOpen}
+          onClose={() => {
+            console.log('[V17] Closing voice settings modal (matching view)');
+            setIsVoiceSettingsOpen(false);
+          }}
+        />
       </div>
     );
   }
@@ -731,7 +753,10 @@ export default function ChatBotV17Page() {
       {/* Voice Settings Modal */}
       <VoiceSettingsModal
         isOpen={isVoiceSettingsOpen}
-        onClose={() => setIsVoiceSettingsOpen(false)}
+        onClose={() => {
+          console.log('[V17] Closing voice settings modal');
+          setIsVoiceSettingsOpen(false);
+        }}
       />
     </div>
   );

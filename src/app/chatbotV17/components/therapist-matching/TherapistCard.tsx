@@ -19,9 +19,16 @@ export interface Therapist {
 interface TherapistCardProps {
   therapist: Therapist;
   onTryAIPreview: (therapist: Therapist) => void;
+  onAdvancedSettings?: () => void;
+  isProviderMode?: boolean;
 }
 
-const TherapistCard: React.FC<TherapistCardProps> = ({ therapist, onTryAIPreview }) => {
+const TherapistCard: React.FC<TherapistCardProps> = ({
+  therapist,
+  onTryAIPreview,
+  onAdvancedSettings,
+  isProviderMode = false
+}) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
   const formatDegrees = (degrees: string[]) => {
@@ -161,16 +168,37 @@ const TherapistCard: React.FC<TherapistCardProps> = ({ therapist, onTryAIPreview
               {isExpanded ? 'View Less' : 'View More'}
             </button>
 
-            <button
-              onClick={() => onTryAIPreview(therapist)}
-              className="font-bold px-6 py-2 rounded-lg transition-colors hover:opacity-80"
-              style={{
-                backgroundColor: '#fbbf24',
-                color: '#000000'
-              }}
-            >
-              Try AI Preview
-            </button>
+            <div className="flex gap-2">
+              {/* Advanced Settings Button - Only show in provider mode */}
+              {isProviderMode && onAdvancedSettings && (
+                <button
+                  onClick={(e) => {
+                    e.preventDefault();
+                    console.log('[TherapistCard] Advanced button clicked, calling handler');
+                    onAdvancedSettings();
+                  }}
+                  className="font-medium px-4 py-2 border rounded-lg transition-colors hover:bg-gray-50"
+                  style={{
+                    borderColor: 'var(--border-color)',
+                    color: 'var(--text-secondary)'
+                  }}
+                  title="Configure voice settings for your AI Preview"
+                >
+                  ⚙️ Advanced
+                </button>
+              )}
+
+              <button
+                onClick={() => onTryAIPreview(therapist)}
+                className="font-bold px-6 py-2 rounded-lg transition-colors hover:opacity-80"
+                style={{
+                  backgroundColor: '#fbbf24',
+                  color: '#000000'
+                }}
+              >
+                {isProviderMode ? 'Test AI Preview' : 'Try AI Preview'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

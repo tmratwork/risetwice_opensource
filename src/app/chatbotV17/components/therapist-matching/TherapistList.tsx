@@ -4,12 +4,16 @@ import TherapistCard, { Therapist } from './TherapistCard';
 interface TherapistListProps {
   therapists: Therapist[];
   onTryAIPreview: (therapist: Therapist) => void;
+  onAdvancedSettings?: () => void;
+  isProviderMode?: boolean;
   loading?: boolean;
 }
 
 const TherapistList: React.FC<TherapistListProps> = ({
   therapists,
   onTryAIPreview,
+  onAdvancedSettings,
+  isProviderMode = false,
   loading = false
 }) => {
   if (loading) {
@@ -68,6 +72,8 @@ const TherapistList: React.FC<TherapistListProps> = ({
           key={therapist.id}
           therapist={therapist}
           onTryAIPreview={onTryAIPreview}
+          onAdvancedSettings={onAdvancedSettings}
+          isProviderMode={isProviderMode}
         />
       ))}
     </div>
