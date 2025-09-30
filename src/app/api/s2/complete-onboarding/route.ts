@@ -21,12 +21,12 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Set user role to provider
+    // Set user as provider
     const { error } = await supabase
       .from('user_profiles')
       .upsert({
         user_id: userId,
-        user_role: 'provider',
+        is_provider: true,
         updated_at: new Date().toISOString()
       }, {
         onConflict: 'user_id'

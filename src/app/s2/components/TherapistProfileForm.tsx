@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 import CustomMultiSelect from './CustomMultiSelect';
+import { StepCompletionStatus } from '@/utils/s2-validation';
 
 interface TherapistProfile {
   fullName: string;
@@ -36,6 +37,7 @@ interface TherapistProfileFormProps {
   onBack: () => void;
   onStepNavigation?: (step: FlowStep) => void;
   canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
+  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
@@ -44,7 +46,8 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   onNext,
   onBack,
   onStepNavigation,
-  canSkipToStep
+  canSkipToStep,
+  stepCompletionStatus
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -362,6 +365,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
           currentStep="profile"
           onStepClick={onStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       )}
 

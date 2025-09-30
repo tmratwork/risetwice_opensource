@@ -4,19 +4,20 @@
 "use client";
 
 import React from 'react';
-
-type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+import { StepCompletionStatus, FlowStep, getStepDisplayStatus } from '@/utils/s2-validation';
 
 interface StepNavigatorProps {
   currentStep: FlowStep;
   onStepClick: (step: FlowStep) => void;
   canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
+  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const StepNavigator: React.FC<StepNavigatorProps> = ({
   currentStep,
   onStepClick,
-  canSkipToStep
+  canSkipToStep,
+  stepCompletionStatus
 }) => {
   // Define the step order and their display information (Byron's new flow)
   const stepOrder: { step: FlowStep; number: number; label: string; width: string }[] = [
@@ -42,10 +43,39 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
         <div className="flex justify-center items-center mb-4 space-x-2">
           {stepOrder.slice(1, -1).map((stepInfo) => { // Exclude welcome (0) and complete (8)
             const stepNumber = stepInfo.number;
-            const isCompleted = stepNumber < currentStepNumber;
-            const isCurrent = stepNumber === currentStepNumber;
-            const isClickable = stepNumber < currentStepNumber ||
+
+            // Enhanced display status based on completion data
+            const displayStatus = stepCompletionStatus
+              ? getStepDisplayStatus(stepInfo.step, currentStep, stepCompletionStatus)
+              : (stepNumber === currentStepNumber ? 'current' : 'locked');
+
+            const isClickable = displayStatus !== 'locked' ||
               (canSkipToStep ? canSkipToStep(stepInfo.step, currentStep) : false);
+
+            // Enhanced styling based on step completion status
+            const getStepStyling = () => {
+              switch (displayStatus) {
+                case 'current':
+                  return 'bg-green-600 text-white ring-2 ring-green-300';
+                case 'completed':
+                  return 'bg-green-500 text-white hover:bg-green-600 cursor-pointer';
+                case 'available':
+                  return 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer border border-blue-300';
+                case 'locked':
+                default:
+                  return 'bg-gray-200 text-gray-400 cursor-not-allowed';
+              }
+            };
+
+            // Enhanced connector line styling
+            const getConnectorStyling = () => {
+              if (displayStatus === 'completed' || displayStatus === 'current') {
+                return 'bg-green-400';
+              } else if (displayStatus === 'available') {
+                return 'bg-blue-200';
+              }
+              return 'bg-gray-200';
+            };
 
             return (
               <div key={stepInfo.step} className="flex items-center">
@@ -53,23 +83,22 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
                   onClick={isClickable ? () => onStepClick(stepInfo.step) : undefined}
                   disabled={!isClickable}
                   className={`
-                    flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-colors
-                    ${isCurrent
-                      ? 'bg-green-600 text-white'
-                      : isCompleted
-                        ? 'bg-green-100 text-green-600 hover:bg-green-200 cursor-pointer'
-                        : isClickable
-                          ? 'bg-blue-100 text-blue-600 hover:bg-blue-200 cursor-pointer'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                    }
+                    flex items-center justify-center w-8 h-8 rounded-full text-xs font-medium transition-all duration-200
+                    ${getStepStyling()}
                   `}
-                  title={isClickable ? `Go to ${stepInfo.label}` : `${stepInfo.label} (locked)`}
+                  title={
+                    displayStatus === 'completed'
+                      ? `${stepInfo.label} (Completed - Click to edit)`
+                      : isClickable
+                        ? `Go to ${stepInfo.label}`
+                        : `${stepInfo.label} (Complete previous steps first)`
+                  }
                 >
-                  {stepNumber}
+                  {displayStatus === 'completed' ? '✓' : stepNumber}
                 </button>
-                {/* Connector line (except for last step) */}
+                {/* Enhanced connector line (except for last step) */}
                 {stepNumber < 7 && (
-                  <div className={`w-8 h-0.5 ${stepNumber < currentStepNumber ? 'bg-green-300' : 'bg-gray-200'}`} />
+                  <div className={`w-8 h-0.5 transition-all duration-200 ${getConnectorStyling()}`} />
                 )}
               </div>
             );

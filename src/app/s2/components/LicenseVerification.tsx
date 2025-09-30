@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
+import { StepCompletionStatus } from '@/utils/s2-validation';
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
 
@@ -24,6 +25,7 @@ interface LicenseVerificationProps {
   onBack?: () => void;
   onStepNavigation?: (step: FlowStep) => void;
   canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
+  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const LicenseVerification: React.FC<LicenseVerificationProps> = ({
@@ -32,7 +34,8 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
   onNext,
   onSkip,
   onStepNavigation,
-  canSkipToStep
+  canSkipToStep,
+  stepCompletionStatus
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -214,6 +217,7 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
           currentStep="license-verification"
           onStepClick={onStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       )}
 

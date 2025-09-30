@@ -7,6 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 import InfoTooltip from './InfoTooltip';
+import { StepCompletionStatus } from '@/utils/s2-validation';
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
 
@@ -31,6 +32,7 @@ interface AIStyleCustomizationProps {
   onBack: () => void;
   onStepNavigation?: (step: FlowStep) => void;
   canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
+  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
@@ -39,7 +41,8 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
   onNext,
   onBack,
   onStepNavigation,
-  canSkipToStep
+  canSkipToStep,
+  stepCompletionStatus
 }) => {
   const { user } = useAuth();
   const [totalModality, setTotalModality] = useState(0);
@@ -160,6 +163,7 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
           currentStep="ai-style"
           onStepClick={onStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       )}
 

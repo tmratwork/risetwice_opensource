@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
+import { StepCompletionStatus } from '@/utils/s2-validation';
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
 
@@ -46,6 +47,7 @@ interface SessionPreparationProps {
   onUpdateSessionData: (data: Partial<SessionData>) => void;
   onStepNavigation?: (step: FlowStep) => void;
   canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
+  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const SessionPreparation: React.FC<SessionPreparationProps> = ({
@@ -54,7 +56,8 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
   onBack,
   onUpdateSessionData,
   onStepNavigation,
-  canSkipToStep
+  canSkipToStep,
+  stepCompletionStatus
 }) => {
   const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -134,6 +137,7 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
           currentStep="preparation"
           onStepClick={onStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       )}
 

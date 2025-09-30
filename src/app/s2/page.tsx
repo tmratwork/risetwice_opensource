@@ -6,6 +6,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useSearchParams } from 'next/navigation';
+import { useS2ProfileData } from '@/hooks/use-s2-profile-data';
+import { canSkipToStepWithData, getNextRecommendedStep, FlowStep } from '@/utils/s2-validation';
 import WelcomeScreen from './components/WelcomeScreen';
 import TherapistProfileForm from './components/TherapistProfileForm';
 import PatientDescriptionForm from './components/PatientDescriptionForm';
@@ -16,8 +18,8 @@ import LicenseVerification from './components/LicenseVerification';
 import CompleteProfile from './components/CompleteProfile';
 import OnboardingComplete from './components/OnboardingComplete';
 
-// Flow steps
-type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
+// Flow steps (imported from validation utils)
+// type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
 
 // Types
 interface TherapistProfile {
@@ -107,6 +109,16 @@ const S2CaseSimulation: React.FC = () => {
   const { user, loading: authLoading, firebaseAvailable } = useAuth();
   const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState<FlowStep>('welcome');
+
+  // Load S2 profile data and completion status
+  const {
+    data: profileData,
+    stepCompletionStatus,
+    loading: dataLoading,
+    error: dataError,
+    refetch: refetchData,
+    updateStepCompletion
+  } = useS2ProfileData();
   const [sessionData, setSessionData] = useState<SessionData>({
     therapistProfile: {
       fullName: '',
@@ -163,8 +175,92 @@ const S2CaseSimulation: React.FC = () => {
     }
   }, [searchParams]);
 
-  // Show loading while authentication is initializing
-  if (authLoading) {
+  // Populate sessionData when profile data is loaded
+  useEffect(() => {
+    if (profileData) {
+      setSessionData(prev => ({
+        ...prev,
+        therapistProfile: profileData.therapistProfile ? {
+          fullName: profileData.therapistProfile.full_name || '',
+          title: profileData.therapistProfile.title || '',
+          degrees: profileData.therapistProfile.degrees || [],
+          otherTitle: profileData.therapistProfile.other_title,
+          primaryLocation: profileData.therapistProfile.primary_location || '',
+          offersOnline: profileData.therapistProfile.offers_online || false,
+          phoneNumber: profileData.therapistProfile.phone_number,
+          emailAddress: profileData.therapistProfile.email_address,
+          dateOfBirth: profileData.therapistProfile.date_of_birth,
+          genderIdentity: profileData.therapistProfile.gender_identity,
+          yearsOfExperience: profileData.therapistProfile.years_of_experience,
+          languagesSpoken: profileData.therapistProfile.languages_spoken,
+          otherLanguage: profileData.therapistProfile.other_language,
+          culturalBackgrounds: profileData.therapistProfile.cultural_backgrounds,
+          otherCulturalBackground: profileData.therapistProfile.other_cultural_background,
+        } : prev.therapistProfile,
+
+        patientDescription: profileData.patientDescription ? {
+          description: profileData.patientDescription.description || ''
+        } : prev.patientDescription,
+
+        aiStyle: profileData.aiStyleConfig ? {
+          therapeuticModalities: {
+            cognitive_behavioral: profileData.aiStyleConfig.cognitive_behavioral || 0,
+            person_centered: profileData.aiStyleConfig.person_centered || 0,
+            psychodynamic: profileData.aiStyleConfig.psychodynamic || 0,
+            solution_focused: profileData.aiStyleConfig.solution_focused || 0
+          },
+          communicationStyle: {
+            interactionStyle: profileData.aiStyleConfig.interaction_style || 50,
+            tone: profileData.aiStyleConfig.tone || 50,
+            energyLevel: profileData.aiStyleConfig.energy_level || 50
+          }
+        } : prev.aiStyle,
+
+        licenseVerification: profileData.licenseVerification ? {
+          licenseType: profileData.licenseVerification.license_type || '',
+          licenseNumber: profileData.licenseVerification.license_number || '',
+          stateOfLicensure: profileData.licenseVerification.state_of_licensure || '',
+          otherLicenseType: profileData.licenseVerification.other_license_type
+        } : prev.licenseVerification,
+
+        completeProfile: profileData.completeProfile ? {
+          profilePhoto: profileData.completeProfile.profile_photo_url,
+          personalStatement: profileData.completeProfile.personal_statement || '',
+          mentalHealthSpecialties: profileData.completeProfile.mental_health_specialties || [],
+          otherMentalHealthSpecialty: profileData.completeProfile.other_mental_health_specialty,
+          treatmentApproaches: profileData.completeProfile.treatment_approaches || [],
+          otherTreatmentApproach: profileData.completeProfile.other_treatment_approach,
+          ageRangesTreated: profileData.completeProfile.age_ranges_treated || [],
+          practiceDetails: {
+            practiceType: profileData.completeProfile.practice_type || '',
+            sessionLength: profileData.completeProfile.session_length || '',
+            availabilityHours: profileData.completeProfile.availability_hours || '',
+            emergencyProtocol: profileData.completeProfile.emergency_protocol || ''
+          },
+          insuranceInformation: {
+            acceptsInsurance: profileData.completeProfile.accepts_insurance || false,
+            insurancePlans: profileData.completeProfile.insurance_plans || [],
+            outOfNetworkSupported: profileData.completeProfile.out_of_network_supported || false
+          },
+          clientTypesServed: profileData.completeProfile.client_types_served,
+          lgbtqAffirming: profileData.completeProfile.lgbtq_affirming,
+          religiousSpiritualIntegration: profileData.completeProfile.religious_spiritual_integration,
+          otherReligiousSpiritualIntegration: profileData.completeProfile.other_religious_spiritual_integration,
+          sessionFees: profileData.completeProfile.session_fees,
+          boardCertifications: profileData.completeProfile.board_certifications,
+          otherBoardCertification: profileData.completeProfile.other_board_certification,
+          professionalMemberships: profileData.completeProfile.professional_memberships,
+          otherProfessionalMembership: profileData.completeProfile.other_professional_membership,
+        } : prev.completeProfile,
+
+        generatedScenario: profileData.generatedScenario?.description,
+        scenarioId: profileData.generatedScenario?.id
+      }));
+    }
+  }, [profileData]);
+
+  // Show loading while authentication or data is initializing
+  if (authLoading || dataLoading) {
     return (
       <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
@@ -276,38 +372,9 @@ const S2CaseSimulation: React.FC = () => {
     }
   };
 
-  // Function to determine if user can skip forward to a specific step
+  // Enhanced function to determine if user can skip to a specific step based on data
   const canSkipToStep = (targetStep: FlowStep, currentStep: FlowStep): boolean => {
-    const independentSteps: FlowStep[] = ['ai-style', 'license-verification', 'complete-profile'];
-    const stepOrder: FlowStep[] = [
-      'welcome', 'profile', 'patient-description', 'preparation', 'session',
-      'ai-style', 'license-verification', 'complete-profile', 'onboarding-complete'
-    ];
-
-    const currentIndex = stepOrder.indexOf(currentStep);
-    const targetIndex = stepOrder.indexOf(targetStep);
-
-    // Always allow backward navigation
-    if (targetIndex < currentIndex) {
-      return true;
-    }
-
-    // Can skip forward to independent steps from session or later
-    if (currentIndex >= stepOrder.indexOf('session') && independentSteps.includes(targetStep)) {
-      return true;
-    }
-
-    // Can skip between independent steps
-    if (independentSteps.includes(currentStep) && independentSteps.includes(targetStep)) {
-      return true;
-    }
-
-    // Can always go to onboarding-complete from complete-profile
-    if (currentStep === 'complete-profile' && targetStep === 'onboarding-complete') {
-      return true;
-    }
-
-    return false;
+    return canSkipToStepWithData(targetStep, currentStep, stepCompletionStatus);
   };
 
   const updateTherapistProfile = (profile: Partial<TherapistProfile>) => {
@@ -363,6 +430,7 @@ const S2CaseSimulation: React.FC = () => {
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       );
       
@@ -375,6 +443,7 @@ const S2CaseSimulation: React.FC = () => {
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       );
       
@@ -387,6 +456,7 @@ const S2CaseSimulation: React.FC = () => {
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       );
       
@@ -400,6 +470,7 @@ const S2CaseSimulation: React.FC = () => {
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       );
       
@@ -412,6 +483,7 @@ const S2CaseSimulation: React.FC = () => {
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       );
       
@@ -424,6 +496,7 @@ const S2CaseSimulation: React.FC = () => {
           onUpdateSessionData={updateSessionData}
           onStepNavigation={handleStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       );
       

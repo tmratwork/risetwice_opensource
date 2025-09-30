@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 import CustomMultiSelect from './CustomMultiSelect';
+import { StepCompletionStatus } from '@/utils/s2-validation';
 // Removed direct Supabase import - now using server-side upload API
 
 type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
@@ -49,6 +50,7 @@ interface CompleteProfileProps {
   onBack: () => void;
   onStepNavigation?: (step: FlowStep) => void;
   canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
+  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const CompleteProfile: React.FC<CompleteProfileProps> = ({
@@ -57,7 +59,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   onNext,
   onBack,
   onStepNavigation,
-  canSkipToStep
+  canSkipToStep,
+  stepCompletionStatus
 }) => {
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -506,6 +509,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
           currentStep="complete-profile"
           onStepClick={onStepNavigation}
           canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
         />
       )}
 
