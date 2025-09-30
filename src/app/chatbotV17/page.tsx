@@ -443,8 +443,8 @@ export default function ChatBotV17Page() {
               loading={loading}
             />
 
-            {/* Playback Speed Settings - Patient Mode Only */}
-            {!isProviderMode && !loading && therapists.length > 0 && (
+            {/* Playback Speed Settings - Patient Mode Only - COMMENTED OUT FOR NEXT VERSION */}
+            {/* {!isProviderMode && !loading && therapists.length > 0 && (
               <div className="flex justify-center mt-8 mb-6">
                 <button
                   onClick={() => {
@@ -457,7 +457,7 @@ export default function ChatBotV17Page() {
                   <div className="text-sm font-medium text-gray-900">Playback Speed</div>
                 </button>
               </div>
-            )}
+            )} */}
           </div>
         </div>
 
