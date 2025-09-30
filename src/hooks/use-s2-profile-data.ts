@@ -6,13 +6,13 @@ import { StepCompletionStatus } from '@/utils/s2-validation';
 import { useAuth } from '@/contexts/auth-context';
 
 interface S2ProfileData {
-  therapistProfile: any;
-  patientDescription: any;
-  aiStyleConfig: any;
-  licenseVerification: any;
-  completeProfile: any;
-  generatedScenario: any;
-  session: any;
+  therapistProfile: Record<string, unknown> | null;
+  patientDescription: Record<string, unknown> | null;
+  aiStyleConfig: Record<string, unknown> | null;
+  licenseVerification: Record<string, unknown> | null;
+  completeProfile: Record<string, unknown> | null;
+  generatedScenario: Record<string, unknown> | null;
+  session: Record<string, unknown> | null;
 }
 
 interface UseS2ProfileDataReturn {

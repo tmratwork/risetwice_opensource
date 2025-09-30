@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useSearchParams } from 'next/navigation';
 import { useS2ProfileData } from '@/hooks/use-s2-profile-data';
-import { canSkipToStepWithData, getNextRecommendedStep, FlowStep } from '@/utils/s2-validation';
+import { canSkipToStepWithData, FlowStep } from '@/utils/s2-validation';
 import WelcomeScreen from './components/WelcomeScreen';
 import TherapistProfileForm from './components/TherapistProfileForm';
 import PatientDescriptionForm from './components/PatientDescriptionForm';
@@ -114,10 +114,7 @@ const S2CaseSimulation: React.FC = () => {
   const {
     data: profileData,
     stepCompletionStatus,
-    loading: dataLoading,
-    error: dataError,
-    refetch: refetchData,
-    updateStepCompletion
+    loading: dataLoading
   } = useS2ProfileData();
   const [sessionData, setSessionData] = useState<SessionData>({
     therapistProfile: {
@@ -181,80 +178,80 @@ const S2CaseSimulation: React.FC = () => {
       setSessionData(prev => ({
         ...prev,
         therapistProfile: profileData.therapistProfile ? {
-          fullName: profileData.therapistProfile.full_name || '',
-          title: profileData.therapistProfile.title || '',
-          degrees: profileData.therapistProfile.degrees || [],
-          otherTitle: profileData.therapistProfile.other_title,
-          primaryLocation: profileData.therapistProfile.primary_location || '',
-          offersOnline: profileData.therapistProfile.offers_online || false,
-          phoneNumber: profileData.therapistProfile.phone_number,
-          emailAddress: profileData.therapistProfile.email_address,
-          dateOfBirth: profileData.therapistProfile.date_of_birth,
-          genderIdentity: profileData.therapistProfile.gender_identity,
-          yearsOfExperience: profileData.therapistProfile.years_of_experience,
-          languagesSpoken: profileData.therapistProfile.languages_spoken,
-          otherLanguage: profileData.therapistProfile.other_language,
-          culturalBackgrounds: profileData.therapistProfile.cultural_backgrounds,
-          otherCulturalBackground: profileData.therapistProfile.other_cultural_background,
+          fullName: (profileData.therapistProfile.full_name as string) || '',
+          title: (profileData.therapistProfile.title as string) || '',
+          degrees: (profileData.therapistProfile.degrees as string[]) || [],
+          otherTitle: profileData.therapistProfile.other_title as string,
+          primaryLocation: (profileData.therapistProfile.primary_location as string) || '',
+          offersOnline: (profileData.therapistProfile.offers_online as boolean) || false,
+          phoneNumber: profileData.therapistProfile.phone_number as string,
+          emailAddress: profileData.therapistProfile.email_address as string,
+          dateOfBirth: profileData.therapistProfile.date_of_birth as string,
+          genderIdentity: profileData.therapistProfile.gender_identity as string,
+          yearsOfExperience: profileData.therapistProfile.years_of_experience as string,
+          languagesSpoken: profileData.therapistProfile.languages_spoken as string[],
+          otherLanguage: profileData.therapistProfile.other_language as string,
+          culturalBackgrounds: profileData.therapistProfile.cultural_backgrounds as string[],
+          otherCulturalBackground: profileData.therapistProfile.other_cultural_background as string,
         } : prev.therapistProfile,
 
         patientDescription: profileData.patientDescription ? {
-          description: profileData.patientDescription.description || ''
+          description: (profileData.patientDescription.description as string) || ''
         } : prev.patientDescription,
 
         aiStyle: profileData.aiStyleConfig ? {
           therapeuticModalities: {
-            cognitive_behavioral: profileData.aiStyleConfig.cognitive_behavioral || 0,
-            person_centered: profileData.aiStyleConfig.person_centered || 0,
-            psychodynamic: profileData.aiStyleConfig.psychodynamic || 0,
-            solution_focused: profileData.aiStyleConfig.solution_focused || 0
+            cognitive_behavioral: (profileData.aiStyleConfig.cognitive_behavioral as number) || 0,
+            person_centered: (profileData.aiStyleConfig.person_centered as number) || 0,
+            psychodynamic: (profileData.aiStyleConfig.psychodynamic as number) || 0,
+            solution_focused: (profileData.aiStyleConfig.solution_focused as number) || 0
           },
           communicationStyle: {
-            interactionStyle: profileData.aiStyleConfig.interaction_style || 50,
-            tone: profileData.aiStyleConfig.tone || 50,
-            energyLevel: profileData.aiStyleConfig.energy_level || 50
+            interactionStyle: (profileData.aiStyleConfig.interaction_style as number) || 50,
+            tone: (profileData.aiStyleConfig.tone as number) || 50,
+            energyLevel: (profileData.aiStyleConfig.energy_level as number) || 50
           }
         } : prev.aiStyle,
 
         licenseVerification: profileData.licenseVerification ? {
-          licenseType: profileData.licenseVerification.license_type || '',
-          licenseNumber: profileData.licenseVerification.license_number || '',
-          stateOfLicensure: profileData.licenseVerification.state_of_licensure || '',
-          otherLicenseType: profileData.licenseVerification.other_license_type
+          licenseType: (profileData.licenseVerification.license_type as string) || '',
+          licenseNumber: (profileData.licenseVerification.license_number as string) || '',
+          stateOfLicensure: (profileData.licenseVerification.state_of_licensure as string) || '',
+          otherLicenseType: profileData.licenseVerification.other_license_type as string
         } : prev.licenseVerification,
 
         completeProfile: profileData.completeProfile ? {
-          profilePhoto: profileData.completeProfile.profile_photo_url,
-          personalStatement: profileData.completeProfile.personal_statement || '',
-          mentalHealthSpecialties: profileData.completeProfile.mental_health_specialties || [],
-          otherMentalHealthSpecialty: profileData.completeProfile.other_mental_health_specialty,
-          treatmentApproaches: profileData.completeProfile.treatment_approaches || [],
-          otherTreatmentApproach: profileData.completeProfile.other_treatment_approach,
-          ageRangesTreated: profileData.completeProfile.age_ranges_treated || [],
+          profilePhoto: profileData.completeProfile.profile_photo_url as string,
+          personalStatement: (profileData.completeProfile.personal_statement as string) || '',
+          mentalHealthSpecialties: (profileData.completeProfile.mental_health_specialties as string[]) || [],
+          otherMentalHealthSpecialty: profileData.completeProfile.other_mental_health_specialty as string,
+          treatmentApproaches: (profileData.completeProfile.treatment_approaches as string[]) || [],
+          otherTreatmentApproach: profileData.completeProfile.other_treatment_approach as string,
+          ageRangesTreated: (profileData.completeProfile.age_ranges_treated as string[]) || [],
           practiceDetails: {
-            practiceType: profileData.completeProfile.practice_type || '',
-            sessionLength: profileData.completeProfile.session_length || '',
-            availabilityHours: profileData.completeProfile.availability_hours || '',
-            emergencyProtocol: profileData.completeProfile.emergency_protocol || ''
+            practiceType: (profileData.completeProfile.practice_type as string) || '',
+            sessionLength: (profileData.completeProfile.session_length as string) || '',
+            availabilityHours: (profileData.completeProfile.availability_hours as string) || '',
+            emergencyProtocol: (profileData.completeProfile.emergency_protocol as string) || ''
           },
           insuranceInformation: {
-            acceptsInsurance: profileData.completeProfile.accepts_insurance || false,
-            insurancePlans: profileData.completeProfile.insurance_plans || [],
-            outOfNetworkSupported: profileData.completeProfile.out_of_network_supported || false
+            acceptsInsurance: (profileData.completeProfile.accepts_insurance as boolean) || false,
+            insurancePlans: (profileData.completeProfile.insurance_plans as string[]) || [],
+            outOfNetworkSupported: (profileData.completeProfile.out_of_network_supported as boolean) || false
           },
-          clientTypesServed: profileData.completeProfile.client_types_served,
-          lgbtqAffirming: profileData.completeProfile.lgbtq_affirming,
-          religiousSpiritualIntegration: profileData.completeProfile.religious_spiritual_integration,
-          otherReligiousSpiritualIntegration: profileData.completeProfile.other_religious_spiritual_integration,
-          sessionFees: profileData.completeProfile.session_fees,
-          boardCertifications: profileData.completeProfile.board_certifications,
-          otherBoardCertification: profileData.completeProfile.other_board_certification,
-          professionalMemberships: profileData.completeProfile.professional_memberships,
-          otherProfessionalMembership: profileData.completeProfile.other_professional_membership,
+          clientTypesServed: profileData.completeProfile.client_types_served as string[],
+          lgbtqAffirming: profileData.completeProfile.lgbtq_affirming as boolean,
+          religiousSpiritualIntegration: profileData.completeProfile.religious_spiritual_integration as string,
+          otherReligiousSpiritualIntegration: profileData.completeProfile.other_religious_spiritual_integration as string,
+          sessionFees: profileData.completeProfile.session_fees as string,
+          boardCertifications: profileData.completeProfile.board_certifications as string[],
+          otherBoardCertification: profileData.completeProfile.other_board_certification as string,
+          professionalMemberships: profileData.completeProfile.professional_memberships as string[],
+          otherProfessionalMembership: profileData.completeProfile.other_professional_membership as string,
         } : prev.completeProfile,
 
-        generatedScenario: profileData.generatedScenario?.description,
-        scenarioId: profileData.generatedScenario?.id
+        generatedScenario: profileData.generatedScenario?.description as string,
+        scenarioId: profileData.generatedScenario?.id as string
       }));
     }
   }, [profileData]);
