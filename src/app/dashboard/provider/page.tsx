@@ -89,7 +89,7 @@ const ProviderDashboard: React.FC = () => {
               View and edit your professional profile, specializations, and credentials.
             </p>
             <Link
-              href="/profile"
+              href="/s2?skip=welcome"
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >
               Manage Profile

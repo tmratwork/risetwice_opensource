@@ -3,8 +3,9 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
+import { useSearchParams } from 'next/navigation';
 import WelcomeScreen from './components/WelcomeScreen';
 import TherapistProfileForm from './components/TherapistProfileForm';
 import PatientDescriptionForm from './components/PatientDescriptionForm';
@@ -104,6 +105,7 @@ interface SessionData {
 
 const S2CaseSimulation: React.FC = () => {
   const { user, loading: authLoading, firebaseAvailable } = useAuth();
+  const searchParams = useSearchParams();
   const [currentStep, setCurrentStep] = useState<FlowStep>('welcome');
   const [sessionData, setSessionData] = useState<SessionData>({
     therapistProfile: {
@@ -152,6 +154,14 @@ const S2CaseSimulation: React.FC = () => {
       }
     }
   });
+
+  // Check for skip parameter to start on profile form instead of welcome
+  useEffect(() => {
+    const skipWelcome = searchParams.get('skip');
+    if (skipWelcome === 'welcome') {
+      setCurrentStep('profile');
+    }
+  }, [searchParams]);
 
   // Show loading while authentication is initializing
   if (authLoading) {
