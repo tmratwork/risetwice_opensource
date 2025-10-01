@@ -270,33 +270,34 @@ const S2AdminPanel: React.FC = () => {
             </div>
 
             {/* Therapist Table */}
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white rounded-lg shadow overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       Therapist
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden sm:table-cell">
                       Location
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden md:table-cell">
                       Profile Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
                       Sessions
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap hidden lg:table-cell">
                       Joined
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredTherapists.map((therapist) => (
-                    <tr key={therapist.id} className="hover:bg-gray-50">
+                    <tr
+                      key={therapist.id}
+                      className="hover:bg-gray-50 cursor-pointer transition-colors"
+                      onClick={() => setSelectedTherapist(therapist)}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
                           <div className="text-sm font-medium text-gray-900">
@@ -312,7 +313,7 @@ const S2AdminPanel: React.FC = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden sm:table-cell">
                         {therapist.primary_location}
                         {therapist.offers_online && (
                           <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -320,7 +321,7 @@ const S2AdminPanel: React.FC = () => {
                           </span>
                         )}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-6 py-4 whitespace-nowrap hidden md:table-cell">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                           therapist.profile_completion_status === 'complete'
                             ? 'bg-green-100 text-green-800'
@@ -330,21 +331,21 @@ const S2AdminPanel: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {therapist.session_summary?.total_sessions || 0} sessions
-                        <div className="text-xs text-gray-500">
-                          {therapist.session_summary?.total_messages || 0} messages
+                        <div className="flex items-center justify-between">
+                          <div>
+                            {therapist.session_summary?.total_sessions || 0} sessions
+                            <div className="text-xs text-gray-500">
+                              {therapist.session_summary?.total_messages || 0} messages
+                            </div>
+                          </div>
+                          {/* Arrow indicator on mobile */}
+                          <svg className="ml-4 h-5 w-5 text-gray-400 sm:hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 hidden lg:table-cell">
                         {new Date(therapist.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                        <button
-                          onClick={() => setSelectedTherapist(therapist)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View Details
-                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1502,11 +1503,11 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
           {sessions.map((session) => (
             <div
               key={session.id}
-              className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
+              className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-colors"
               onClick={() => setSelectedSession(session)}
             >
               <div className="flex justify-between items-start">
-                <div>
+                <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-gray-900">
                     Session #{session.session_number}
                   </h4>
@@ -1514,7 +1515,7 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
                     {new Date(session.created_at).toLocaleDateString()} at{' '}
                     {new Date(session.created_at).toLocaleTimeString()}
                   </p>
-                  <div className="mt-2 flex items-center space-x-4 text-xs text-gray-500">
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs text-gray-500">
                     <span>Status: <span className="capitalize">{session.status}</span></span>
                     <span>Messages: {session.message_count}</span>
                     {session.duration_seconds && (
@@ -1532,9 +1533,11 @@ const SessionsAndTranscripts: React.FC<{ therapistId: string }> = ({ therapistId
                     ) : null}
                   </div>
                 </div>
-                <button className="text-blue-600 hover:text-blue-800 text-sm">
-                  View Transcript →
-                </button>
+                <div className="ml-4 flex-shrink-0">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
               </div>
             </div>
           ))}
