@@ -903,21 +903,6 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             </div>
           </div>
 
-          {/* LGBTQ+ Affirming */}
-          <div>
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="lgbtqAffirming"
-                checked={profileData.lgbtqAffirming || false}
-                onChange={(e) => handleInputChange('lgbtqAffirming', e.target.checked)}
-                className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
-              />
-              <label htmlFor="lgbtqAffirming" className="ml-2 text-sm text-gray-700">
-                LGBTQ+ Affirming Practice
-              </label>
-            </div>
-          </div>
 
           {/* Religious/Spiritual Integration */}
           <div>
@@ -953,26 +938,65 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
           </div>
 
           {/* Session Fees */}
-          <div>
-            <label htmlFor="sessionFees" className="block text-sm font-medium text-gray-700 mb-2">
-              Session Fees <span className="text-gray-400">(optional)</span>
-            </label>
-            <select
-              id="sessionFees"
-              value={profileData.sessionFees || ''}
-              onChange={(e) => handleInputChange('sessionFees', e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              <option value="">Select fee range</option>
-              <option value="$50-$75">$50-$75 per session</option>
-              <option value="$76-$100">$76-$100 per session</option>
-              <option value="$101-$150">$101-$150 per session</option>
-              <option value="$151-$200">$151-$200 per session</option>
-              <option value="$201-$300">$201-$300 per session</option>
-              <option value="$301+">$301+ per session</option>
-              <option value="Sliding scale">Sliding scale available</option>
-              <option value="Contact for rates">Contact for rates</option>
-            </select>
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+              Session Fees <span className="text-sm font-normal text-gray-500">(optional)</span>
+            </h2>
+            <div className="space-y-4">
+              {/* Text input for custom session fee */}
+              <div>
+                <label htmlFor="sessionFeesCustom" className="block text-sm font-medium text-gray-700 mb-2">
+                  Enter session fee (e.g. $150, $75-100, etc.)
+                </label>
+                <input
+                  type="text"
+                  id="sessionFeesCustom"
+                  value={profileData.sessionFees &&
+                    !['Sliding scale available', 'Contact for rates'].includes(profileData.sessionFees)
+                    ? profileData.sessionFees : ''}
+                  onChange={(e) => handleInputChange('sessionFees', e.target.value)}
+                  placeholder="Enter your session fee"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                />
+              </div>
+
+              {/* Checkbox options */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-gray-700">Or select one of these options:</p>
+                <div className="space-y-2">
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={profileData.sessionFees === 'Sliding scale available'}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleInputChange('sessionFees', 'Sliding scale available');
+                        } else {
+                          handleInputChange('sessionFees', '');
+                        }
+                      }}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Sliding scale available</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="checkbox"
+                      checked={profileData.sessionFees === 'Contact for rates'}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          handleInputChange('sessionFees', 'Contact for rates');
+                        } else {
+                          handleInputChange('sessionFees', '');
+                        }
+                      }}
+                      className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                    />
+                    <span className="ml-2 text-sm text-gray-700">Contact for rates</span>
+                  </label>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Board Certifications */}
