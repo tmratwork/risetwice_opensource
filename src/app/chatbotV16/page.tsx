@@ -2576,11 +2576,14 @@ export default function ChatBotV16Page() {
 
   // Handler for Let's Talk button that shows sign-in dialog for non-authenticated users
   const handleLetsTalkClick = useCallback(() => {
+    console.log('[PHONE_AUTH_OVERLAY] handleLetsTalkClick called, user:', user);
     if (!user) {
       // User is not signed in - show sign-in dialog
+      console.log('[PHONE_AUTH_OVERLAY] No user, opening SignInDialog');
       setIsSignInDialogOpen(true);
     } else {
       // User is signed in - proceed with normal flow
+      console.log('[PHONE_AUTH_OVERLAY] User authenticated, proceeding with chat');
       handleLetsTalk();
     }
   }, [user, handleLetsTalk]);
@@ -3972,15 +3975,24 @@ Time: ${new Date().toLocaleString()}`);
       />
 
       {/* Sign In Dialog for non-authenticated users */}
+      {(() => {
+        console.log('[PHONE_AUTH_OVERLAY] SignInDialog in render, isOpen:', isSignInDialogOpen);
+        return null;
+      })()}
       <SignInDialog
         isOpen={isSignInDialogOpen}
-        onClose={() => setIsSignInDialogOpen(false)}
+        onClose={() => {
+          console.log('[PHONE_AUTH_OVERLAY] SignInDialog closed');
+          setIsSignInDialogOpen(false);
+        }}
         onSignedIn={() => {
+          console.log('[PHONE_AUTH_OVERLAY] SignInDialog sign-in successful');
           setIsSignInDialogOpen(false);
           // After signing in, proceed with Let's Talk
           handleLetsTalk();
         }}
         onContinueWithoutSignIn={() => {
+          console.log('[PHONE_AUTH_OVERLAY] SignInDialog continue without sign-in');
           setIsSignInDialogOpen(false);
           // Continue with chat as anonymous user
           handleLetsTalk();

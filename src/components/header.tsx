@@ -231,6 +231,29 @@ function AuthButtons() {
     const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
     const [showContributorsModal, setShowContributorsModal] = useState(false);
     const [showPhoneAuth, setShowPhoneAuth] = useState(false);
+    const [portalMounted, setPortalMounted] = useState(false);
+
+    // Mount portal on client side
+    useEffect(() => {
+        console.log('[PHONE_AUTH_OVERLAY] Mounting portal');
+        setPortalMounted(true);
+    }, []);
+
+    // Debug logging for phone auth overlay and fix layout constraints
+    useEffect(() => {
+        console.log('[PHONE_AUTH_OVERLAY] showPhoneAuth state changed:', showPhoneAuth);
+
+        // Ensure body can't scroll when modal is open
+        if (showPhoneAuth) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = '';
+        }
+
+        return () => {
+            document.body.style.overflow = '';
+        };
+    }, [showPhoneAuth]);
     const [showLanguageDropdown, setShowLanguageDropdown] = useState(false);
     const [showBugReportModal, setShowBugReportModal] = useState(false);
     const [selectedLanguage, setSelectedLanguage] = useState('en');
@@ -539,39 +562,88 @@ function AuthButtons() {
             </>);
     }
 
-    // Show phone auth component if requested
-    if (showPhoneAuth) {
-        return (
-            <div className="fixed inset-0 bg-white dark:bg-gray-900 z-50 flex items-center justify-center">
-                <PhoneAuth onBack={() => setShowPhoneAuth(false)} />
-            </div>
-        );
+    // Render phone auth modal using portal (matching V17 structure)
+    if (showPhoneAuth && portalMounted) {
+        console.log('[PHONE_AUTH_OVERLAY] Rendering modal via portal to document.body');
+        // Check if elements will be found after render
+        setTimeout(() => {
+            const overlay = document.querySelector('[data-phone-auth-overlay]');
+            const container = document.querySelector('[data-phone-auth-container]');
+            console.log('[PHONE_AUTH_OVERLAY] Portal rendered - overlay found:', !!overlay, 'container found:', !!container);
+            if (overlay) {
+                const styles = window.getComputedStyle(overlay);
+                console.log('[PHONE_AUTH_OVERLAY] Overlay z-index:', styles.zIndex, 'position:', styles.position);
+            }
+        }, 0);
     }
+    const phoneAuthModal = showPhoneAuth && portalMounted ? createPortal(
+        <div
+            className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
+            style={{ zIndex: 9999 }}
+            onClick={() => {
+                console.log('[PHONE_AUTH_OVERLAY] Overlay clicked, closing modal');
+                setShowPhoneAuth(false);
+            }}
+            data-phone-auth-overlay="true"
+        >
+            <div
+                className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
+                onClick={(e) => e.stopPropagation()}
+                data-phone-auth-container="true"
+            >
+                <div className="p-6">
+                    <button
+                        onClick={() => {
+                            console.log('[PHONE_AUTH_OVERLAY] Back button clicked');
+                            setShowPhoneAuth(false);
+                        }}
+                        className="mb-4 text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200"
+                    >
+                        ← Back to sign in options
+                    </button>
+                    <PhoneAuth
+                        onBack={() => setShowPhoneAuth(false)}
+                        onSignedIn={() => {
+                            console.log('[PHONE_AUTH_OVERLAY] Sign in successful');
+                            setShowPhoneAuth(false);
+                        }}
+                    />
+                </div>
+            </div>
+        </div>,
+        document.body
+    ) : null;
 
     return (
-        <div className="flex items-center gap-2">
-            <button
-                onClick={signInWithGoogle}
-                className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
-                aria-label="Sign in with Google"
-            >
-                <span className="font-semibold text-lg">G</span>
-            </button>
-            <button
-                onClick={signInWithApple}
-                className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
-                aria-label="Sign in with Apple"
-            >
-                <Apple className="w-5 h-5" />
-            </button>
-            <button
-                onClick={() => setShowPhoneAuth(true)}
-                className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
-                aria-label="Sign in with Phone"
-            >
-                <Phone className="w-5 h-5" />
-            </button>
-        </div>
+        <>
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={signInWithGoogle}
+                    className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
+                    aria-label="Sign in with Google"
+                >
+                    <span className="font-semibold text-lg">G</span>
+                </button>
+                <button
+                    onClick={signInWithApple}
+                    className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
+                    aria-label="Sign in with Apple"
+                >
+                    <Apple className="w-5 h-5" />
+                </button>
+                <button
+                    onClick={() => {
+                        console.log('[PHONE_AUTH_OVERLAY] Phone sign-in button clicked');
+                        setShowPhoneAuth(true);
+                    }}
+                    className="p-2 rounded-lg border border-sage-400 dark:border-gray-600 text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-800"
+                    aria-label="Sign in with Phone"
+                >
+                    <Phone className="w-5 h-5" />
+                </button>
+            </div>
+            {phoneAuthModal}
+        </>
     );
 }
 

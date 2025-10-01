@@ -52,6 +52,7 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
   };
 
   const handlePhoneClick = () => {
+    console.log('[PHONE_AUTH_OVERLAY] SignInDialog phone button clicked');
     setShowPhoneAuth(true);
   };
 
@@ -69,10 +70,10 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
     const checkScreenSize = () => {
       setIsSmallScreen(window.innerWidth < 640); // Tailwind's sm breakpoint
     };
-    
+
     checkScreenSize();
     window.addEventListener('resize', checkScreenSize);
-    
+
     return () => {
       window.removeEventListener('resize', checkScreenSize);
     };
@@ -83,50 +84,99 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
     if (isOpen) {
       // Save currently focused element
       lastFocusedElement.current = document.activeElement as HTMLElement;
-      
+
+      // Add body class to prevent scrolling
+      document.body.style.overflow = 'hidden';
+
       // Focus the dialog
       setTimeout(() => {
         dialogRef.current?.focus();
       }, 100);
-      
+
       // Handle Escape key
       const handleEscape = (e: KeyboardEvent) => {
         if (e.key === 'Escape') {
           onClose();
         }
       };
-      
+
       document.addEventListener('keydown', handleEscape);
-      
+
       return () => {
         document.removeEventListener('keydown', handleEscape);
-        
+        document.body.style.overflow = '';
+
         // Restore focus when dialog closes
         if (lastFocusedElement.current) {
           lastFocusedElement.current.focus();
         }
       };
+    } else {
+      document.body.style.overflow = '';
     }
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
 
+  // Debug logging
+  console.log('[PHONE_AUTH_OVERLAY] SignInDialog rendering, isOpen:', isOpen, 'showPhoneAuth:', showPhoneAuth);
+
+  // Direct render without portal - use extremely high z-index to ensure it's on top
   return (
-    <div 
-      className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4"
-      style={{ zIndex: 9999 }}
-      onClick={handleContinueWithoutSignIn}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="signin-dialog-title"
-      aria-describedby="signin-dialog-description"
-    >
-      <div 
-        ref={dialogRef}
-        className="bg-white dark:bg-[#1a1a1b] border border-gray-200 dark:border-gray-700 rounded-lg max-w-lg w-full max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-        tabIndex={-1}
+    <>
+      {/* Full screen overlay */}
+      <div
+        data-modal-overlay="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          zIndex: 2147483646, // Maximum safe z-index value (just below max int)
+          pointerEvents: 'auto',
+        }}
+        onClick={handleContinueWithoutSignIn}
+        aria-hidden="true"
+      />
+      {/* Modal content */}
+      <div
+        data-modal-container="true"
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100vw',
+          height: '100vh',
+          zIndex: 2147483647, // Maximum z-index value
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '16px',
+          pointerEvents: 'none',
+        }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="signin-dialog-title"
+        aria-describedby="signin-dialog-description"
       >
+        <div
+          ref={dialogRef}
+          style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            border: '1px solid #e5e7eb',
+            maxWidth: '500px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            position: 'relative',
+            pointerEvents: 'auto',
+          }}
+          onClick={(e) => e.stopPropagation()}
+          tabIndex={-1}
+        >
         <div className="p-6">
           {showPhoneAuth ? (
             <div>
@@ -277,7 +327,8 @@ export function SignInDialog({ isOpen, onClose, onSignedIn, onContinueWithoutSig
             </>
           )}
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }

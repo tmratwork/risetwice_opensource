@@ -205,16 +205,21 @@ export default function PhoneAuth({ onBack, onSignedIn }: PhoneAuthProps) {
 
     return (
         <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '24px',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            padding: '20px',
-            maxWidth: '400px',
-            margin: '0 auto'
+            position: 'relative',
+            width: '100%',
+            zIndex: 'auto'
         }}>
+            <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '24px',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '40px 20px',
+                maxWidth: '400px',
+                margin: '0 auto',
+                width: '100%'
+            }}>
             {/* Hidden recaptcha container with mobile-safe styling */}
             <div 
                 id="recaptcha-container" 
@@ -324,7 +329,7 @@ export default function PhoneAuth({ onBack, onSignedIn }: PhoneAuthProps) {
                                         border: '1px solid #d1d5db',
                                         borderRadius: '8px',
                                         boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
-                                        zIndex: 100,
+                                        zIndex: 2147483647,
                                         minWidth: '200px',
                                         maxHeight: '300px',
                                         overflowY: 'auto'
@@ -558,6 +563,7 @@ export default function PhoneAuth({ onBack, onSignedIn }: PhoneAuthProps) {
                     </button>
                 </form>
             )}
+            </div>
         </div>
     );
 }

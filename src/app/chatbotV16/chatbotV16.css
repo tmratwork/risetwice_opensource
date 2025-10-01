@@ -380,6 +380,16 @@ html.dark body {
   }
 }
 
+/* Modal overlay fix - ensure highest priority */
+[role="dialog"] {
+  position: fixed !important;
+  z-index: 999999 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
 /* Spinner animation */
 .spinner {
   display: inline-block;
