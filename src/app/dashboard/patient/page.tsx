@@ -61,7 +61,7 @@ const PatientDashboard: React.FC = () => {
             </h1>
             <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>
               {userRole === 'provider'
-                ? 'You have provider access. Visit your provider dashboard for full features.'
+                ? 'You have provider access. Visit your clinician dashboard for full features.'
                 : 'Find the right therapist and manage your mental health journey.'
               }
             </p>
@@ -81,14 +81,14 @@ const PatientDashboard: React.FC = () => {
                     Provider Account Detected
                   </h3>
                   <p className="text-blue-700 dark:text-blue-300 text-sm">
-                    You have provider access. Switch to your provider dashboard for full features.
+                    You have provider access. Switch to your clinician dashboard for full features.
                   </p>
                 </div>
                 <Link
                   href="/dashboard/provider"
                   className="ml-auto px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  Go to Provider Dashboard
+                  Go to Clinician Dashboard
                 </Link>
               </div>
             </div>
