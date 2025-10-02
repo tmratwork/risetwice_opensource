@@ -49,22 +49,10 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
     completeOnboarding();
   }, [user, onboardingCompleted]);
 
-  const handleViewProfile = () => {
-    setIsNavigating(true);
-    // Navigate to profile view page
-    router.push('/profile');
-  };
-
   const handleGoToDashboard = () => {
     setIsNavigating(true);
     // Navigate to dashboard
     router.push('/dashboard');
-  };
-
-  const handleTestPreview = () => {
-    setIsNavigating(true);
-    // Navigate to AI chat for testing
-    router.push('/chatbotV17');
   };
 
   const handleContactSupport = () => {
