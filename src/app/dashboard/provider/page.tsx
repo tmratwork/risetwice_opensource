@@ -106,7 +106,7 @@ const ProviderDashboard: React.FC = () => {
                 </h3>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Experience your AI Preview as patients would and refine your therapeutic approach.
+                Experience your AI Preview as patients would.
               </p>
               <Link
                 href="/chatbotV17?provider=true"

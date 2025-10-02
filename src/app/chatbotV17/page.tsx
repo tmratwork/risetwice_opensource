@@ -403,7 +403,7 @@ export default function ChatBotV17Page() {
                   Test Your AI Preview
                 </h1>
                 <p className="text-xl max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-                  Experience your AI Preview as patients would see it and refine your therapeutic approach.
+                  Experience your AI Preview as patients would see it.
                 </p>
               </>
             ) : (

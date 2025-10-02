@@ -31,24 +31,6 @@ interface ProviderVoiceSettings {
 }
 
 
-const MODEL_FAMILIES = [
-  { id: 'same_as_agent', name: 'Same as Agent Default' },
-  { id: 'flash', name: 'Flash (Fastest)' },
-  { id: 'turbo', name: 'Turbo (Balanced)' },
-  { id: 'multilingual', name: 'Multilingual (Highest Quality)' },
-];
-
-const LANGUAGES = [
-  { code: 'en', name: 'English' },
-  { code: 'es', name: 'Spanish' },
-  { code: 'fr', name: 'French' },
-  { code: 'de', name: 'German' },
-  { code: 'it', name: 'Italian' },
-  { code: 'pt', name: 'Portuguese' },
-  { code: 'ja', name: 'Japanese' },
-  { code: 'ko', name: 'Korean' },
-  { code: 'zh', name: 'Chinese' },
-];
 
 // Tooltip component for voice settings information
 function InfoTooltip({ content, position = 'top' }: { content: string; position?: 'top' | 'bottom' }) {
@@ -111,8 +93,6 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
     use_speaker_boost: false,
   });
 
-  const [modelFamily, setModelFamily] = useState('same_as_agent');
-  const [language, setLanguage] = useState('en');
 
   // Patient-specific state (playback speed only)
   const [patientPlaybackSpeed, setPatientPlaybackSpeed] = useState(1.0);
@@ -140,8 +120,6 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
                 style: settings.style,
                 use_speaker_boost: settings.speaker_boost
               });
-              setModelFamily(settings.model_family);
-              setLanguage(settings.language);
               setStatus('✅ AI Preview voice settings loaded');
             } else {
               setStatus('⚠️ Using default provider settings');
@@ -232,8 +210,8 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
           similarity: voiceSettings.similarity_boost,
           style: voiceSettings.style,
           speaker_boost: voiceSettings.use_speaker_boost,
-          model_family: modelFamily,
-          language: language
+          model_family: 'same_as_agent',
+          language: 'en'
         };
 
         const response = await fetch('/api/voice-settings/provider', {
@@ -357,7 +335,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
 
               {/* Speed Control */}
               <div className="space-y-3">
-                <h3 className="text-base font-medium text-gray-800">⚡ Speed Control</h3>
+                <h3 className="text-base font-medium text-gray-800">Speed Control</h3>
                 <div>
                   <label className="block text-sm font-medium mb-2 text-gray-700">
                     Speed: {voiceSettings.speed.toFixed(2)}x
@@ -386,7 +364,7 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
 
               {/* Voice Quality */}
               <div className="space-y-3">
-                <h3 className="text-base font-medium text-gray-800">🎯 Voice Quality</h3>
+                <h3 className="text-base font-medium text-gray-800">Voice Quality</h3>
 
                 {/* Stability */}
                 <div>
@@ -464,40 +442,6 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
             </div>
           </div>
 
-          {/* Model and Language Settings */}
-          <div className="bg-gray-50 rounded-lg p-4">
-            <h2 className="text-lg font-semibold mb-4 text-gray-800">🔧 Model & Language Settings</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* Model Family */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Model Family</label>
-                <select
-                  value={modelFamily}
-                  onChange={(e) => setModelFamily(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-gray-800"
-                >
-                  {MODEL_FAMILIES.map(model => (
-                    <option key={model.id} value={model.id}>{model.name}</option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Language */}
-              <div>
-                <label className="block text-sm font-medium mb-2 text-gray-700">Language</label>
-                <select
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg text-gray-800"
-                >
-                  {LANGUAGES.map(lang => (
-                    <option key={lang.code} value={lang.code}>{lang.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          </div>
           </>
           ) : (
             /* Patient Mode: Playback Speed Only */
