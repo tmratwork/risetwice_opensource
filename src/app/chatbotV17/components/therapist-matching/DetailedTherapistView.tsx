@@ -76,12 +76,12 @@ const DetailedTherapistView: React.FC<DetailedTherapistViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '20px' }}>
-      {/* Back Arrow */}
-      <div className="absolute top-6 left-6 z-10">
+    <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      {/* Back Arrow - Fixed position at top of screen */}
+      <div className="fixed top-4 left-4 z-50">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />

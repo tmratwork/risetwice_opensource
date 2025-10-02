@@ -137,7 +137,11 @@ export default function ChatBotV17Page() {
   const handleTryAIPreview = useCallback((therapist: Therapist) => {
     console.log('[V17] Starting AI preview for therapist:', therapist.fullName);
     setSelectedTherapist(therapist);
+
+    // Hide all views to show chat interface
     setShowMatching(false);
+    setShowDetailedView(false);
+    setDetailedTherapistData(null);
 
     // Use therapist info for AI conversation
     const voiceId = 'default'; // Use default voice for now
@@ -295,6 +299,8 @@ export default function ChatBotV17Page() {
 
     // Reset UI state
     setShowMatching(true);
+    setShowDetailedView(false);
+    setDetailedTherapistData(null);
     setSelectedTherapist(null);
     setChatStateTherapist(null);
 
@@ -441,6 +447,15 @@ export default function ChatBotV17Page() {
       });
     }
   }, [store.conversationHistory]);
+
+  // Debug render states
+  console.log('[V17] Render states:', {
+    showMatching,
+    showDetailedView,
+    detailedTherapistData: !!detailedTherapistData,
+    selectedTherapist: !!selectedTherapist,
+    isConnected
+  });
 
   // Show detailed therapist view
   if (showDetailedView && detailedTherapistData) {
