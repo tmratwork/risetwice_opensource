@@ -66,9 +66,6 @@ const ProviderDashboard: React.FC = () => {
             <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
               Clinician Dashboard
             </h1>
-            <p className="text-lg" style={{ color: 'var(--text-secondary)' }}>
-              Welcome back! Manage your practice and AI Preview here.
-            </p>
           </div>
 
           {/* Quick Actions Grid */}
@@ -170,40 +167,6 @@ const ProviderDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Quick Setup Guide */}
-          <div className="mt-8 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg p-6 border">
-            <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-              Next Steps
-            </h2>
-            <div className="space-y-3">
-              <div className="flex items-center">
-                <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  ✅ Complete your AI Preview setup
-                </span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-white text-xs font-bold">2</span>
-                </div>
-                <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                  Test your AI Preview to ensure it matches your therapeutic style
-                </span>
-              </div>
-              <div className="flex items-center">
-                <div className="w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-white text-xs font-bold">3</span>
-                </div>
-                <span className="text-sm text-gray-400">
-                  Review analytics and patient feedback (coming soon)
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </>
