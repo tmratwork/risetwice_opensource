@@ -496,7 +496,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   useEffect(() => {
     if (conversationHistoryRef.current && conversation.length > 0) {
       const scrollContainer = conversationHistoryRef.current;
-      
+
       // Use requestAnimationFrame to ensure DOM has updated before scrolling
       requestAnimationFrame(() => {
         // Triple RAF to ensure all rendering and layout is complete
@@ -507,7 +507,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               const currentScrollTop = scrollContainer.scrollTop;
               const maxScrollTop = scrollContainer.scrollHeight - scrollContainer.clientHeight;
               const distanceFromBottom = maxScrollTop - currentScrollTop;
-              
+
               console.log('[v16_auto_scroll] Auto-scroll triggered', {
                 currentScrollTop,
                 scrollHeight: scrollContainer.scrollHeight,
@@ -517,10 +517,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 conversationLength: conversation.length
               });
             }
-            
+
             // Always scroll to bottom for new messages
             scrollContainer.scrollTop = scrollContainer.scrollHeight;
-            
+
             if (process.env.NEXT_PUBLIC_ENABLE_V16_AUTO_SCROLL_LOGS === 'true') {
               console.log('[v16_auto_scroll] ✅ SCROLLED to bottom');
             }
@@ -1205,7 +1205,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     const lastAiMessage = conversation
       .filter(msg => msg.role === 'assistant')
       .slice(-1)[0];
-    
+
     if (lastAiMessage) {
       setBookmarkText(lastAiMessage.text);
       setIsBookmarkModalOpen(true);
@@ -1256,7 +1256,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         throw new Error(`Failed to fetch terms: ${response.status}`);
       }
       const termsData = await response.json();
-      
+
       // Set terms content and open modal
       setTermsContent(termsData.content);
       setIsTermsModalOpen(true);
@@ -1282,13 +1282,13 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       const conversationContainer = document.querySelector('.conversation-container');
 
       console.log('[layout_debug] 🔍 LAYOUT HEIGHT ANALYSIS:');
-      
+
       if (mainContentRow) {
         console.log('[layout_debug] main-content-row: offsetHeight = ' + (mainContentRow as HTMLElement).offsetHeight + 'px');
         console.log('[layout_debug] main-content-row: computedHeight = ' + window.getComputedStyle(mainContentRow).height);
         console.log('[layout_debug] main-content-row: display = ' + window.getComputedStyle(mainContentRow).display + ' (MUST be "flex" for children flex props to work)');
         console.log('[layout_debug] main-content-row: flexDirection = ' + window.getComputedStyle(mainContentRow).flexDirection);
-        
+
         console.log('[layout_debug] 👶 CHILDREN OF main-content-row:');
         const children = Array.from(mainContentRow.children);
         children.forEach((child, index) => {
@@ -1296,7 +1296,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           console.log('[layout_debug] Child #' + index + ': ' + element.tagName + ' class="' + element.className + '" height=' + element.offsetHeight + 'px');
           console.log('[layout_debug] Child #' + index + ': flex=' + window.getComputedStyle(element).flex + ' flexGrow=' + window.getComputedStyle(element).flexGrow);
         });
-        
+
         const totalChildrenHeight = children.reduce((sum, child) => sum + (child as HTMLElement).offsetHeight, 0);
         console.log('[layout_debug] Total children height: ' + totalChildrenHeight + 'px');
         console.log('[layout_debug] Missing space: ' + ((mainContentRow as HTMLElement).offsetHeight - totalChildrenHeight) + 'px (could be margins/padding)');
@@ -1326,7 +1326,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
       console.log('[layout_debug] 🎯 CSS CHANGES VERIFICATION:');
       console.log('[layout_debug] isConnected = ' + isConnected);
-      
+
       if (conversationContainer?.classList.contains('conversation-container-with-overlay')) {
         console.log('[layout_debug] HAS conversation-container-with-overlay class');
         console.log('[layout_debug] paddingTop with overlay = ' + window.getComputedStyle(conversationContainer).paddingTop + ' (should be 0px if fix worked)');
@@ -1491,14 +1491,14 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     >
       {/* Screen reader page title */}
       <h1 id="page-title" className="sr-only">RiseTwice AI Chat Interface</h1>
-      
+
       {/* Connection status live region for screen readers */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {connectionState === 'connecting' && 'Connecting to RiseTwice AI...'}
         {isPreparing && 'Preparing your conversation...'}
         {connectionState === 'connected' && !isPreparing && 'Connected to RiseTwice AI. Your microphone is muted - click the microphone control in the center of the screen to unmute and start talking.'}
       </div>
-      
+
       {/* Microphone status live region for screen readers */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {isConnected && (isMuted ? 'Microphone muted' : 'Microphone unmuted - you can now speak')}
@@ -1662,7 +1662,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             <div className="mt-8 mb-8">
               <div className="w-full h-px bg-gray-300 mb-6"></div>
               <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                Our AI companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges. It cannot replace the healing power of real human connection. We built it for anyone who needs support — especially those who lack access to traditional therapy or just aren&apos;t ready to start yet.
+                Our AI companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges. It cannot replace the healing power of real human connection. We built it for anyone who needs support — especially those who lack access to traditional therapy or just aren&apos;t ready to start yet. Note: This AI is trained solely by our in-house medical team. It does not take data from AI Previews and is a completely separate model.
               </div>
               <div className="w-full h-px bg-gray-300 mt-6"></div>
             </div>
@@ -1692,8 +1692,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
       {/* Conversation container - naturally fills available space */}
       <div className={`conversation-container ${!isConnected ? 'conversation-container-with-overlay' : ''}`} style={{ position: 'relative', zIndex: 1 }}>
-        <div 
-          className="conversation-history" 
+        <div
+          className="conversation-history"
           ref={conversationHistoryRef}
           role="log"
           aria-live="polite"
@@ -1734,23 +1734,23 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 const isRecent = messageIndex >= Math.max(0, assistantMessages.length - 5);
                 return isRecent;
               })() && (
-                <div className="feedback-buttons mt-2 flex gap-2 opacity-60 hover:opacity-100 transition-opacity">
-                  <button
-                    onClick={() => handleFeedbackClick(msg.id, 'thumbs_up')}
-                    className="feedback-button thumbs-up p-1.5 rounded-full hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
-                    aria-label="Give positive feedback on this response"
-                  >
-                    <ThumbsUp size={14} className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" aria-hidden="true" />
-                  </button>
-                  <button
-                    onClick={() => handleFeedbackClick(msg.id, 'thumbs_down')}
-                    className="feedback-button thumbs-down p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
-                    aria-label="Give negative feedback on this response"
-                  >
-                    <ThumbsDown size={14} className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" aria-hidden="true" />
-                  </button>
-                </div>
-              )}
+                  <div className="feedback-buttons mt-2 flex gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={() => handleFeedbackClick(msg.id, 'thumbs_up')}
+                      className="feedback-button thumbs-up p-1.5 rounded-full hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
+                      aria-label="Give positive feedback on this response"
+                    >
+                      <ThumbsUp size={14} className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" aria-hidden="true" />
+                    </button>
+                    <button
+                      onClick={() => handleFeedbackClick(msg.id, 'thumbs_down')}
+                      className="feedback-button thumbs-down p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+                      aria-label="Give negative feedback on this response"
+                    >
+                      <ThumbsDown size={14} className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
               {!msg.isFinal && msg.status === 'speaking' && msg.text !== 'Thinking...' && msg.text !== 'Listening...' && (
                 <div className="text-xs opacity-50 mt-1">
                   Listening...
@@ -1795,11 +1795,11 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               disabled={!conversation.some(msg => msg.role === 'assistant')}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" 
-                      stroke="currentColor" 
-                      strokeWidth="2" 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
+                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
             </button>
@@ -1931,14 +1931,14 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           </div>
         </div>
       )}
-      
+
       {/* Terms of Service Modal */}
       {isTermsModalOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/75 flex items-center justify-center z-[9999] p-4"
           onClick={handleCloseTermsModal}
         >
-          <div 
+          <div
             className="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-full max-w-lg mx-4 max-h-[70vh] flex flex-col"
             onClick={(e) => e.stopPropagation()}
           >
@@ -2510,8 +2510,8 @@ export default function ChatBotV16Page() {
     };
 
     // Get current language preference from localStorage
-    const currentLanguagePreference = typeof window !== 'undefined' 
-      ? localStorage.getItem('languagePreference') || 'en' 
+    const currentLanguagePreference = typeof window !== 'undefined'
+      ? localStorage.getItem('languagePreference') || 'en'
       : 'en';
 
     logMultilingualSupport('🚀 CONVERSATION START: Let\'s Talk button clicked', {
@@ -2841,16 +2841,16 @@ export default function ChatBotV16Page() {
             contains_shelter: greeting.toLowerCase().includes('shelter'),
             contains_emergency: greeting.toLowerCase().includes('emergency')
           });
-          
+
           logResourceGreeting('💬 GREETING: Setting resource greeting in state');
           setResourceGreeting(greeting);
-          
+
           logResourceGreeting('💬 GREETING: ✅ Resource greeting set in state successfully');
         })
         .catch((error) => {
           logResourceGreeting('💬 STEP 11: ❌ CRITICAL ERROR generating resource greeting:', error);
           console.error('[V16] CRITICAL RESOURCE GREETING ERROR:', error);
-          
+
           // Show verbose UI error - no fallbacks allowed
           const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
           alert(`V16 RESOURCE GREETING SYSTEM FAILURE
@@ -2865,7 +2865,7 @@ Resource: ${resourceLocatorContext.selectedResource.title}
 Language: ${getStoredLanguagePreference(!!user)}
 User: ${user?.uid || 'anonymous'}
 Time: ${new Date().toLocaleString()}`);
-          
+
           // Do not set null - leave existing greeting or show error state
           logResourceGreeting('💬 STEP 12: ❌ NOT setting greeting to null - showing breaking error instead');
         });
@@ -3096,7 +3096,7 @@ Time: ${new Date().toLocaleString()}`);
       };
 
       logMultilingualSupport('🤖 FINAL AI CONTENT: WebRTC configuration created - this is what AI will receive', {
-        greetingSource: resourceGreeting ? 'RESOURCE_SPECIFIC' : triageGreeting ? 'SUPABASE_TRIAGE' : 'DEFAULT_TRIAGE', 
+        greetingSource: resourceGreeting ? 'RESOURCE_SPECIFIC' : triageGreeting ? 'SUPABASE_TRIAGE' : 'DEFAULT_TRIAGE',
         hasResourceContext: !!resourceLocatorContext,
         resourceTitle: resourceLocatorContext?.selectedResource?.title || null,
         greetingInstructions: finalGreeting,
@@ -3302,7 +3302,7 @@ Time: ${new Date().toLocaleString()}`);
         const languagePreference = getStoredLanguagePreference(!!user);
         const promptApiUrl = `/api/v16/load-prompt?type=triage&userId=${user?.uid || 'anonymous'}&language=${languagePreference}`;
         const greetingApiUrl = `/api/v16/greeting-prompt?type=triage&language=${languagePreference}${user?.uid ? `&userId=${user.uid}` : ''}`;
-        
+
         // Add comprehensive multilingual support logging
         const logMultilingualSupport = (message: string, ...args: unknown[]) => {
           if (process.env.NEXT_PUBLIC_ENABLE_MULTILINGUAL_SUPPORT_LOGS === 'true') {
@@ -3332,11 +3332,11 @@ Time: ${new Date().toLocaleString()}`);
           fetch(promptApiUrl),
           fetch(greetingApiUrl)
         ]);
-        
+
         logMultilingualSupport('📡 PARALLEL API RESPONSES: Received both responses', {
           promptOk: promptResponse.ok,
           promptStatus: promptResponse.status,
-          greetingOk: greetingResponse.ok, 
+          greetingOk: greetingResponse.ok,
           greetingStatus: greetingResponse.status,
           languagePreference,
           userId: user?.uid || 'anonymous',
@@ -3381,7 +3381,7 @@ Time: ${new Date().toLocaleString()}`);
         const responsePromises = [
           promptResponse.json()
         ];
-        
+
         if (!greetingError) {
           responsePromises.push(greetingResponse.json());
         }
@@ -3599,21 +3599,21 @@ Time: ${new Date().toLocaleString()}`);
     const handleLanguageChange = (event: Event) => {
       const customEvent = event as CustomEvent<{ languageCode: string }>;
       const newLanguageCode = customEvent.detail.languageCode;
-      
+
       // Add comprehensive multilingual support logging (local scope)
       const logMultilingualSupport = (message: string, ...args: unknown[]) => {
         if (process.env.NEXT_PUBLIC_ENABLE_MULTILINGUAL_SUPPORT_LOGS === 'true') {
           console.log(`[multilingual_support] ${message}`, ...args);
         }
       };
-      
+
       // All logs use single consistent prefix for multilingual support debugging
       const logTriageHandoff = (message: string, ...args: unknown[]) => {
         if (process.env.NEXT_PUBLIC_ENABLE_MULTILINGUAL_SUPPORT_LOGS === 'true') {
           console.log(`[multilingual_support] ${message}`, ...args);
         }
       };
-      
+
       logMultilingualSupport('🌐 CRITICAL: Language change detected in V16 page', {
         previousLanguage: 'unknown', // TODO: Store previous language for comparison
         newLanguage: newLanguageCode,
@@ -3624,7 +3624,7 @@ Time: ${new Date().toLocaleString()}`);
         resourceTitle: resourceLocatorContext?.selectedResource?.title || 'none',
         impact: 'Will reload triage prompt and resource greeting'
       });
-      
+
       logTriageHandoff('Language change detected - reloading triage prompt', {
         newLanguage: newLanguageCode,
         userId: user?.uid || 'anonymous',
@@ -3635,14 +3635,14 @@ Time: ${new Date().toLocaleString()}`);
       const fetchTriagePrompt = async () => {
         try {
           const apiUrl = `/api/v16/load-prompt?type=triage&userId=${user?.uid || 'anonymous'}&language=${newLanguageCode}`;
-          
+
           logMultilingualSupport('🔄 STEP 1: Reloading triage prompt with new language', {
             newLanguage: newLanguageCode,
             apiUrl,
             userId: user?.uid || 'anonymous',
             source: 'triage-prompt-reload'
           });
-          
+
           const response = await fetch(apiUrl);
 
           logMultilingualSupport('📡 TRIAGE RELOAD API RESPONSE: Received response from triage prompt API', {
@@ -3699,7 +3699,7 @@ Time: ${new Date().toLocaleString()}`);
           }
 
           setTriagePrompt(data.prompt);
-          
+
           logMultilingualSupport('✅ STEP 1 SUCCESS: Triage prompt reloaded with new language', {
             newLanguage: newLanguageCode,
             promptId: data.prompt.id,
@@ -3801,7 +3801,7 @@ Time: ${new Date().toLocaleString()}`);
             // Don't fail the whole language change process if greeting fails
             // Just log the error and continue - the prompt change is more critical
           }
-          
+
           logTriageHandoff('Successfully reloaded triage prompt with new language', {
             newLanguage: newLanguageCode,
             promptId: data.prompt.id,
@@ -3816,7 +3816,7 @@ Time: ${new Date().toLocaleString()}`);
             source: 'triage-prompt-reload-error',
             impact: 'AI will continue using old language for triage prompt'
           });
-          
+
           console.error('Failed to reload triage prompt after language change:', error);
           logTriageHandoff('Failed to reload triage prompt after language change', {
             error: (error as Error).message,
@@ -3825,7 +3825,7 @@ Time: ${new Date().toLocaleString()}`);
           });
         }
       };
-      
+
       // Also regenerate resource greeting if a resource is selected
       const regenerateResourceGreeting = async () => {
         if (resourceLocatorContext && resourceLocatorContext.selectedResource) {
@@ -3836,20 +3836,20 @@ Time: ${new Date().toLocaleString()}`);
             resourceCategory: resourceLocatorContext.selectedResource.category,
             source: 'resource-greeting-regenerate'
           });
-          
+
           logTriageHandoff('Language change detected - regenerating resource greeting', {
             newLanguage: newLanguageCode,
             resourceTitle: resourceLocatorContext.selectedResource.title,
             resourceId: resourceLocatorContext.selectedResource.id,
             source: 'language-change-resource-greeting'
           });
-          
+
           try {
             const userId = user?.uid || 'anonymous';
             const newResourceGreeting = await getResourceWelcomeContent(resourceLocatorContext.selectedResource, userId);
-            
+
             setResourceGreeting(newResourceGreeting);
-            
+
             logMultilingualSupport('✅ STEP 2 SUCCESS: Resource greeting regenerated with new language', {
               newLanguage: newLanguageCode,
               resourceTitle: resourceLocatorContext.selectedResource.title,
@@ -3859,7 +3859,7 @@ Time: ${new Date().toLocaleString()}`);
               source: 'resource-greeting-regenerate-success',
               impact: 'AI will now greet user in selected language for this resource'
             });
-            
+
             logTriageHandoff('Successfully regenerated resource greeting with new language', {
               newLanguage: newLanguageCode,
               resourceTitle: resourceLocatorContext.selectedResource.title,
@@ -3876,7 +3876,7 @@ Time: ${new Date().toLocaleString()}`);
               source: 'resource-greeting-regenerate-error',
               impact: 'AI will continue using old language for resource greeting'
             });
-            
+
             console.error('Failed to regenerate resource greeting after language change:', error);
             logTriageHandoff('Failed to regenerate resource greeting after language change', {
               error: (error as Error).message,
@@ -3901,7 +3901,7 @@ Time: ${new Date().toLocaleString()}`);
     };
 
     window.addEventListener('languageChanged', handleLanguageChange);
-    
+
     return () => {
       window.removeEventListener('languageChanged', handleLanguageChange);
     };
