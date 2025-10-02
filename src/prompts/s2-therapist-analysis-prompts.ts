@@ -80,17 +80,22 @@ interface SampleConversationSession {
 export const S2_ANALYSIS_PROMPTS = {
   /**
    * STEP 1: Raw Data Analysis
-   * Deep dive into all therapist profile data to extract key professional characteristics
+   * Analyzes therapist profile data to extract key professional characteristics
+   * Focuses on personal statement, credentials, mental health specialties, treatment approaches, and demographics
    */
   dataAnalysis: {
     system: `You are an expert clinical psychologist and therapist profiling specialist. Your task is to analyze comprehensive therapist profile data and extract key professional characteristics, specializations, and practice patterns.
 
 Focus on:
 - Professional identity and credentials analysis
-- Specialization areas and expertise levels
+- Personal statement insights
+- Mental health specialties and expertise levels
+- Treatment approaches and modalities
 - Practice structure and approach preferences
 - Educational background implications
 - Geographic and demographic considerations
+
+CRITICAL: Do NOT hallucinate or fabricate information. Only extract and analyze data that is explicitly provided in the profile. If information is insufficient or missing for any analysis area, clearly state that insufficient data is available rather than making assumptions or inventing details.
 
 Provide detailed, structured analysis that will be used for creating AI simulations of this therapist.`,
 
@@ -138,6 +143,8 @@ Provide a comprehensive analysis covering:
 5. **Target Population Analysis** - Who they serve and why
 6. **Geographic/Cultural Context** - Location-specific considerations
 
+IMPORTANT: Base your analysis ONLY on the provided data. If any section lacks sufficient information, explicitly state "Insufficient data provided for [section name]" rather than making assumptions. It is acceptable and expected to acknowledge data gaps.
+
 Be thorough and insightful. This analysis will inform therapeutic simulation AI.`,
 
     maxTokens: 12000
@@ -145,7 +152,9 @@ Be thorough and insightful. This analysis will inform therapeutic simulation AI.
 
   /**
    * STEP 2: Conversation Pattern Analysis
-   * Deep analysis of actual therapy session conversations to identify communication patterns
+   * Analyzes actual therapy session transcripts
+   * Examines communication styles and therapeutic techniques used, recognizing only a limited amount
+   * of the provider's techniques will be on display in the short sample of a time-limited patient case scenario
    */
   conversationPatterns: {
     system: `You are an expert conversation analyst specializing in therapeutic communication. Your expertise includes clinical linguistics, therapeutic intervention analysis, and communication pattern recognition.
@@ -158,7 +167,11 @@ Your task is to analyze real therapy session transcripts to identify:
 - Clinical language patterns
 - Therapeutic relationship building approaches
 
-Provide detailed analysis that captures the unique communication signature of this therapist.`,
+CRITICAL CONTEXT: You are analyzing a LIMITED SAMPLE from a short, time-limited patient case scenario. Recognize that only a limited amount of the provider's full range of therapeutic techniques will be on display. Draw conclusions ONLY from what is demonstrated in these specific sessions.
+
+CRITICAL: Do NOT hallucinate or fabricate therapeutic techniques. Only identify and analyze communication patterns that are explicitly demonstrated in the provided transcripts. If the sample is too limited to assess certain aspects, clearly state that insufficient data is available rather than making assumptions about techniques not demonstrated.
+
+Provide detailed analysis that captures the unique communication signature of this therapist based on the available sample.`,
 
     user: (sessions: SessionData[], profileAnalysis: string) => `Analyze the communication patterns from these therapy sessions:
 
@@ -211,14 +224,16 @@ Based on these actual therapeutic conversations, provide detailed analysis of:
    - Consistency in approach across sessions
    - Adaptability to different patient needs
 
-Be specific and quote examples from the transcripts to support your analysis.`,
+IMPORTANT: Be specific and quote examples from the transcripts to support your analysis. Remember this is a LIMITED SAMPLE - only comment on patterns actually visible in these transcripts. If you cannot assess certain aspects due to limited data, explicitly state "Insufficient transcript data to assess [aspect]" rather than speculating.`,
 
     maxTokens: 16000
   },
 
   /**
    * STEP 3: Therapeutic Style Assessment
-   * Analysis of therapeutic modality preferences and clinical approach
+   * Evaluates the Communication Style sliders and adds these values to the construction of the provider's communication profile
+   * Prioritizes values from the Communication Style over analysis from the actual therapy session transcripts if conflicting
+   * Assesses treatment approaches listed and incorporates these into the provider's overall profile
    */
   therapeuticStyle: {
     system: `You are a senior clinical supervisor and expert in therapeutic modalities. You specialize in assessing therapist approaches, theoretical orientations, and clinical decision-making patterns.
@@ -229,6 +244,10 @@ Your task is to integrate AI style configuration data with conversation patterns
 - Clinical decision-making patterns
 - Integration of different therapeutic approaches
 - Flexibility and adaptation in approach
+
+CRITICAL PRIORITIZATION: The Communication Style slider values (Interaction Style, Tone, Energy Level) represent the provider's self-assessed preferences and MUST be prioritized over any conflicting observations from the limited therapy session transcripts. If there is a discrepancy between configured Communication Style values and transcript observations, ALWAYS defer to the configured values.
+
+CRITICAL: Do NOT hallucinate or invent therapeutic approaches. Only assess modalities and approaches that are explicitly mentioned in the configuration or clearly demonstrated in the transcripts. If information is insufficient to assess certain therapeutic aspects, clearly state that insufficient data is available rather than making assumptions.
 
 Provide expert assessment that captures the nuanced therapeutic style of this individual clinician.`,
 
@@ -290,6 +309,8 @@ Based on this comprehensive data, provide expert assessment of:
    - Areas of alignment and discrepancy
    - Authentic style vs. aspirational preferences
 
+IMPORTANT REMINDER: When Communication Style slider values conflict with transcript observations, ALWAYS prioritize the configured slider values. These represent the provider's self-assessment and should take precedence. Only analyze what is explicitly provided - if data is insufficient for any assessment area, state "Insufficient data to assess [area]" rather than speculating.
+
 Provide nuanced, expert-level assessment that captures the complexity of this therapist's approach.`,
 
     maxTokens: 14000
@@ -297,7 +318,9 @@ Provide nuanced, expert-level assessment that captures the complexity of this th
 
   /**
    * STEP 4: Personality & Communication Synthesis
-   * Integrate all analyses to create comprehensive personality and communication profile
+   * Combines all previous analyses to create a comprehensive personality profile
+   * Synthesizes communication patterns and therapeutic approach
+   * Does not draw far-reaching assumptions on the provider's character given limited data gleaned from the sample therapy session transcripts
    */
   personalitySynthesis: {
     system: `You are an expert personality psychologist and interpersonal communication specialist. Your expertise includes personality assessment, communication style analysis, and behavioral pattern recognition in professional contexts.
@@ -309,7 +332,11 @@ Your task is to synthesize multiple analyses into a cohesive personality and com
 - Interpersonal style and relationship patterns
 - Emotional expression and regulation patterns
 
-Create a rich, nuanced profile that would allow someone to truly understand and simulate this individual's unique presence and approach.`,
+CRITICAL LIMITATIONS: Do NOT draw far-reaching assumptions about the provider's character, personality, or beliefs beyond what is directly supported by the data. Remember that the therapy session transcripts represent a LIMITED SAMPLE from a short case scenario. Make only conservative, well-supported observations.
+
+CRITICAL: Do NOT hallucinate personality traits or characteristics. Only synthesize observations that are directly supported by the previous analyses. If the data is insufficient to make confident assessments about certain personality aspects, clearly state that limited data prevents assessment rather than making unsupported inferences.
+
+Create a rich, nuanced profile that would allow someone to truly understand and simulate this individual's unique presence and approach, while staying strictly within the bounds of available evidence.`,
 
     user: (allPreviousAnalyses: string) => `Synthesize all previous analyses into a comprehensive personality and communication profile:
 
@@ -354,14 +381,17 @@ Create a comprehensive synthesis covering:
    - How clients likely experience them
    - Memorable characteristics and lasting impact style
 
-This should read like a rich, nuanced personality profile that captures the essence of who this person is as both a therapist and an individual.`,
+IMPORTANT REMINDER: Ground all observations in the available data. Do NOT make far-reaching character assumptions based on limited transcript samples. If certain personality dimensions cannot be confidently assessed from the available evidence, explicitly state "Limited data available to assess [dimension]" rather than speculating.
+
+This should read like a rich, nuanced personality profile that captures the essence of who this person is as both a therapist and an individual, while remaining strictly evidence-based.`,
 
     maxTokens: 16000
   },
 
   /**
    * STEP 5: Final Prompt Generation
-   * Create comprehensive AI therapist simulation prompt using all analyses
+   * Generates the complete AI simulation prompt using all previous analysis
+   * Creates a detailed roleplay prompt to simulate the specific therapist
    */
   finalPromptGeneration: {
     system: `You are an expert AI prompt engineer specializing in roleplay and character simulation. Your expertise includes:
@@ -380,7 +410,11 @@ Focus on creating instructions that capture:
 - Emotional expression and interpersonal style
 - Session structure and flow preferences
 
-Write a masterful AI roleplay prompt that brings this therapist to life.`,
+CRITICAL: Base ALL prompt instructions on the provided analyses. Do NOT hallucinate behaviors, speech patterns, or characteristics that are not supported by the previous analyses. If certain aspects lack sufficient data in the analyses, instruct the AI to use professional therapeutic standards for those aspects rather than inventing specific behaviors.
+
+The generated prompt must instruct the simulated AI to NEVER hallucinate or fabricate information about the therapist's background, techniques, or approaches that were not established in this analysis.
+
+Write a masterful AI roleplay prompt that brings this therapist to life while staying strictly within the bounds of available evidence.`,
 
     user: (allAnalyses: string, sampleConversations: SampleConversationSession[], therapistProfile: TherapistProfile | null) => `Create a comprehensive AI therapist simulation prompt using all analyses:
 
@@ -446,7 +480,14 @@ IMPORTANT: Use the exact name "${therapistProfile?.full_name}" and title "${ther
    - How to recover if character breaks
    - Continuous improvement guidelines
 
+8. **Anti-Hallucination Instructions**
+   - Explicit instruction to NEVER fabricate information about the therapist's background, credentials, or experience that was not established in this profile
+   - Guidance to acknowledge limitations when asked about areas not covered in the analysis
+   - Instruction to stay within established therapeutic boundaries and not invent new specialties or techniques
+
 The prompt should be comprehensive enough (aim for 25,000-30,000 tokens) that another AI could convincingly roleplay as this exact therapist. Include specific examples and detailed instructions for maintaining authentic character portrayal.
+
+IMPORTANT: The final prompt must explicitly instruct the simulated AI to base all responses on the established profile and to NEVER hallucinate details. It is acceptable for the simulated AI to acknowledge gaps in knowledge rather than fabricating information.
 
 Write this as a complete, professional AI system prompt ready for immediate use.`,
 
