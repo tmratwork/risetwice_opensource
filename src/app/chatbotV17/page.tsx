@@ -552,23 +552,6 @@ export default function ChatBotV17Page() {
               By selecting &ldquo;Let&apos;s Talk&rdquo; to start your session, you agree to these Terms of Service. Select here for details.
             </button>
 
-            {/* Additional spacing before Advanced link */}
-            <div className="mt-6"></div>
-
-            {/* Advanced Voice Settings Link - moved lower */}
-            <button
-              onClick={() => {
-                console.log('[V17] Advanced voice settings clicked');
-                setIsVoiceSettingsOpen(true);
-              }}
-              disabled={false}
-              className="text-sm underline mt-4 cursor-pointer pointer-events-auto block font-medium"
-              style={{ color: '#2563eb', pointerEvents: 'auto' }}
-              onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#1d4ed8'}
-              onMouseLeave={(e) => (e.target as HTMLElement).style.color = '#2563eb'}
-            >
-              Advanced
-            </button>
           </div>
         )}
 
