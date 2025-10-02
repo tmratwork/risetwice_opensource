@@ -110,76 +110,27 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
           <h2 className="text-2xl font-semibold mb-6 text-center" style={{ color: 'var(--text-primary)' }}>
             What&apos;s Next?
           </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {/* View Your Profile */}
-            <div className="text-center">
-              <div className="mx-auto mb-4 w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                Review Your Profile
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                See how your profile appears to potential patients and make any final adjustments.
-              </p>
-              <button
-                onClick={handleViewProfile}
-                disabled={isNavigating}
-                className="control-button text-sm"
-                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-              >
-                View Profile
-              </button>
-            </div>
 
-            {/* Test Your AI Preview */}
-            <div className="text-center">
-              <div className="mx-auto mb-4 w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                Test Your AI Preview
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Experience your AI Preview as a patient would and make adjustments if needed.
-              </p>
-              <button
-                onClick={handleTestPreview}
-                disabled={isNavigating}
-                className="control-button primary text-sm"
-              >
-                Test Preview
-              </button>
-            </div>
-
+          <div className="text-center">
             {/* Go to Dashboard */}
-            <div className="text-center">
-              <div className="mx-auto mb-4 w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <h3 className="text-lg font-semibold mb-2" style={{ color: 'var(--text-primary)' }}>
-                Go to Dashboard
-              </h3>
-              <p className="text-sm text-gray-600 mb-4">
-                Access your main dashboard to manage your practice, view analytics, and more.
-              </p>
-              <button
-                onClick={handleGoToDashboard}
-                disabled={isNavigating}
-                className="control-button text-sm"
-                style={{ backgroundColor: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-              >
-                Dashboard
-              </button>
+            <div className="mx-auto mb-6 w-20 h-20 bg-purple-100 rounded-full flex items-center justify-center">
+              <svg className="w-10 h-10 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
             </div>
-
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
+              Go to Dashboard
+            </h3>
+            <button
+              onClick={handleGoToDashboard}
+              disabled={isNavigating}
+              className="control-button primary text-base px-8 py-3 mb-4"
+            >
+              Go to Dashboard
+            </button>
+            <p className="text-sm text-gray-600 max-w-md mx-auto">
+              Access your main dashboard to test and edit your AI preview, edit profile, and view analytics.
+            </p>
           </div>
         </div>
 
