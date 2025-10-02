@@ -4,6 +4,7 @@ import TherapistCard, { Therapist } from './TherapistCard';
 interface TherapistListProps {
   therapists: Therapist[];
   onTryAIPreview: (therapist: Therapist) => void;
+  onViewMore?: (therapist: Therapist) => void;
   onAdvancedSettings?: () => void;
   isProviderMode?: boolean;
   loading?: boolean;
@@ -12,6 +13,7 @@ interface TherapistListProps {
 const TherapistList: React.FC<TherapistListProps> = ({
   therapists,
   onTryAIPreview,
+  onViewMore,
   onAdvancedSettings,
   isProviderMode = false,
   loading = false
@@ -72,6 +74,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
           key={therapist.id}
           therapist={therapist}
           onTryAIPreview={onTryAIPreview}
+          onViewMore={onViewMore}
           onAdvancedSettings={onAdvancedSettings}
           isProviderMode={isProviderMode}
         />

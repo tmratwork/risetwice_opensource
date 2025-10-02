@@ -19,6 +19,7 @@ export interface Therapist {
 interface TherapistCardProps {
   therapist: Therapist;
   onTryAIPreview: (therapist: Therapist) => void;
+  onViewMore?: (therapist: Therapist) => void;
   onAdvancedSettings?: () => void;
   isProviderMode?: boolean;
 }
@@ -26,6 +27,7 @@ interface TherapistCardProps {
 const TherapistCard: React.FC<TherapistCardProps> = ({
   therapist,
   onTryAIPreview,
+  onViewMore,
   onAdvancedSettings,
   isProviderMode = false
 }) => {
@@ -161,11 +163,17 @@ const TherapistCard: React.FC<TherapistCardProps> = ({
           {/* Actions */}
           <div className="flex items-center justify-between mt-4">
             <button
-              onClick={() => setIsExpanded(!isExpanded)}
+              onClick={() => {
+                if (onViewMore) {
+                  onViewMore(therapist);
+                } else {
+                  setIsExpanded(!isExpanded);
+                }
+              }}
               className="font-medium text-sm"
               style={{ color: 'var(--button-primary)' }}
             >
-              {isExpanded ? 'View Less' : 'View More'}
+              View More
             </button>
 
             <div className="flex gap-2">

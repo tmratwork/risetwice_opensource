@@ -16,6 +16,7 @@ import SearchBar from './components/therapist-matching/SearchBar';
 import FilterTags, { FilterTag } from './components/therapist-matching/FilterTags';
 import TherapistList from './components/therapist-matching/TherapistList';
 import { Therapist } from './components/therapist-matching/TherapistCard';
+import DetailedTherapistView, { DetailedTherapist } from './components/therapist-matching/DetailedTherapistView';
 import { useSearchParams } from 'next/navigation';
 
 // Type for pending demo data
@@ -57,11 +58,13 @@ export default function ChatBotV17Page() {
 
   // Therapist matching state
   const [showMatching, setShowMatching] = useState(true);
+  const [showDetailedView, setShowDetailedView] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [filterTags, setFilterTags] = useState<FilterTag[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
+  const [detailedTherapistData, setDetailedTherapistData] = useState<DetailedTherapist | null>(null);
   const store = useElevenLabsStore();
   const {
     startSession,
@@ -227,7 +230,56 @@ export default function ChatBotV17Page() {
     setFilterTags(prev => prev.filter(tag => tag.id !== tagId));
   }, []);
 
-  // Handle back to matching
+  // Handle view more (detailed view)
+  const handleViewMore = useCallback(async (therapist: Therapist) => {
+    console.log('[V17] Loading detailed view for therapist:', therapist.fullName);
+    setLoading(true);
+
+    try {
+      // Fetch complete therapist data from both S2 tables
+      const response = await fetch('/api/therapists/detailed', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ therapistId: therapist.id })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch detailed therapist data');
+      }
+
+      const data = await response.json();
+      if (data.success && data.therapist) {
+        setDetailedTherapistData(data.therapist);
+        setShowMatching(false);
+        setShowDetailedView(true);
+        console.log('[V17] Detailed therapist data loaded successfully');
+      } else {
+        console.error('[V17] Failed to load detailed therapist data:', data.error);
+        // Fallback: use basic therapist data
+        setDetailedTherapistData(therapist);
+        setShowMatching(false);
+        setShowDetailedView(true);
+      }
+    } catch (error) {
+      console.error('[V17] Error loading detailed therapist data:', error);
+      // Fallback: use basic therapist data
+      setDetailedTherapistData(therapist);
+      setShowMatching(false);
+      setShowDetailedView(true);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Handle back to matching from detailed view
+  const handleBackToMatchingFromDetail = useCallback(() => {
+    console.log('[V17] Returning to matching from detailed view');
+    setShowDetailedView(false);
+    setDetailedTherapistData(null);
+    setShowMatching(true);
+  }, []);
+
+  // Handle back to matching from chat
   const handleBackToMatching = useCallback(async () => {
     console.log('[V17] Ending chat and returning to matching');
 
@@ -390,6 +442,17 @@ export default function ChatBotV17Page() {
     }
   }, [store.conversationHistory]);
 
+  // Show detailed therapist view
+  if (showDetailedView && detailedTherapistData) {
+    return (
+      <DetailedTherapistView
+        therapist={detailedTherapistData}
+        onBack={handleBackToMatchingFromDetail}
+        onTryAIPreview={handleTryAIPreview}
+      />
+    );
+  }
+
   // Show matching interface first, then conversation
   if (showMatching) {
     return (
@@ -438,6 +501,7 @@ export default function ChatBotV17Page() {
             <TherapistList
               therapists={therapists}
               onTryAIPreview={handleTryAIPreview}
+              onViewMore={isProviderMode ? undefined : handleViewMore}
               onAdvancedSettings={isProviderMode ? handleAdvancedSettings : undefined}
               isProviderMode={isProviderMode}
               loading={loading}
