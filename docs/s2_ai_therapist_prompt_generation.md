@@ -100,16 +100,10 @@ The system aggregates data from multiple S2 database tables:
 
 The system incorporates therapist-configured preferences:
 
-- **Therapeutic Modalities** (weighted percentages):
-  - Cognitive Behavioral Therapy (0-100%)
-  - Person-Centered Therapy (0-100%)
-  - Psychodynamic Therapy (0-100%)
-  - Solution-Focused Therapy (0-100%)
-
 - **Communication Style Settings**:
-  - Interaction Style: Suggestive Framing ↔ Guided Reflection
+  - Friction: Encouraging ↔ Adversarial
   - Tone: Warm & Casual ↔ Clinical & Formal
-  - Energy Level: Energetic & Expressive ↔ Calm & Grounded
+  - Expression: Calm & Grounded ↔ Energetic & Expressive
 
 ## Usage
 

@@ -245,7 +245,7 @@ Your task is to integrate AI style configuration data with conversation patterns
 - Integration of different therapeutic approaches
 - Flexibility and adaptation in approach
 
-CRITICAL PRIORITIZATION: The Communication Style slider values (Interaction Style, Tone, Energy Level) represent the provider's self-assessed preferences and MUST be prioritized over any conflicting observations from the limited therapy session transcripts. If there is a discrepancy between configured Communication Style values and transcript observations, ALWAYS defer to the configured values.
+CRITICAL PRIORITIZATION: The Communication Style slider values (Friction, Tone, Expression) represent the provider's self-assessed preferences and MUST be prioritized over any conflicting observations from the limited therapy session transcripts. If there is a discrepancy between configured Communication Style values and transcript observations, ALWAYS defer to the configured values.
 
 CRITICAL: Do NOT hallucinate or invent therapeutic approaches. Only assess modalities and approaches that are explicitly mentioned in the configuration or clearly demonstrated in the transcripts. If information is insufficient to assess certain therapeutic aspects, clearly state that insufficient data is available rather than making assumptions.
 
@@ -264,7 +264,7 @@ Therapeutic Modalities:
 Communication Style Settings:
 - Friction: ${aiStyleConfig.friction}% (0=Encouraging, 100=Adversarial)
 - Tone: ${aiStyleConfig.tone}% (0=Warm & Casual, 100=Clinical & Formal)
-- Energy Level: ${aiStyleConfig.energy_level}% (0=Energetic & Expressive, 100=Calm & Grounded)
+- Expression: ${aiStyleConfig.energy_level}% (0=Calm & Grounded, 100=Energetic & Expressive)
 ` : 'No AI style configuration available'}
 
 **PREVIOUS ANALYSES:**

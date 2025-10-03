@@ -1186,7 +1186,7 @@ const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist 
                   <span className="text-sm font-medium">{therapist.ai_style_config.tone}%</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Energy Level</span>
+                  <span className="text-sm">Expression</span>
                   <span className="text-sm font-medium">{therapist.ai_style_config.energy_level}%</span>
                 </div>
               </div>

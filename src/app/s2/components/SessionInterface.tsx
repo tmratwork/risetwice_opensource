@@ -224,7 +224,7 @@ THERAPEUTIC MODALITIES:
 COMMUNICATION STYLE:
 - Friction: ${getStyleDescription(communicationStyle.friction, 'responsive to encouragement', 'responsive to challenges and pushback')}
 - Tone: ${getStyleDescription(communicationStyle.tone, 'casual and conversational', 'formal and clinical')}
-- Energy Level: ${getStyleDescription(communicationStyle.energyLevel, 'expressive and animated', 'calm and measured')}
+- Expression: ${getStyleDescription(communicationStyle.energyLevel, 'calm and measured', 'expressive and animated')}
 
 Stay in character as the patient throughout the session. Respond naturally to the therapist's interventions while maintaining consistency with the scenario and the therapist's preferred style. Be authentic to the patient's struggles while being appropriately responsive to therapeutic techniques that match the therapist's approach.`;
   }, [sessionData]);

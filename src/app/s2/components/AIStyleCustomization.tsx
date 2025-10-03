@@ -254,13 +254,13 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
                 </div>
               </div>
 
-              {/* Energy Level */}
+              {/* Expression */}
               <div>
                 <div className="flex items-center mb-4">
                   <h3 className="text-sm font-medium text-gray-700">
-                    Energy Level
+                    Expression
                   </h3>
-                  <InfoTooltip content="Energetic & Expressive side: The voice clone's intonation will have more dynamic range, sounding more active and engaged. | Calm & Grounded side: The voice clone's intonation will be more measured, steady, and soothing." />
+                  <InfoTooltip content="Calm & Grounded side: The voice clone's intonation will be more measured, steady, and soothing. | Energetic & Expressive side: The voice clone's intonation will have more dynamic range, sounding more active and engaged." />
                 </div>
                 <div className="relative">
                   <input
@@ -272,11 +272,11 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-2">
-                    <span>Energetic & Expressive</span>
                     <span>Calm & Grounded</span>
+                    <span>Energetic & Expressive</span>
                   </div>
-                  <div 
-                    className="absolute top-6 w-2 h-2 bg-green-600 rounded-full transform -translate-x-1" 
+                  <div
+                    className="absolute top-6 w-2 h-2 bg-green-600 rounded-full transform -translate-x-1"
                     style={{ left: `${style.communicationStyle.energyLevel}%` }}
                   ></div>
                 </div>
