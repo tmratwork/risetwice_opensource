@@ -45,7 +45,6 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
   stepCompletionStatus
 }) => {
   const { user } = useAuth();
-  const [totalModality, setTotalModality] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStyle, setLoadingStyle] = useState(true);
   const [error, setError] = useState<string>('');
@@ -76,20 +75,6 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
     loadExistingStyle();
   }, [user?.uid]); // Remove onUpdate from dependencies to prevent infinite loop
 
-  useEffect(() => {
-    const total = Object.values(style.therapeuticModalities).reduce((sum, value) => sum + value, 0);
-    setTotalModality(total);
-  }, [style.therapeuticModalities]);
-
-  const handleModalityChange = (modality: keyof AIStyle['therapeuticModalities'], value: number) => {
-    onUpdate({
-      therapeuticModalities: {
-        ...style.therapeuticModalities,
-        [modality]: value
-      }
-    });
-  };
-
   const handleCommunicationChange = (aspect: keyof AIStyle['communicationStyle'], value: number) => {
     onUpdate({
       communicationStyle: {
@@ -99,10 +84,7 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
     });
   };
 
-  const canProceed = totalModality > 0 && totalModality <= 100;
-
   const handleNext = async () => {
-    if (!canProceed) return;
     if (!user?.uid) {
       setError('Authentication required. Please sign in.');
       return;
@@ -296,8 +278,8 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
           </button>
           <button
             onClick={handleNext}
-            disabled={!canProceed || isSubmitting}
-            className={`control-button primary ${(!canProceed || isSubmitting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+            disabled={isSubmitting}
+            className={`control-button primary ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {isSubmitting ? (
               <>
