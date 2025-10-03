@@ -1662,7 +1662,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             <div className="mt-8 mb-8">
               <div className="w-full h-px bg-gray-300 mb-6"></div>
               <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                Our AI companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges. It cannot replace the healing power of real human connection. We built it for anyone who needs support — especially those who lack access to traditional therapy or just aren&apos;t ready to start yet. Note: This AI is trained solely by our in-house medical team. It does not take data from AI Previews and is a completely separate model.
+                Our AI companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges. It cannot replace the healing power of real human connection. We built it for anyone who needs support — especially those who lack access to traditional therapy or just aren&apos;t ready to start yet.<br />
+                <br />
+                Note: This AI is trained solely by our in-house medical team. It does not take data from AI Previews and is a completely separate model.
               </div>
               <div className="w-full h-px bg-gray-300 mt-6"></div>
             </div>
