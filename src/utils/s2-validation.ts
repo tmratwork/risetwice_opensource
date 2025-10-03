@@ -67,7 +67,7 @@ export function validateAIStyleStep(config: unknown): boolean {
     typeof c.person_centered === 'number' &&
     typeof c.psychodynamic === 'number' &&
     typeof c.solution_focused === 'number' &&
-    typeof c.interaction_style === 'number' &&
+    typeof c.friction === 'number' &&
     typeof c.tone === 'number' &&
     typeof c.energy_level === 'number'
   );

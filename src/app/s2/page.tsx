@@ -52,7 +52,7 @@ interface AIStyle {
     solution_focused: number;
   };
   communicationStyle: {
-    interactionStyle: number; // 0 = Suggestive Framing, 100 = Guided Reflection
+    friction: number; // 0 = Encouraging, 100 = Adversarial
     tone: number; // 0 = Warm & Casual, 100 = Clinical & Formal
     energyLevel: number; // 0 = Energetic & Expressive, 100 = Calm & Grounded
   };
@@ -135,7 +135,7 @@ const S2CaseSimulation: React.FC = () => {
         solution_focused: 0
       },
       communicationStyle: {
-        interactionStyle: 50,
+        friction: 50,
         tone: 50,
         energyLevel: 50
       }
@@ -207,7 +207,7 @@ const S2CaseSimulation: React.FC = () => {
             solution_focused: (profileData.aiStyleConfig.solution_focused as number) || 0
           },
           communicationStyle: {
-            interactionStyle: (profileData.aiStyleConfig.interaction_style as number) || 50,
+            friction: (profileData.aiStyleConfig.friction as number) || 50,
             tone: (profileData.aiStyleConfig.tone as number) || 50,
             energyLevel: (profileData.aiStyleConfig.energy_level as number) || 50
           }

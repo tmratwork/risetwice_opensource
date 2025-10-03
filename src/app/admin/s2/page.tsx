@@ -43,7 +43,7 @@ interface AIStyleConfig {
   person_centered: number;
   psychodynamic: number;
   solution_focused: number;
-  interaction_style: number;
+  friction: number;
   tone: number;
   energy_level: number;
 }
@@ -1178,8 +1178,8 @@ const ProfileInformation: React.FC<{ therapist: TherapistData }> = ({ therapist 
               <h4 className="font-medium text-gray-700 mb-2">Communication Style</h4>
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Interaction Style</span>
-                  <span className="text-sm font-medium">{therapist.ai_style_config.interaction_style}%</span>
+                  <span className="text-sm">Friction</span>
+                  <span className="text-sm font-medium">{therapist.ai_style_config.friction}%</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Tone</span>

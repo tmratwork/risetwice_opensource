@@ -31,7 +31,7 @@ interface SessionData {
       solution_focused: number;
     };
     communicationStyle: {
-      interactionStyle: number;
+      friction: number;
       tone: number;
       energyLevel: number;
     };
@@ -222,7 +222,7 @@ THERAPEUTIC MODALITIES:
 - Solution-Focused & Strategic: ${getModalityLevel(therapeuticModalities.solution_focused)} solution-focused approaches
 
 COMMUNICATION STYLE:
-- Interaction Style: ${getStyleDescription(communicationStyle.interactionStyle, 'receptive to suggestions', 'prefer guided self-reflection')}
+- Friction: ${getStyleDescription(communicationStyle.friction, 'responsive to encouragement', 'responsive to challenges and pushback')}
 - Tone: ${getStyleDescription(communicationStyle.tone, 'casual and conversational', 'formal and clinical')}
 - Energy Level: ${getStyleDescription(communicationStyle.energyLevel, 'expressive and animated', 'calm and measured')}
 

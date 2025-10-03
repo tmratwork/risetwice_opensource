@@ -55,7 +55,7 @@ interface AIStyleConfig {
   person_centered: number;
   psychodynamic: number;
   solution_focused: number;
-  interaction_style: number;
+  friction: number;
   tone: number;
   energy_level: number;
 }

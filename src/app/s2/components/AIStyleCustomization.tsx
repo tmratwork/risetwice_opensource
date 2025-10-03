@@ -19,7 +19,7 @@ interface AIStyle {
     solution_focused: number;
   };
   communicationStyle: {
-    interactionStyle: number; // 0 = Suggestive Framing, 100 = Guided Reflection
+    friction: number; // 0 = Encouraging, 100 = Adversarial
     tone: number; // 0 = Warm & Casual, 100 = Clinical & Formal
     energyLevel: number; // 0 = Energetic & Expressive, 100 = Calm & Grounded
   };
@@ -198,30 +198,30 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
             </h2>
 
             <div className="space-y-8">
-              {/* Interaction Style */}
+              {/* Friction */}
               <div>
                 <div className="flex items-center mb-4">
                   <h3 className="text-sm font-medium text-gray-700">
-                    Interaction Style
+                    Friction
                   </h3>
-                  <InfoTooltip content="Suggestive Framing side: The AI is more likely to offer gentle suggestions or frames. (e.g., 'Have you considered looking at it from this angle?') | Guided Reflection side: The AI almost exclusively asks guiding questions to help the user find their own answers. (e.g., 'What do you think is stopping you from looking at it from a different angle?')" />
+                  <InfoTooltip content="Encouraging side: The AI provides supportive, affirming responses that validate the user's perspective and build confidence. | Adversarial side: The AI offers more challenging perspectives, plays devil's advocate, and pushes back on assumptions to encourage deeper critical thinking." />
                 </div>
                 <div className="relative">
                   <input
                     type="range"
                     min="0"
                     max="100"
-                    value={style.communicationStyle.interactionStyle}
-                    onChange={(e) => handleCommunicationChange('interactionStyle', parseInt(e.target.value))}
+                    value={style.communicationStyle.friction}
+                    onChange={(e) => handleCommunicationChange('friction', parseInt(e.target.value))}
                     className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
                   />
                   <div className="flex justify-between text-xs text-gray-500 mt-2">
-                    <span>Suggestive Framing</span>
-                    <span>Guided Reflection</span>
+                    <span>Encouraging</span>
+                    <span>Adversarial</span>
                   </div>
-                  <div 
-                    className="absolute top-6 w-2 h-2 bg-green-600 rounded-full transform -translate-x-1" 
-                    style={{ left: `${style.communicationStyle.interactionStyle}%` }}
+                  <div
+                    className="absolute top-6 w-2 h-2 bg-green-600 rounded-full transform -translate-x-1"
+                    style={{ left: `${style.communicationStyle.friction}%` }}
                   ></div>
                 </div>
               </div>

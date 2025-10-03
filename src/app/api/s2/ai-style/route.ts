@@ -18,7 +18,7 @@ interface AIStyleRequest {
     solution_focused: number;
   };
   communicationStyle: {
-    interactionStyle: number;
+    friction: number;
     tone: number;
     energyLevel: number;
   };
@@ -62,8 +62,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate communication style ranges
-    const { interactionStyle, tone, energyLevel } = data.communicationStyle;
-    if ([interactionStyle, tone, energyLevel].some(val => val < 0 || val > 100)) {
+    const { friction, tone, energyLevel } = data.communicationStyle;
+    if ([friction, tone, energyLevel].some(val => val < 0 || val > 100)) {
       return NextResponse.json(
         { error: 'Communication style values must be between 0-100' },
         { status: 400 }
@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
         person_centered: data.therapeuticModalities.person_centered,
         psychodynamic: data.therapeuticModalities.psychodynamic,
         solution_focused: data.therapeuticModalities.solution_focused,
-        interaction_style: interactionStyle,
+        friction: friction,
         tone: tone,
         energy_level: energyLevel
       })
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           solution_focused: aiStyle.solution_focused
         },
         communicationStyle: {
-          interactionStyle: aiStyle.interaction_style,
+          friction: aiStyle.friction,
           tone: aiStyle.tone,
           energyLevel: aiStyle.energy_level
         },
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
         person_centered,
         psychodynamic,
         solution_focused,
-        interaction_style,
+        friction,
         tone,
         energy_level,
         is_valid,
@@ -181,7 +181,7 @@ export async function GET(request: NextRequest) {
           solution_focused: data.solution_focused
         },
         communicationStyle: {
-          interactionStyle: data.interaction_style,
+          friction: data.friction,
           tone: data.tone,
           energyLevel: data.energy_level
         },

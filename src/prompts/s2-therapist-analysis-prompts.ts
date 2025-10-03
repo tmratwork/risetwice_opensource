@@ -42,7 +42,7 @@ interface AIStyleConfig {
   person_centered?: number;
   psychodynamic?: number;
   solution_focused?: number;
-  interaction_style?: number;
+  friction?: number;
   tone?: number;
   energy_level?: number;
 }
@@ -262,7 +262,7 @@ Therapeutic Modalities:
 - Solution-Focused: ${aiStyleConfig.solution_focused}%
 
 Communication Style Settings:
-- Interaction Style: ${aiStyleConfig.interaction_style}% (0=Suggestive Framing, 100=Guided Reflection)
+- Friction: ${aiStyleConfig.friction}% (0=Encouraging, 100=Adversarial)
 - Tone: ${aiStyleConfig.tone}% (0=Warm & Casual, 100=Clinical & Formal)
 - Energy Level: ${aiStyleConfig.energy_level}% (0=Energetic & Expressive, 100=Calm & Grounded)
 ` : 'No AI style configuration available'}

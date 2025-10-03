@@ -31,7 +31,7 @@ interface SessionData {
       solution_focused: number;
     };
     communicationStyle: {
-      interactionStyle: number;
+      friction: number;
       tone: number;
       energyLevel: number;
     };
