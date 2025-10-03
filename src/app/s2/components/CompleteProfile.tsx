@@ -17,9 +17,9 @@ interface CompleteProfileData {
   profilePhoto?: string;
   personalStatement: string;
   mentalHealthSpecialties: string[];
-  otherMentalHealthSpecialty?: string;
+  otherMentalHealthSpecialty?: string[];
   treatmentApproaches: string[];
-  otherTreatmentApproach?: string;
+  otherTreatmentApproach?: string[];
   ageRangesTreated: string[];
   practiceDetails: {
     practiceType: string;
@@ -35,12 +35,12 @@ interface CompleteProfileData {
   clientTypesServed?: string[];
   lgbtqAffirming?: boolean;
   religiousSpiritualIntegration?: string;
-  otherReligiousSpiritualIntegration?: string;
+  otherReligiousSpiritualIntegration?: string[];
   sessionFees?: string;
   boardCertifications?: string[];
-  otherBoardCertification?: string;
+  otherBoardCertification?: string[];
   professionalMemberships?: string[];
-  otherProfessionalMembership?: string;
+  otherProfessionalMembership?: string[];
 }
 
 interface CompleteProfileProps {
@@ -67,11 +67,11 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
-  const [otherMentalHealthSpecialtyInput, setOtherMentalHealthSpecialtyInput] = useState('');
-  const [otherTreatmentApproachInput, setOtherTreatmentApproachInput] = useState('');
-  const [otherBoardCertificationInput, setOtherBoardCertificationInput] = useState('');
-  const [otherProfessionalMembershipInput, setOtherProfessionalMembershipInput] = useState('');
-  const [otherReligiousSpiritualInput, setOtherReligiousSpiritualInput] = useState('');
+  const [otherMentalHealthSpecialtyInputs, setOtherMentalHealthSpecialtyInputs] = useState<string[]>([]);
+  const [otherTreatmentApproachInputs, setOtherTreatmentApproachInputs] = useState<string[]>([]);
+  const [otherBoardCertificationInputs, setOtherBoardCertificationInputs] = useState<string[]>([]);
+  const [otherProfessionalMembershipInputs, setOtherProfessionalMembershipInputs] = useState<string[]>([]);
+  const [otherReligiousSpiritualInputs, setOtherReligiousSpiritualInputs] = useState<string[]>([]);
 
   // Options for multi-select fields
   const boardCertificationOptions = [
@@ -109,28 +109,48 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
         if (data.success && data.completeProfile) {
           console.log('[S2] Loaded existing complete profile:', data.completeProfile);
 
-          // Set custom input states if they exist
+          // Set custom input states if they exist (now as arrays)
           if (data.completeProfile.otherMentalHealthSpecialty) {
-            setOtherMentalHealthSpecialtyInput(data.completeProfile.otherMentalHealthSpecialty);
+            setOtherMentalHealthSpecialtyInputs(
+              Array.isArray(data.completeProfile.otherMentalHealthSpecialty)
+                ? data.completeProfile.otherMentalHealthSpecialty
+                : [data.completeProfile.otherMentalHealthSpecialty]
+            );
           }
           if (data.completeProfile.otherTreatmentApproach) {
-            setOtherTreatmentApproachInput(data.completeProfile.otherTreatmentApproach);
+            setOtherTreatmentApproachInputs(
+              Array.isArray(data.completeProfile.otherTreatmentApproach)
+                ? data.completeProfile.otherTreatmentApproach
+                : [data.completeProfile.otherTreatmentApproach]
+            );
           }
           if (data.completeProfile.otherBoardCertification) {
-            setOtherBoardCertificationInput(data.completeProfile.otherBoardCertification);
+            setOtherBoardCertificationInputs(
+              Array.isArray(data.completeProfile.otherBoardCertification)
+                ? data.completeProfile.otherBoardCertification
+                : [data.completeProfile.otherBoardCertification]
+            );
           }
           if (data.completeProfile.otherProfessionalMembership) {
-            setOtherProfessionalMembershipInput(data.completeProfile.otherProfessionalMembership);
+            setOtherProfessionalMembershipInputs(
+              Array.isArray(data.completeProfile.otherProfessionalMembership)
+                ? data.completeProfile.otherProfessionalMembership
+                : [data.completeProfile.otherProfessionalMembership]
+            );
           }
           if (data.completeProfile.otherReligiousSpiritualIntegration) {
-            setOtherReligiousSpiritualInput(data.completeProfile.otherReligiousSpiritualIntegration);
+            setOtherReligiousSpiritualInputs(
+              Array.isArray(data.completeProfile.otherReligiousSpiritualIntegration)
+                ? data.completeProfile.otherReligiousSpiritualIntegration
+                : [data.completeProfile.otherReligiousSpiritualIntegration]
+            );
           }
 
           // Fix: Skip blob URLs entirely to prevent security errors
           const profilePhoto = data.completeProfile.profilePhoto &&
-                               !data.completeProfile.profilePhoto.startsWith('blob:')
-                               ? data.completeProfile.profilePhoto
-                               : '';
+            !data.completeProfile.profilePhoto.startsWith('blob:')
+            ? data.completeProfile.profilePhoto
+            : '';
 
           onUpdate({
             profilePhoto,
@@ -243,10 +263,10 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     }
 
     setIsSubmitting(true);
-    
+
     try {
       console.log('[S2] Saving complete profile...');
-      
+
       const response = await fetch('/api/s2/complete-profile', {
         method: 'POST',
         headers: {
@@ -269,8 +289,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     } catch (error) {
       console.error('[S2] Error saving complete profile:', error);
-      setErrors({ 
-        general: error instanceof Error ? error.message : 'Failed to save profile. Please try again.' 
+      setErrors({
+        general: error instanceof Error ? error.message : 'Failed to save profile. Please try again.'
       });
     } finally {
       setIsSubmitting(false);
@@ -289,7 +309,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
     } else {
       onUpdate({ [field]: value });
     }
-    
+
     // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }));
@@ -334,29 +354,37 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     // If "Other" was just selected (wasn't selected before, but is now)
     if (!wasOtherSelected && isOtherNowSelected) {
-      const customSpecialty = window.prompt(
-        'Please specify your custom mental health specialty:\n\n(Examples: Perinatal Mental Health, Neurofeedback, Play Therapy, etc.)'
-      );
-
-      if (customSpecialty && customSpecialty.trim()) {
-        // User entered a custom specialty
-        setOtherMentalHealthSpecialtyInput(customSpecialty.trim());
-        handleInputChange('otherMentalHealthSpecialty', customSpecialty.trim());
-        handleMultiSelectChange('mentalHealthSpecialties', specialty, checked);
-      } else {
-        // User cancelled or entered empty string, don't add "Other"
-        return;
-      }
+      // Initialize with one empty input field
+      setOtherMentalHealthSpecialtyInputs(['']);
+      handleInputChange('otherMentalHealthSpecialty', []);
+      handleMultiSelectChange('mentalHealthSpecialties', specialty, checked);
     } else {
       // Normal specialty selection (no "Other" involved)
       handleMultiSelectChange('mentalHealthSpecialties', specialty, checked);
 
-      // If "Other" was previously selected but now deselected, clear the custom specialty
+      // If "Other" was previously selected but now deselected, clear the custom specialties
       if (wasOtherSelected && specialty === 'Other' && !checked) {
-        setOtherMentalHealthSpecialtyInput('');
-        handleInputChange('otherMentalHealthSpecialty', '');
+        setOtherMentalHealthSpecialtyInputs([]);
+        handleInputChange('otherMentalHealthSpecialty', []);
       }
     }
+  };
+
+  const addMentalHealthSpecialtyInput = () => {
+    setOtherMentalHealthSpecialtyInputs([...otherMentalHealthSpecialtyInputs, '']);
+  };
+
+  const removeMentalHealthSpecialtyInput = (index: number) => {
+    const newInputs = otherMentalHealthSpecialtyInputs.filter((_, i) => i !== index);
+    setOtherMentalHealthSpecialtyInputs(newInputs);
+    handleInputChange('otherMentalHealthSpecialty', newInputs.filter(input => input.trim()));
+  };
+
+  const updateMentalHealthSpecialtyInput = (index: number, value: string) => {
+    const newInputs = [...otherMentalHealthSpecialtyInputs];
+    newInputs[index] = value;
+    setOtherMentalHealthSpecialtyInputs(newInputs);
+    handleInputChange('otherMentalHealthSpecialty', newInputs.filter(input => input.trim()));
   };
 
   const handleTreatmentApproachSelection = (approach: string, checked: boolean) => {
@@ -366,29 +394,37 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     // If "Other" was just selected (wasn't selected before, but is now)
     if (!wasOtherSelected && isOtherNowSelected) {
-      const customApproach = window.prompt(
-        'Please specify your custom treatment approach:\n\n(Examples: Somatic Therapy, IFS (Internal Family Systems), Music Therapy, etc.)'
-      );
-
-      if (customApproach && customApproach.trim()) {
-        // User entered a custom approach
-        setOtherTreatmentApproachInput(customApproach.trim());
-        handleInputChange('otherTreatmentApproach', customApproach.trim());
-        handleMultiSelectChange('treatmentApproaches', approach, checked);
-      } else {
-        // User cancelled or entered empty string, don't add "Other"
-        return;
-      }
+      // Initialize with one empty input field
+      setOtherTreatmentApproachInputs(['']);
+      handleInputChange('otherTreatmentApproach', []);
+      handleMultiSelectChange('treatmentApproaches', approach, checked);
     } else {
       // Normal approach selection (no "Other" involved)
       handleMultiSelectChange('treatmentApproaches', approach, checked);
 
-      // If "Other" was previously selected but now deselected, clear the custom approach
+      // If "Other" was previously selected but now deselected, clear the custom approaches
       if (wasOtherSelected && approach === 'Other' && !checked) {
-        setOtherTreatmentApproachInput('');
-        handleInputChange('otherTreatmentApproach', '');
+        setOtherTreatmentApproachInputs([]);
+        handleInputChange('otherTreatmentApproach', []);
       }
     }
+  };
+
+  const addTreatmentApproachInput = () => {
+    setOtherTreatmentApproachInputs([...otherTreatmentApproachInputs, '']);
+  };
+
+  const removeTreatmentApproachInput = (index: number) => {
+    const newInputs = otherTreatmentApproachInputs.filter((_, i) => i !== index);
+    setOtherTreatmentApproachInputs(newInputs);
+    handleInputChange('otherTreatmentApproach', newInputs.filter(input => input.trim()));
+  };
+
+  const updateTreatmentApproachInput = (index: number, value: string) => {
+    const newInputs = [...otherTreatmentApproachInputs];
+    newInputs[index] = value;
+    setOtherTreatmentApproachInputs(newInputs);
+    handleInputChange('otherTreatmentApproach', newInputs.filter(input => input.trim()));
   };
 
   const handleBoardCertificationSelection = (selectedCertifications: string[]) => {
@@ -398,30 +434,37 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     // If "Other" was just selected (wasn't selected before, but is now)
     if (!wasOtherSelected && isOtherNowSelected) {
-      const customCertification = window.prompt(
-        'Please specify your custom board certification:\n\n(Examples: Board Certified Psychiatrist, Certified Clinical Trauma Professional, etc.)'
-      );
-
-      if (customCertification && customCertification.trim()) {
-        // User entered a custom certification
-        setOtherBoardCertificationInput(customCertification.trim());
-        handleInputChange('otherBoardCertification', customCertification.trim());
-        handleInputChange('boardCertifications', selectedCertifications);
-      } else {
-        // User cancelled or entered empty string, remove "Other" from selection
-        const certificationsWithoutOther = selectedCertifications.filter(cert => cert !== 'Other');
-        handleInputChange('boardCertifications', certificationsWithoutOther);
-      }
+      // Initialize with one empty input field
+      setOtherBoardCertificationInputs(['']);
+      handleInputChange('otherBoardCertification', []);
+      handleInputChange('boardCertifications', selectedCertifications);
     } else {
       // Normal certification selection (no "Other" involved)
       handleInputChange('boardCertifications', selectedCertifications);
 
-      // If "Other" was previously selected but now deselected, clear the custom certification
+      // If "Other" was previously selected but now deselected, clear the custom certifications
       if (wasOtherSelected && !isOtherNowSelected) {
-        setOtherBoardCertificationInput('');
-        handleInputChange('otherBoardCertification', '');
+        setOtherBoardCertificationInputs([]);
+        handleInputChange('otherBoardCertification', []);
       }
     }
+  };
+
+  const addBoardCertificationInput = () => {
+    setOtherBoardCertificationInputs([...otherBoardCertificationInputs, '']);
+  };
+
+  const removeBoardCertificationInput = (index: number) => {
+    const newInputs = otherBoardCertificationInputs.filter((_, i) => i !== index);
+    setOtherBoardCertificationInputs(newInputs);
+    handleInputChange('otherBoardCertification', newInputs.filter(input => input.trim()));
+  };
+
+  const updateBoardCertificationInput = (index: number, value: string) => {
+    const newInputs = [...otherBoardCertificationInputs];
+    newInputs[index] = value;
+    setOtherBoardCertificationInputs(newInputs);
+    handleInputChange('otherBoardCertification', newInputs.filter(input => input.trim()));
   };
 
   const handleProfessionalMembershipSelection = (selectedMemberships: string[]) => {
@@ -431,30 +474,37 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     // If "Other" was just selected (wasn't selected before, but is now)
     if (!wasOtherSelected && isOtherNowSelected) {
-      const customMembership = window.prompt(
-        'Please specify your custom professional membership:\n\n(Examples: International Association for Play Therapy, Association for Applied Sport Psychology, etc.)'
-      );
-
-      if (customMembership && customMembership.trim()) {
-        // User entered a custom membership
-        setOtherProfessionalMembershipInput(customMembership.trim());
-        handleInputChange('otherProfessionalMembership', customMembership.trim());
-        handleInputChange('professionalMemberships', selectedMemberships);
-      } else {
-        // User cancelled or entered empty string, remove "Other" from selection
-        const membershipsWithoutOther = selectedMemberships.filter(membership => membership !== 'Other');
-        handleInputChange('professionalMemberships', membershipsWithoutOther);
-      }
+      // Initialize with one empty input field
+      setOtherProfessionalMembershipInputs(['']);
+      handleInputChange('otherProfessionalMembership', []);
+      handleInputChange('professionalMemberships', selectedMemberships);
     } else {
       // Normal membership selection (no "Other" involved)
       handleInputChange('professionalMemberships', selectedMemberships);
 
-      // If "Other" was previously selected but now deselected, clear the custom membership
+      // If "Other" was previously selected but now deselected, clear the custom memberships
       if (wasOtherSelected && !isOtherNowSelected) {
-        setOtherProfessionalMembershipInput('');
-        handleInputChange('otherProfessionalMembership', '');
+        setOtherProfessionalMembershipInputs([]);
+        handleInputChange('otherProfessionalMembership', []);
       }
     }
+  };
+
+  const addProfessionalMembershipInput = () => {
+    setOtherProfessionalMembershipInputs([...otherProfessionalMembershipInputs, '']);
+  };
+
+  const removeProfessionalMembershipInput = (index: number) => {
+    const newInputs = otherProfessionalMembershipInputs.filter((_, i) => i !== index);
+    setOtherProfessionalMembershipInputs(newInputs);
+    handleInputChange('otherProfessionalMembership', newInputs.filter(input => input.trim()));
+  };
+
+  const updateProfessionalMembershipInput = (index: number, value: string) => {
+    const newInputs = [...otherProfessionalMembershipInputs];
+    newInputs[index] = value;
+    setOtherProfessionalMembershipInputs(newInputs);
+    handleInputChange('otherProfessionalMembership', newInputs.filter(input => input.trim()));
   };
 
   const handleReligiousSpiritualIntegrationSelection = (selectedValue: string) => {
@@ -464,29 +514,37 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
 
     // If "Other" was just selected (wasn't selected before, but is now)
     if (!wasOtherSelected && isOtherNowSelected) {
-      const customIntegration = window.prompt(
-        'Please specify your custom religious/spiritual integration approach:\n\n(Examples: Indigenous Practices, Interfaith Approach, Secular Humanism, etc.)'
-      );
-
-      if (customIntegration && customIntegration.trim()) {
-        // User entered a custom integration approach
-        setOtherReligiousSpiritualInput(customIntegration.trim());
-        handleInputChange('otherReligiousSpiritualIntegration', customIntegration.trim());
-        handleInputChange('religiousSpiritualIntegration', selectedValue);
-      } else {
-        // User cancelled or entered empty string, don't change selection
-        return;
-      }
+      // Initialize with one empty input field
+      setOtherReligiousSpiritualInputs(['']);
+      handleInputChange('otherReligiousSpiritualIntegration', []);
+      handleInputChange('religiousSpiritualIntegration', selectedValue);
     } else {
       // Normal selection (no "Other" involved)
       handleInputChange('religiousSpiritualIntegration', selectedValue);
 
-      // If "Other" was previously selected but now deselected, clear the custom integration
+      // If "Other" was previously selected but now deselected, clear the custom integrations
       if (wasOtherSelected && !isOtherNowSelected) {
-        setOtherReligiousSpiritualInput('');
-        handleInputChange('otherReligiousSpiritualIntegration', '');
+        setOtherReligiousSpiritualInputs([]);
+        handleInputChange('otherReligiousSpiritualIntegration', []);
       }
     }
+  };
+
+  const addReligiousSpiritualInput = () => {
+    setOtherReligiousSpiritualInputs([...otherReligiousSpiritualInputs, '']);
+  };
+
+  const removeReligiousSpiritualInput = (index: number) => {
+    const newInputs = otherReligiousSpiritualInputs.filter((_, i) => i !== index);
+    setOtherReligiousSpiritualInputs(newInputs);
+    handleInputChange('otherReligiousSpiritualIntegration', newInputs.filter(input => input.trim()));
+  };
+
+  const updateReligiousSpiritualInput = (index: number, value: string) => {
+    const newInputs = [...otherReligiousSpiritualInputs];
+    newInputs[index] = value;
+    setOtherReligiousSpiritualInputs(newInputs);
+    handleInputChange('otherReligiousSpiritualIntegration', newInputs.filter(input => input.trim()));
   };
 
   // Show loading while fetching existing data
@@ -544,9 +602,9 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             </h2>
             <div className="flex items-center space-x-4">
               {profileData.profilePhoto ? (
-                <Image 
-                  src={profileData.profilePhoto} 
-                  alt="Profile" 
+                <Image
+                  src={profileData.profilePhoto}
+                  alt="Profile"
                   width={80}
                   height={80}
                   className="w-20 h-20 rounded-full object-cover border-2 border-gray-300"
@@ -636,9 +694,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               onChange={(e) => handleInputChange('personalStatement', e.target.value)}
               placeholder="Tell potential patients about your approach to therapy, your experience, and what makes you unique as a therapist..."
               rows={6}
-              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                errors.personalStatement ? 'border-red-300' : 'border-gray-300'
-              }`}
+              className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.personalStatement ? 'border-red-300' : 'border-gray-300'
+                }`}
             />
             {errors.personalStatement && (
               <p className="mt-1 text-sm text-red-600">{errors.personalStatement}</p>
@@ -674,12 +731,38 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               <p className="mt-2 text-sm text-red-600">{errors.mentalHealthSpecialties}</p>
             )}
 
-            {/* Show custom mental health specialty when "Other" is selected */}
-            {profileData.mentalHealthSpecialties.includes('Other') && otherMentalHealthSpecialtyInput && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                <span className="text-green-800">
-                  <strong>Custom Mental Health Specialty:</strong> {otherMentalHealthSpecialtyInput}
-                </span>
+            {/* Show custom mental health specialty input fields when "Other" is selected */}
+            {profileData.mentalHealthSpecialties.includes('Other') && (
+              <div className="mt-4 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Custom Mental Health Specialties
+                </label>
+                {otherMentalHealthSpecialtyInputs.map((input, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => updateMentalHealthSpecialtyInput(index, e.target.value)}
+                      placeholder="e.g., Perinatal Mental Health, Neurofeedback, Play Therapy"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeMentalHealthSpecialtyInput(index)}
+                      className="px-3 py-2 text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50"
+                      title="Remove this specialty"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addMentalHealthSpecialtyInput}
+                  className="text-sm text-green-600 hover:text-green-800 font-medium"
+                >
+                  + Add Another Specialty
+                </button>
               </div>
             )}
           </div>
@@ -694,7 +777,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                 'Cognitive Behavioral Therapy (CBT)', 'Dialectical Behavior Therapy (DBT)',
                 'Acceptance and Commitment Therapy (ACT)', 'Psychodynamic Therapy',
                 'Humanistic/Person-Centered', 'Family Systems', 'EMDR', 'Mindfulness-Based',
-                'Solution-Focused', 'Narrative Therapy', 'Gestalt Therapy', 'Art/Creative Therapy', 'Other'
+                'Solution-Focused', 'Narrative Therapy', 'Art/Creative Therapy', 'Other'
               ].map(approach => (
                 <label key={approach} className="flex items-center">
                   <input
@@ -711,12 +794,38 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               <p className="mt-2 text-sm text-red-600">{errors.treatmentApproaches}</p>
             )}
 
-            {/* Show custom treatment approach when "Other" is selected */}
-            {profileData.treatmentApproaches.includes('Other') && otherTreatmentApproachInput && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                <span className="text-green-800">
-                  <strong>Custom Treatment Approach:</strong> {otherTreatmentApproachInput}
-                </span>
+            {/* Show custom treatment approach input fields when "Other" is selected */}
+            {profileData.treatmentApproaches.includes('Other') && (
+              <div className="mt-4 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Custom Treatment Approaches
+                </label>
+                {otherTreatmentApproachInputs.map((input, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => updateTreatmentApproachInput(index, e.target.value)}
+                      placeholder="e.g., Somatic Therapy, IFS (Internal Family Systems), Music Therapy"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeTreatmentApproachInput(index)}
+                      className="px-3 py-2 text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50"
+                      title="Remove this approach"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addTreatmentApproachInput}
+                  className="text-sm text-green-600 hover:text-green-800 font-medium"
+                >
+                  + Add Another Approach
+                </button>
               </div>
             )}
           </div>
@@ -728,7 +837,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             </h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {[
-                'Children (5-12)', 'Adolescents (13-17)', 'Young Adults (18-25)', 
+                'Children (5-12)', 'Adolescents (13-17)', 'Young Adults (18-25)',
                 'Adults (26-64)', 'Seniors (65+)'
               ].map(ageRange => (
                 <label key={ageRange} className="flex items-center">
@@ -760,9 +869,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                 <select
                   value={profileData.practiceDetails.practiceType}
                   onChange={(e) => handleInputChange('practiceDetails.practiceType', e.target.value)}
-                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.practiceType ? 'border-red-300' : 'border-gray-300'
-                  }`}
+                  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 ${errors.practiceType ? 'border-red-300' : 'border-gray-300'
+                    }`}
                 >
                   <option value="">Select practice type</option>
                   <option value="Private Practice">Private Practice</option>
@@ -927,12 +1035,38 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               <option value="Other">Other</option>
             </select>
 
-            {/* Show custom religious/spiritual integration when "Other" is selected */}
-            {profileData.religiousSpiritualIntegration === 'Other' && otherReligiousSpiritualInput && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                <span className="text-green-800">
-                  <strong>Custom Religious/Spiritual Integration:</strong> {otherReligiousSpiritualInput}
-                </span>
+            {/* Show custom religious/spiritual integration input fields when "Other" is selected */}
+            {profileData.religiousSpiritualIntegration === 'Other' && (
+              <div className="mt-4 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Custom Religious/Spiritual Integration Approaches
+                </label>
+                {otherReligiousSpiritualInputs.map((input, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => updateReligiousSpiritualInput(index, e.target.value)}
+                      placeholder="e.g., Indigenous Practices, Interfaith Approach, Secular Humanism"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeReligiousSpiritualInput(index)}
+                      className="px-3 py-2 text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50"
+                      title="Remove this approach"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addReligiousSpiritualInput}
+                  className="text-sm text-green-600 hover:text-green-800 font-medium"
+                >
+                  + Add Another Approach
+                </button>
               </div>
             )}
           </div>
@@ -1011,12 +1145,38 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               placeholder="Select board certifications..."
             />
 
-            {/* Show custom board certification when "Other" is selected */}
-            {profileData.boardCertifications?.includes('Other') && otherBoardCertificationInput && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                <span className="text-green-800">
-                  <strong>Custom Board Certification:</strong> {otherBoardCertificationInput}
-                </span>
+            {/* Show custom board certification input fields when "Other" is selected */}
+            {profileData.boardCertifications?.includes('Other') && (
+              <div className="mt-4 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Custom Board Certifications
+                </label>
+                {otherBoardCertificationInputs.map((input, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => updateBoardCertificationInput(index, e.target.value)}
+                      placeholder="e.g., Board Certified Psychiatrist, Certified Clinical Trauma Professional"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeBoardCertificationInput(index)}
+                      className="px-3 py-2 text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50"
+                      title="Remove this certification"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addBoardCertificationInput}
+                  className="text-sm text-green-600 hover:text-green-800 font-medium"
+                >
+                  + Add Another Certification
+                </button>
               </div>
             )}
           </div>
@@ -1033,12 +1193,38 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               placeholder="Select professional memberships..."
             />
 
-            {/* Show custom professional membership when "Other" is selected */}
-            {profileData.professionalMemberships?.includes('Other') && otherProfessionalMembershipInput && (
-              <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded text-sm">
-                <span className="text-green-800">
-                  <strong>Custom Professional Membership:</strong> {otherProfessionalMembershipInput}
-                </span>
+            {/* Show custom professional membership input fields when "Other" is selected */}
+            {profileData.professionalMemberships?.includes('Other') && (
+              <div className="mt-4 space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Custom Professional Memberships
+                </label>
+                {otherProfessionalMembershipInputs.map((input, index) => (
+                  <div key={index} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={input}
+                      onChange={(e) => updateProfessionalMembershipInput(index, e.target.value)}
+                      placeholder="e.g., International Association for Play Therapy, Association for Applied Sport Psychology"
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeProfessionalMembershipInput(index)}
+                      className="px-3 py-2 text-red-600 hover:text-red-800 border border-red-300 rounded-lg hover:bg-red-50"
+                      title="Remove this membership"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  onClick={addProfessionalMembershipInput}
+                  className="text-sm text-green-600 hover:text-green-800 font-medium"
+                >
+                  + Add Another Membership
+                </button>
               </div>
             )}
           </div>

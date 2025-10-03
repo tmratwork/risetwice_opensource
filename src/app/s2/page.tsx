@@ -69,9 +69,9 @@ interface CompleteProfileData {
   profilePhoto?: string;
   personalStatement: string;
   mentalHealthSpecialties: string[];
-  otherMentalHealthSpecialty?: string;
+  otherMentalHealthSpecialty?: string[];
   treatmentApproaches: string[];
-  otherTreatmentApproach?: string;
+  otherTreatmentApproach?: string[];
   ageRangesTreated: string[];
   practiceDetails: {
     practiceType: string;
@@ -87,12 +87,12 @@ interface CompleteProfileData {
   clientTypesServed?: string[];
   lgbtqAffirming?: boolean;
   religiousSpiritualIntegration?: string;
-  otherReligiousSpiritualIntegration?: string;
+  otherReligiousSpiritualIntegration?: string[];
   sessionFees?: string;
   boardCertifications?: string[];
-  otherBoardCertification?: string;
+  otherBoardCertification?: string[];
   professionalMemberships?: string[];
-  otherProfessionalMembership?: string;
+  otherProfessionalMembership?: string[];
 }
 
 interface SessionData {
