@@ -474,7 +474,7 @@ export default function ChatBotV17Page() {
       <div className="chatbot-v16-wrapper">
         <div className="main-container" style={{ backgroundColor: 'var(--bg-secondary)', paddingTop: '80px' }}>
           {/* Header */}
-          <div className="text-center mb-8">
+          <div className="text-center mb-4">
             {isProviderMode ? (
               <>
                 <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
@@ -498,7 +498,7 @@ export default function ChatBotV17Page() {
 
           {/* Search and Filters - Only show in patient mode */}
           {!isProviderMode && (
-            <div className="mb-8">
+            <div className="mb-0">
               <SearchBar
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
@@ -512,9 +512,9 @@ export default function ChatBotV17Page() {
           )}
 
           {/* Therapist Results */}
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto" style={{ marginTop: 0 }}>
             {/* Disclaimer - inside scrollable area */}
-            <div className="mt-0 mb-8">
+            <div className="mt-0 mb-6">
               <div className="w-full h-px bg-gray-300 mb-6"></div>
               <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
                 Our therapy match software is currently being pilot tested and we are building live, in public. Some of the profiles listed are for demonstration purposes only during this initial testing phase.
