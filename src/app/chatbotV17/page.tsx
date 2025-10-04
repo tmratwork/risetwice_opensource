@@ -496,6 +496,15 @@ export default function ChatBotV17Page() {
             )}
           </div>
 
+          {/* Disclaimer */}
+          <div className="mt-8 mb-8">
+            <div className="w-full h-px bg-gray-300 mb-6"></div>
+            <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
+              Our therapy match software is currently being pilot tested and we are building live, in public. Some of the profiles listed are for demonstration purposes only during this initial testing phase.
+            </div>
+            <div className="w-full h-px bg-gray-300 mt-6"></div>
+          </div>
+
           {/* Search and Filters - Only show in patient mode */}
           {!isProviderMode && (
             <div className="mb-8">
