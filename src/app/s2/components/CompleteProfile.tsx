@@ -1085,10 +1085,30 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                 <input
                   type="text"
                   id="sessionFeesCustom"
-                  value={profileData.sessionFees &&
-                    !['Sliding scale available', 'Contact for rates'].includes(profileData.sessionFees)
-                    ? profileData.sessionFees : ''}
-                  onChange={(e) => handleInputChange('sessionFees', e.target.value)}
+                  value={(() => {
+                    if (!profileData.sessionFees) return '';
+                    // Extract custom fee from combined string
+                    const parts = profileData.sessionFees.split(', ').filter(part =>
+                      part !== 'Sliding scale available' && part !== 'Contact for rates'
+                    );
+                    return parts.join(', ');
+                  })()}
+                  onChange={(e) => {
+                    const customFee = e.target.value;
+                    const currentFees = profileData.sessionFees || '';
+
+                    // Extract checkbox options
+                    const hasSliding = currentFees.includes('Sliding scale available');
+                    const hasContact = currentFees.includes('Contact for rates');
+
+                    // Build new sessionFees string
+                    const parts = [];
+                    if (customFee.trim()) parts.push(customFee.trim());
+                    if (hasSliding) parts.push('Sliding scale available');
+                    if (hasContact) parts.push('Contact for rates');
+
+                    handleInputChange('sessionFees', parts.join(', '));
+                  }}
                   placeholder="Enter your session fee"
                   className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
@@ -1101,13 +1121,21 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={profileData.sessionFees === 'Sliding scale available'}
+                      checked={profileData.sessionFees?.includes('Sliding scale available') || false}
                       onChange={(e) => {
+                        const currentFees = profileData.sessionFees || '';
+
+                        // Extract custom fee and contact option
+                        const parts = currentFees.split(', ').filter(part => part !== 'Sliding scale available');
+
+                        // Add or remove sliding scale
                         if (e.target.checked) {
-                          handleInputChange('sessionFees', 'Sliding scale available');
-                        } else {
-                          handleInputChange('sessionFees', '');
+                          parts.push('Sliding scale available');
                         }
+
+                        // Filter out empty strings and join
+                        const newValue = parts.filter(p => p.trim()).join(', ');
+                        handleInputChange('sessionFees', newValue);
                       }}
                       className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                     />
@@ -1116,13 +1144,21 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                   <label className="flex items-center">
                     <input
                       type="checkbox"
-                      checked={profileData.sessionFees === 'Contact for rates'}
+                      checked={profileData.sessionFees?.includes('Contact for rates') || false}
                       onChange={(e) => {
+                        const currentFees = profileData.sessionFees || '';
+
+                        // Extract custom fee and sliding scale option
+                        const parts = currentFees.split(', ').filter(part => part !== 'Contact for rates');
+
+                        // Add or remove contact for rates
                         if (e.target.checked) {
-                          handleInputChange('sessionFees', 'Contact for rates');
-                        } else {
-                          handleInputChange('sessionFees', '');
+                          parts.push('Contact for rates');
                         }
+
+                        // Filter out empty strings and join
+                        const newValue = parts.filter(p => p.trim()).join(', ');
+                        handleInputChange('sessionFees', newValue);
                       }}
                       className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
                     />
