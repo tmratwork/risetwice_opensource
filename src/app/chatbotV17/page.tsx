@@ -144,7 +144,7 @@ export default function ChatBotV17Page() {
     setDetailedTherapistData(null);
 
     // Use therapist info for AI conversation
-    const voiceId = 'default'; // Use default voice for now
+    const voiceId = therapist.clonedVoiceId || 'EmtkmiOFoQVpKRVpXH2B'; // Use therapist's cloned voice or fallback to default
     const promptAppend = `You are now speaking as a therapist named ${therapist.fullName}. ${therapist.personalStatement ? `Your approach: ${therapist.personalStatement}` : ''}`;
     handleDemoStart(voiceId, promptAppend, therapist.fullName, false);
   }, [handleDemoStart]);

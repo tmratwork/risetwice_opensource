@@ -19,6 +19,7 @@ interface DatabaseTherapist {
   gender_identity: string;
   years_of_experience: string;
   languages_spoken: string[] | null;
+  cloned_voice_id?: string | null;
   s2_complete_profiles?: Array<{
     profile_photo_url?: string;
     personal_statement?: string;
@@ -60,6 +61,7 @@ export async function GET(request: NextRequest) {
         gender_identity,
         years_of_experience,
         languages_spoken,
+        cloned_voice_id,
         created_at,
         s2_complete_profiles!fk_therapist_profile(
           profile_photo_url,
@@ -134,6 +136,7 @@ export async function GET(request: NextRequest) {
         genderIdentity: therapist.gender_identity,
         yearsOfExperience: therapist.years_of_experience,
         languagesSpoken: therapist.languages_spoken || [],
+        clonedVoiceId: therapist.cloned_voice_id,
         profilePhotoUrl: completeProfile.profile_photo_url,
         personalStatement: completeProfile.personal_statement,
         mentalHealthSpecialties: completeProfile.mental_health_specialties || [],
