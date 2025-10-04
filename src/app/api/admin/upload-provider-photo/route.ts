@@ -67,11 +67,11 @@ export async function POST(request: NextRequest) {
 
     const photoUrl = urlData.publicUrl;
 
-    // Update provider record with photo URL
+    // Update s2_complete_profiles with photo URL (single source of truth)
     const { error: updateError } = await supabaseAdmin
-      .from('s2_therapist_profiles')
+      .from('s2_complete_profiles')
       .update({ profile_photo_url: photoUrl })
-      .eq('id', providerId);
+      .eq('therapist_profile_id', providerId);
 
     if (updateError) {
       console.error('[UploadProviderPhoto] Database update error:', updateError);
