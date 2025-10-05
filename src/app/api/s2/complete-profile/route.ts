@@ -151,9 +151,11 @@ export async function POST(request: NextRequest) {
     }
 
     console.log('[S2] ✅ Complete profile saved:', profileData.id);
+    console.log('[S2] 📤 Returning therapistProfileId for AI generation:', therapistProfile.id);
 
     return NextResponse.json({
       success: true,
+      therapistProfileId: therapistProfile.id, // Added for AI prompt generation
       completeProfile: {
         id: profileData.id,
         userId: profileData.user_id,

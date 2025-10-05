@@ -285,6 +285,31 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       }
 
       console.log('[S2] ✅ Complete profile saved successfully:', data.completeProfile.id);
+      console.log('[S2] 📋 Full response data:', data);
+
+      // Trigger AI prompt generation in the background (fire and forget)
+      // This is the same function that admin uses via "Generate AI Prompt" button
+      if (data.therapistProfileId) {
+        console.log('[S2] 🤖 Triggering background AI prompt generation for therapist:', data.therapistProfileId);
+        fetch('/api/admin/s2/generate-therapist-prompt', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            therapistId: data.therapistProfileId
+          })
+        }).then(() => {
+          console.log('[S2] ✅ AI prompt generation request sent successfully');
+        }).catch((error) => {
+          // Silent failure - user doesn't need to know about this
+          console.error('[S2] ❌ Background AI prompt generation failed (non-blocking):', error);
+        });
+      } else {
+        console.warn('[S2] ⚠️ No therapistProfileId in response, skipping AI prompt generation');
+        console.log('[S2] 📋 Response keys:', Object.keys(data));
+      }
+
       onNext();
 
     } catch (error) {
@@ -1285,7 +1310,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                   Saving Profile...
                 </>
               ) : (
-                'Complete Profile'
+                'Generate your AI Preview'
               )}
             </button>
           </div>

@@ -191,7 +191,7 @@ export default function ChatBotV17Page() {
       } else {
         // No generated prompt found - show error to user
         console.error('[V17] ❌ No generated prompt found for therapist:', therapist.fullName);
-        const errorMessage = `AI Preview for ${therapist.fullName} has not been generated yet. Please contact the administrator to generate the AI prompt for this therapist.`;
+        const errorMessage = `AI Preview for ${therapist.fullName} has not been generated yet. It takes about ten minutes to generate the AI Preview after the provider selects the button to update or generate.`;
         setPromptError(errorMessage);
 
         // Restore matching view to show error
