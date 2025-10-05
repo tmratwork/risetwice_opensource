@@ -63,6 +63,8 @@ export default function ChatBotV17Page() {
   const [therapists, setTherapists] = useState<Therapist[]>([]);
   const [filterTags, setFilterTags] = useState<FilterTag[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadingPrompt, setLoadingPrompt] = useState(false);
+  const [promptError, setPromptError] = useState<string | null>(null);
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const [detailedTherapistData, setDetailedTherapistData] = useState<DetailedTherapist | null>(null);
   const store = useElevenLabsStore();
@@ -134,20 +136,86 @@ export default function ChatBotV17Page() {
   }, [user, store, startSession]);
 
   // Handle therapist AI preview (replaces demo buttons)
-  const handleTryAIPreview = useCallback((therapist: Therapist) => {
+  const handleTryAIPreview = useCallback(async (therapist: Therapist) => {
     console.log('[V17] Starting AI preview for therapist:', therapist.fullName);
     setSelectedTherapist(therapist);
+    setLoadingPrompt(true);
+    setPromptError(null); // Clear any previous errors
 
     // Hide all views to show chat interface
     setShowMatching(false);
     setShowDetailedView(false);
     setDetailedTherapistData(null);
 
-    // Use therapist info for AI conversation
-    const voiceId = therapist.clonedVoiceId || 'EmtkmiOFoQVpKRVpXH2B'; // Use therapist's cloned voice or fallback to default
-    const promptAppend = `You are now speaking as a therapist named ${therapist.fullName}. ${therapist.personalStatement ? `Your approach: ${therapist.personalStatement}` : ''}`;
-    handleDemoStart(voiceId, promptAppend, therapist.fullName, false);
-  }, [handleDemoStart]);
+    try {
+      // Fetch generated comprehensive therapist prompt from database
+      console.log('[V17] Fetching generated therapist prompt for:', therapist.id);
+      const response = await fetch(`/api/admin/s2/therapist-prompts?therapistId=${therapist.id}`);
+
+      if (!response.ok) {
+        console.error('[V17] ❌ Failed to fetch therapist prompt - HTTP error');
+        throw new Error('Failed to fetch therapist prompt from server');
+      }
+
+      const data = await response.json();
+
+      if (data.prompts && data.prompts.length > 0) {
+        // Use the comprehensive generated prompt (latest version)
+        const latestPrompt = data.prompts[0];
+        const generatedTherapistPrompt = latestPrompt.prompt_text;
+
+        console.log('[V17] ✅ Using generated therapist prompt:', {
+          promptId: latestPrompt.id,
+          version: latestPrompt.prompt_version,
+          promptLength: generatedTherapistPrompt.length
+        });
+
+        // Use therapist's cloned voice if available
+        const voiceId = therapist.clonedVoiceId || 'EmtkmiOFoQVpKRVpXH2B';
+
+        if (therapist.clonedVoiceId) {
+          console.log(`[V17] 🎤 Using cloned voice: ${therapist.clonedVoiceId} for ${therapist.fullName}`);
+        } else {
+          console.log(`[V17] 🎤 Using default voice (no cloned voice available for ${therapist.fullName})`);
+        }
+
+        // Create conversation if needed
+        if (!store.conversationId) {
+          await store.createConversation();
+        }
+
+        // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice
+        await startSession('ai_preview', voiceId, generatedTherapistPrompt);
+
+        console.log(`[V17] ✅ AI preview started with comprehensive prompt for: ${therapist.fullName}`);
+      } else {
+        // No generated prompt found - show error to user
+        console.error('[V17] ❌ No generated prompt found for therapist:', therapist.fullName);
+        const errorMessage = `AI Preview for ${therapist.fullName} has not been generated yet. Please contact the administrator to generate the AI prompt for this therapist.`;
+        setPromptError(errorMessage);
+
+        // Restore matching view to show error
+        setShowMatching(true);
+        setLoadingPrompt(false);
+        throw new Error(errorMessage);
+      }
+    } catch (error) {
+      // Error fetching prompt - show error to user
+      console.error('[V17] ❌ Error starting AI preview:', error);
+
+      const errorMessage = error instanceof Error ? error.message : 'Failed to start AI preview';
+
+      // Only set error if we haven't already set one
+      if (!promptError) {
+        setPromptError(errorMessage);
+      }
+
+      // Restore matching view to show error
+      setShowMatching(true);
+    } finally {
+      setLoadingPrompt(false);
+    }
+  }, [handleDemoStart, store, startSession, promptError]);
 
   // Search therapists (or fetch user's own AI Preview in provider mode)
   const searchTherapists = useCallback(async () => {
@@ -464,6 +532,7 @@ export default function ChatBotV17Page() {
         therapist={detailedTherapistData}
         onBack={handleBackToMatchingFromDetail}
         onTryAIPreview={handleTryAIPreview}
+        loadingPrompt={loadingPrompt}
       />
     );
   }
@@ -522,6 +591,29 @@ export default function ChatBotV17Page() {
               <div className="w-full h-px bg-gray-300 mt-6"></div>
             </div>
 
+            {/* Error Message - Prompt Not Found */}
+            {promptError && (
+              <div className="mb-6 p-6 bg-red-50 border-2 border-red-500 rounded-lg">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <svg className="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-red-900 mb-2">AI Preview Not Available</h3>
+                    <p className="text-red-800 mb-4">{promptError}</p>
+                    <button
+                      onClick={() => setPromptError(null)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <TherapistList
               therapists={therapists}
               onTryAIPreview={handleTryAIPreview}
@@ -529,6 +621,7 @@ export default function ChatBotV17Page() {
               onAdvancedSettings={isProviderMode ? handleAdvancedSettings : undefined}
               isProviderMode={isProviderMode}
               loading={loading}
+              loadingPrompt={loadingPrompt}
             />
 
             {/* Playback Speed Settings - Patient Mode Only - COMMENTED OUT FOR NEXT VERSION */}

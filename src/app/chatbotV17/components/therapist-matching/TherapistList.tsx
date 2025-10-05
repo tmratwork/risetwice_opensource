@@ -8,6 +8,7 @@ interface TherapistListProps {
   onAdvancedSettings?: () => void;
   isProviderMode?: boolean;
   loading?: boolean;
+  loadingPrompt?: boolean;
 }
 
 const TherapistList: React.FC<TherapistListProps> = ({
@@ -16,7 +17,8 @@ const TherapistList: React.FC<TherapistListProps> = ({
   onViewMore,
   onAdvancedSettings,
   isProviderMode = false,
-  loading = false
+  loading = false,
+  loadingPrompt = false
 }) => {
   if (loading) {
     return (
@@ -77,6 +79,7 @@ const TherapistList: React.FC<TherapistListProps> = ({
           onViewMore={onViewMore}
           onAdvancedSettings={onAdvancedSettings}
           isProviderMode={isProviderMode}
+          loadingPrompt={loadingPrompt}
         />
       ))}
     </div>

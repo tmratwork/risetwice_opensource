@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     // Get prompts for this therapist, sorted by creation date (latest first)
     const { data: prompts, error } = await supabase
       .from('s2_ai_therapist_prompts')
-      .select('id, prompt_title, prompt_version, created_at, status, completeness_score, confidence_score')
+      .select('id, prompt_title, prompt_version, prompt_text, created_at, status, completeness_score, confidence_score')
       .eq('therapist_profile_id', therapistId)
       .eq('status', 'active')
       .order('created_at', { ascending: false })
