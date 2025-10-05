@@ -23,6 +23,7 @@ interface AIStyle {
     tone: number; // 0 = Warm & Casual, 100 = Clinical & Formal
     energyLevel: number; // 0 = Energetic & Expressive, 100 = Calm & Grounded
   };
+  openingStatement?: string;
 }
 
 interface AIStyleCustomizationProps {
@@ -62,7 +63,8 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
           console.log('[S2] Loaded existing AI style config:', data.aiStyleConfig);
           onUpdate({
             therapeuticModalities: data.aiStyleConfig.therapeuticModalities,
-            communicationStyle: data.aiStyleConfig.communicationStyle
+            communicationStyle: data.aiStyleConfig.communicationStyle,
+            openingStatement: data.aiStyleConfig.openingStatement
           });
         }
       } catch (error) {
@@ -104,7 +106,8 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
         body: JSON.stringify({
           userId: user.uid,
           therapeuticModalities: style.therapeuticModalities,
-          communicationStyle: style.communicationStyle
+          communicationStyle: style.communicationStyle,
+          openingStatement: style.openingStatement
         })
       });
 
@@ -172,7 +175,25 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
           </div>
         )}
 
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-6">
+          {/* Opening Statement */}
+          <div className="bg-white rounded-lg shadow-sm border p-6">
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">
+              Opening Statement
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Write the first few sentences your AI preview will speak when greeting new patients. (For example: Hi, my name is Dr. XYZ, thanks for trying my AI Preview! What are you hoping to get out of therapy? And what are you looking for in a therapist?)
+            </p>
+            <textarea
+              value={style.openingStatement || ''}
+              onChange={(e) => onUpdate({ openingStatement: e.target.value })}
+              placeholder="Enter your opening greeting..."
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
+              style={{ color: 'var(--text-primary)' }}
+            />
+          </div>
+
           {/* Communication Style */}
           <div className="bg-white rounded-lg shadow-sm border p-6">
             <h2 className="text-xl font-semibold text-gray-900 mb-6">

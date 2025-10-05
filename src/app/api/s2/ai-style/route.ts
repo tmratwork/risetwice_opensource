@@ -22,6 +22,7 @@ interface AIStyleRequest {
     tone: number;
     energyLevel: number;
   };
+  openingStatement?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -81,7 +82,8 @@ export async function POST(request: NextRequest) {
         solution_focused: data.therapeuticModalities.solution_focused,
         friction: friction,
         tone: tone,
-        energy_level: energyLevel
+        energy_level: energyLevel,
+        opening_statement: data.openingStatement || null
       })
       .select()
       .single();
@@ -112,6 +114,7 @@ export async function POST(request: NextRequest) {
           tone: aiStyle.tone,
           energyLevel: aiStyle.energy_level
         },
+        openingStatement: aiStyle.opening_statement,
         isValid: aiStyle.is_valid,
         createdAt: aiStyle.created_at
       }
@@ -150,6 +153,7 @@ export async function GET(request: NextRequest) {
         friction,
         tone,
         energy_level,
+        opening_statement,
         is_valid,
         created_at,
         therapist_profile_id,
@@ -185,6 +189,7 @@ export async function GET(request: NextRequest) {
           tone: data.tone,
           energyLevel: data.energy_level
         },
+        openingStatement: data.opening_statement,
         isValid: data.is_valid,
         createdAt: data.created_at
       } : null

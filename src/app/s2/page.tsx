@@ -56,6 +56,7 @@ interface AIStyle {
     tone: number; // 0 = Warm & Casual, 100 = Clinical & Formal
     energyLevel: number; // 0 = Energetic & Expressive, 100 = Calm & Grounded
   };
+  openingStatement?: string;
 }
 
 interface LicenseVerificationData {
@@ -210,7 +211,8 @@ const S2CaseSimulation: React.FC = () => {
             friction: (profileData.aiStyleConfig.friction as number) || 50,
             tone: (profileData.aiStyleConfig.tone as number) || 50,
             energyLevel: (profileData.aiStyleConfig.energy_level as number) || 50
-          }
+          },
+          openingStatement: profileData.aiStyleConfig.opening_statement as string
         } : prev.aiStyle,
 
         licenseVerification: profileData.licenseVerification ? {
