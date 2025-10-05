@@ -558,8 +558,10 @@ export default function ChatBotV17Page() {
                 <h1 className="text-4xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
                   Find Your Therapist
                 </h1>
-                <p className="text-base max-w-2xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
+                <p className="text-base max-w-4xl mx-auto mb-2 px-4" style={{ color: 'var(--text-secondary)' }}>
                   Browse our network of mental health professionals and start your journey by trying their AI Previews.
+                </p>
+                <p className="text-sm max-w-3xl mx-auto px-4" style={{ color: 'var(--text-secondary)' }}>
                   Note: AI Previews are not meant to administer treatment, but rather to give you a genuine feel for how your provider communicates before scheduling your first appointment.
                 </p>
               </>
