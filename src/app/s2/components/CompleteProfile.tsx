@@ -701,7 +701,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
               <p className="mt-1 text-sm text-red-600">{errors.personalStatement}</p>
             )}
             <p className="mt-2 text-sm text-gray-500">
-              {profileData.personalStatement.length} / 1000 characters
+              {profileData.personalStatement.length} / 3000 characters
             </p>
           </div>
 
