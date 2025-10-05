@@ -181,6 +181,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const updateUserMessage = useWebRTCStore(state => state.updateUserMessage);
   const clearUserMessage = useWebRTCStore(state => state.clearUserMessage);
   const toggleAudioOutputMute = useWebRTCStore(state => state.toggleAudioOutputMute);
+  const disconnect = useWebRTCStore(state => state.disconnect);
 
   // Smart Send state and actions
   const smartSendEnabled = useWebRTCStore(state => state.smartSendEnabled);
@@ -903,6 +904,43 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   // The end_session function returns success, AI says goodbye, WebRTC handles completion
 
   // REMOVED: Static orb visualization state - now using enhanced AudioOrbV15 component
+
+  // Handle end session from header back button
+  const handleEndSession = useCallback(async () => {
+    console.log('[V16] Ending session from header button');
+    try {
+      if (isConnected) {
+        await disconnect();
+        console.log('[V16] ✅ Session ended successfully');
+      }
+    } catch (error) {
+      console.error('[V16] ❌ Error ending session:', error);
+    }
+  }, [isConnected, disconnect]);
+
+  // Register/unregister handler using ChatEvents
+  useEffect(() => {
+    let chatEvents: InstanceType<typeof import('@/utils/chat-events').ChatEvents> | null = null;
+
+    import('@/utils/chat-events').then(({ ChatEvents }) => {
+      chatEvents = ChatEvents.getInstance();
+      chatEvents.setEndChatHandler(handleEndSession);
+    });
+
+    return () => {
+      if (chatEvents) {
+        chatEvents.setEndChatHandler(null);
+      }
+    };
+  }, [handleEndSession]);
+
+  // Update connection state using ChatEvents
+  useEffect(() => {
+    import('@/utils/chat-events').then(({ ChatEvents }) => {
+      const chatEvents = ChatEvents.getInstance();
+      chatEvents.setConnectionState(isConnected);
+    });
+  }, [isConnected]);
 
   // Memoized callback for closing the map
   const handleCloseMap = useCallback(() => {
