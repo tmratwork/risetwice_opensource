@@ -155,8 +155,8 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
   isThinking: false,
   isUserSpeaking: false,
   
-  // Mute state
-  isMuted: false,
+  // Mute state - start with mic muted like V16
+  isMuted: true,
   isAudioOutputMuted: false,
   
   // Conversation state
@@ -441,7 +441,7 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
       isAudioPlaying: false,
       isThinking: false,
       isUserSpeaking: false,
-      isMuted: false,
+      isMuted: true, // Reset to muted like V16
       isAudioOutputMuted: false,
       conversationHistory: [],
       pendingResponses: new Map(),

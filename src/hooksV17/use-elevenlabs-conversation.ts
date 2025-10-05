@@ -38,6 +38,13 @@ export function useElevenLabsConversation() {
       store.setIsConnected(true);
       store.setConnectionState('connected');
       setIsPreparing(false);
+
+      // Ensure microphone starts muted like V16
+      logV17('🎤 Setting initial mic mute state to true (like V16)');
+      const windowWithMicrophone = window as Window & { controlMicrophone?: (muted: boolean) => void };
+      if (typeof windowWithMicrophone.controlMicrophone === 'function') {
+        windowWithMicrophone.controlMicrophone(true);
+      }
     },
 
     onDisconnect: () => {
