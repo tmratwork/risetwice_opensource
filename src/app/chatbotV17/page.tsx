@@ -525,7 +525,7 @@ export default function ChatBotV17Page() {
             <TherapistList
               therapists={therapists}
               onTryAIPreview={handleTryAIPreview}
-              onViewMore={isProviderMode ? undefined : handleViewMore}
+              onViewMore={handleViewMore}
               onAdvancedSettings={isProviderMode ? handleAdvancedSettings : undefined}
               isProviderMode={isProviderMode}
               loading={loading}
