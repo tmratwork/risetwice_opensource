@@ -287,10 +287,12 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       console.log('[S2] ✅ Complete profile saved successfully:', data.completeProfile.id);
       console.log('[S2] 📋 Full response data:', data);
 
-      // Trigger AI prompt generation in the background (fire and forget)
+      // Trigger AI prompt generation and voice cloning in the background (fire and forget)
       // This is the same function that admin uses via "Generate AI Prompt" button
       if (data.therapistProfileId) {
         console.log('[S2] 🤖 Triggering background AI prompt generation for therapist:', data.therapistProfileId);
+
+        // Generate AI prompt
         fetch('/api/admin/s2/generate-therapist-prompt', {
           method: 'POST',
           headers: {
@@ -305,8 +307,32 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
           // Silent failure - user doesn't need to know about this
           console.error('[S2] ❌ Background AI prompt generation failed (non-blocking):', error);
         });
+
+        // Clone voice (silent, parallel to AI prompt generation)
+        console.log('[S2] 🎤 Triggering background voice cloning for therapist:', data.therapistProfileId);
+        fetch('/api/admin/s2/clone-voice', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            therapistProfileId: data.therapistProfileId
+          })
+        }).then(async (response) => {
+          const result = await response.json();
+          if (result.success && result.skipped) {
+            console.log('[S2] ⏭️ Voice cloning skipped: no new audio material');
+          } else if (result.success) {
+            console.log('[S2] ✅ Voice cloning completed successfully:', result.voice_id);
+          } else {
+            console.log('[S2] ⚠️ Voice cloning failed (non-blocking):', result.message);
+          }
+        }).catch((error) => {
+          // Silent failure - user doesn't need to know about this
+          console.error('[S2] ❌ Background voice cloning failed (non-blocking):', error);
+        });
       } else {
-        console.warn('[S2] ⚠️ No therapistProfileId in response, skipping AI prompt generation');
+        console.warn('[S2] ⚠️ No therapistProfileId in response, skipping AI prompt generation and voice cloning');
         console.log('[S2] 📋 Response keys:', Object.keys(data));
       }
 
@@ -1310,7 +1336,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                   Saving Profile...
                 </>
               ) : (
-                'Generate your AI Preview'
+                'Create your AI Preview'
               )}
             </button>
           </div>

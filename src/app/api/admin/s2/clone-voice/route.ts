@@ -37,11 +37,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if voice already exists
+    // Check if voice already exists and determine if re-cloning is needed
     console.log(`[voice_cloning] 🔍 Checking for existing voice clone...`);
     const { data: existingProfile, error: profileError } = await supabase
       .from('s2_therapist_profiles')
-      .select('cloned_voice_id, full_name')
+      .select('cloned_voice_id, full_name, voice_cloning_session_count')
       .eq('id', therapistProfileId)
       .single();
 
@@ -58,18 +58,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[voice_cloning] 👩‍⚕️ Found therapist: ${existingProfile.full_name}`);
-
-    if (existingProfile.cloned_voice_id) {
-      console.log(`[voice_cloning] ⚠️ Voice already exists: ${existingProfile.cloned_voice_id}`);
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'VOICE_ALREADY_EXISTS',
-          message: `Voice clone already exists for ${existingProfile.full_name}. Delete existing voice first.`
-        },
-        { status: 409 }
-      );
-    }
 
     // Get all sessions with audio for this therapist, ordered by most recent first
     console.log(`[voice_cloning] 🎧 Searching for audio sessions...`);
@@ -112,6 +100,38 @@ export async function POST(request: NextRequest) {
         },
         { status: 400 }
       );
+    }
+
+    // Check if re-cloning is needed
+    const previousSessionCount = existingProfile.voice_cloning_session_count || 0;
+    const currentSessionCount = sessions.length;
+
+    if (existingProfile.cloned_voice_id && currentSessionCount <= previousSessionCount) {
+      console.log(`[voice_cloning] ⏭️ Voice cloning skipped: voice already exists and no new audio material`);
+      console.log(`[voice_cloning] 📊 Current sessions: ${currentSessionCount}, Last clone used: ${previousSessionCount}`);
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        voice_id: existingProfile.cloned_voice_id,
+        message: `Voice already exists and no new audio material available`,
+        sessions_available: currentSessionCount,
+        sessions_in_last_clone: previousSessionCount
+      });
+    }
+
+    // If voice exists and we have new material, delete old voice first
+    if (existingProfile.cloned_voice_id) {
+      const newSessionCount = currentSessionCount - previousSessionCount;
+      console.log(`[voice_cloning] 🔄 Re-cloning detected: ${newSessionCount} new sessions available`);
+      console.log(`[voice_cloning] 🗑️ Deleting existing voice from ElevenLabs: ${existingProfile.cloned_voice_id}`);
+
+      try {
+        await deleteVoiceFromElevenLabs(existingProfile.cloned_voice_id);
+        console.log(`[voice_cloning] ✅ Existing voice deleted successfully`);
+      } catch (deleteError) {
+        console.error(`[voice_cloning] ⚠️ Failed to delete existing voice (will proceed anyway):`, deleteError);
+        // Continue with cloning even if delete fails
+      }
     }
 
     // Log session details
@@ -196,11 +216,15 @@ export async function POST(request: NextRequest) {
     );
     console.log(`[voice_cloning] ✅ Voice successfully cloned with ID: ${voiceId}`);
 
-    // Store voice ID in database
-    console.log(`[voice_cloning] 💾 Saving voice ID to database...`);
+    // Store voice ID and tracking info in database
+    console.log(`[voice_cloning] 💾 Saving voice ID and tracking data to database...`);
     const { error: updateError } = await supabase
       .from('s2_therapist_profiles')
-      .update({ cloned_voice_id: voiceId })
+      .update({
+        cloned_voice_id: voiceId,
+        voice_last_cloned_at: new Date().toISOString(),
+        voice_cloning_session_count: selectedSessions.length
+      })
       .eq('id', therapistProfileId);
 
     if (updateError) {
