@@ -13,7 +13,7 @@ export function ForceLightMode() {
     try {
       localStorage.removeItem('theme');
       localStorage.setItem('theme', 'light');
-    } catch (e) {
+    } catch {
       // Ignore localStorage errors
     }
   }, []);
