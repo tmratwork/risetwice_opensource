@@ -20,8 +20,7 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
     name: '',
     email: user?.email || '',
     subject: '',
-    message: '',
-    priority: 'medium' as 'low' | 'medium' | 'high'
+    message: ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
@@ -58,8 +57,7 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
         name: '',
         email: user?.email || '',
         subject: '',
-        message: '',
-        priority: 'medium'
+        message: ''
       });
 
       // Auto-close after success message is shown
@@ -104,7 +102,7 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
           {/* Name */}
           <div className="mb-4">
             <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-              Your Name *
+              Your Name
             </label>
             <input
               type="text"
@@ -112,7 +110,6 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
               name="name"
               value={formData.name}
               onChange={handleInputChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Enter your full name"
             />
@@ -121,7 +118,7 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
           {/* Email */}
           <div className="mb-4">
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-              Email Address *
+              Email Address
             </label>
             <input
               type="email"
@@ -129,34 +126,15 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="your.email@example.com"
             />
           </div>
 
-          {/* Priority */}
-          <div className="mb-4">
-            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-2">
-              Priority Level
-            </label>
-            <select
-              id="priority"
-              name="priority"
-              value={formData.priority}
-              onChange={handleInputChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
-            >
-              <option value="low">Low - General question</option>
-              <option value="medium">Medium - Need assistance</option>
-              <option value="high">High - Urgent issue</option>
-            </select>
-          </div>
-
           {/* Subject */}
           <div className="mb-4">
             <label htmlFor="subject" className="block text-sm font-medium text-gray-700 mb-2">
-              Subject *
+              Subject
             </label>
             <input
               type="text"
@@ -164,7 +142,6 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
               name="subject"
               value={formData.subject}
               onChange={handleInputChange}
-              required
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Brief description of your issue"
             />
@@ -173,14 +150,13 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
           {/* Message */}
           <div className="mb-6">
             <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-2">
-              Message *
+              Message
             </label>
             <textarea
               id="message"
               name="message"
               value={formData.message}
               onChange={handleInputChange}
-              required
               rows={4}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
               placeholder="Please describe your issue in detail..."
@@ -211,7 +187,7 @@ const ContactSupportModal: React.FC<ContactSupportModalProps> = ({
             </button>
             <button
               type="submit"
-              disabled={isSubmitting || !formData.name || !formData.email || !formData.subject || !formData.message}
+              disabled={isSubmitting}
               className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {isSubmitting ? 'Submitting...' : 'Submit Request'}

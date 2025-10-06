@@ -14,7 +14,6 @@ interface SupportRequestBody {
   email: string;
   subject: string;
   message: string;
-  priority: 'low' | 'medium' | 'high';
   userId?: string;
   userEmail?: string;
 }
@@ -23,42 +22,28 @@ export async function POST(request: NextRequest) {
   try {
     const body: SupportRequestBody = await request.json();
 
-    // Validate required fields
-    if (!body.name || !body.email || !body.subject || !body.message) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
-    }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(body.email)) {
-      return NextResponse.json(
-        { error: 'Invalid email format' },
-        { status: 400 }
-      );
-    }
-
-    // Validate priority
-    if (!['low', 'medium', 'high'].includes(body.priority)) {
-      return NextResponse.json(
-        { error: 'Invalid priority level' },
-        { status: 400 }
-      );
+    // Validate email format if provided
+    if (body.email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(body.email)) {
+        return NextResponse.json(
+          { error: 'Invalid email format' },
+          { status: 400 }
+        );
+      }
     }
 
     // Insert support request into Supabase
     const { data, error } = await supabase
       .from('support_requests')
       .insert({
-        name: body.name.trim(),
-        email: body.email.trim(),
-        subject: body.subject.trim(),
-        message: body.message.trim(),
-        priority: body.priority,
+        name: body.name?.trim() || '',
+        email: body.email?.trim() || '',
+        subject: body.subject?.trim() || '',
+        message: body.message?.trim() || '',
+        priority: 'medium',
         user_id: body.userId || null,
-        user_email: body.userEmail || body.email.trim(),
+        user_email: body.userEmail || body.email?.trim() || '',
         status: 'open',
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
