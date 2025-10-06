@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
-import { ThemeProvider } from '@/contexts/theme-context';
 import { ClientHeader } from '@/components/client-header';
 import { MobileFooterNavV15 } from './components/MobileFooterNavV15';
 import SearchProgressToast from './components/SearchProgressToast';
@@ -103,33 +102,31 @@ export default function ChatBotV15Layout({
 }) {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <div className="v11-layout-root">
-          <AuthUserIdSync />
-          <AudioMonitoringInit />
+      <div className="v11-layout-root">
+        <AuthUserIdSync />
+        <AudioMonitoringInit />
 
-          {/* Header Row - Reuse V11 header */}
-          <div className="header-row">
-            <ClientHeader />
-          </div>
-
-          {/* Main Content Row */}
-          <div className="main-content-row">
-            {children}
-          </div>
-
-          {/* Footer Row - Reuse V11 footer but update paths */}
-          <div className="footer-row">
-            <MobileFooterNavWithDebug />
-          </div>
+        {/* Header Row - Reuse V11 header */}
+        <div className="header-row">
+          <ClientHeader />
         </div>
-        
-        {/* V15 Search Progress Toast */}
-        <SearchProgressToast />
-        
-        {/* Move Toaster outside grid - positioned absolutely */}
-        <Toaster position="top-center" />
-      </ThemeProvider>
+
+        {/* Main Content Row */}
+        <div className="main-content-row">
+          {children}
+        </div>
+
+        {/* Footer Row - Reuse V11 footer but update paths */}
+        <div className="footer-row">
+          <MobileFooterNavWithDebug />
+        </div>
+      </div>
+
+      {/* V15 Search Progress Toast */}
+      <SearchProgressToast />
+
+      {/* Move Toaster outside grid - positioned absolutely */}
+      <Toaster position="top-center" />
     </AuthProvider>
   );
 }

@@ -3,7 +3,6 @@
 import { useEffect, useState } from 'react';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
-import { ThemeProvider } from '@/contexts/theme-context';
 import { ClientHeader } from '@/components/client-header';
 import ThinkingStateMonitoringInit from '@/components/ThinkingStateMonitoringInit';
 import { MobileFooterNav } from '@/components/mobile-footer-nav';
@@ -186,31 +185,29 @@ export default function ChatBotV11Layout({
 }) {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <div className="v11-layout-root">
-          <AuthUserIdSync />
-          <AudioMonitoringInit />
-          <ThinkingStateMonitoringInit />
+      <div className="v11-layout-root">
+        <AuthUserIdSync />
+        <AudioMonitoringInit />
+        <ThinkingStateMonitoringInit />
 
-          {/* Header Row */}
-          <div className="header-row">
-            <ClientHeader />
-          </div>
-
-          {/* Main Content Row */}
-          <div className="main-content-row">
-            {children}
-          </div>
-
-          {/* Footer Row */}
-          <div className="footer-row">
-            <MobileFooterNavWithDebug />
-          </div>
+        {/* Header Row */}
+        <div className="header-row">
+          <ClientHeader />
         </div>
-        
-        {/* Move Toaster outside grid - positioned absolutely */}
-        <Toaster position="top-center" />
-      </ThemeProvider>
+
+        {/* Main Content Row */}
+        <div className="main-content-row">
+          {children}
+        </div>
+
+        {/* Footer Row */}
+        <div className="footer-row">
+          <MobileFooterNavWithDebug />
+        </div>
+      </div>
+
+      {/* Move Toaster outside grid - positioned absolutely */}
+      <Toaster position="top-center" />
     </AuthProvider>
   );
 }

@@ -4,7 +4,6 @@
 "use client";
 
 import { AuthProvider } from '@/contexts/auth-context';
-import { ThemeProvider } from '@/contexts/theme-context';
 import { ClientHeader } from '@/components/client-header';
 // Import V16 CSS styles to match chatbotV16 appearance
 import '../chatbotV16/chatbotV16.css';
@@ -20,24 +19,22 @@ export default function S2Layout({
 }) {
   return (
     <AuthProvider>
-      <ThemeProvider>
-        <div className="v16-layout-root">
-          {/* Header Row - exact same as chatbotV17 */}
-          <div className="header-row">
-            <ClientHeader />
-          </div>
-
-          {/* Main Content Row - exact same as chatbotV17 */}
-          <div className="main-content-row">
-            {children}
-          </div>
-
-          {/* Footer Row - empty for S2 but maintaining structure */}
-          <div className="footer-row">
-            {/* S2 doesn't need footer nav, but keeping the row for consistent layout */}
-          </div>
+      <div className="v16-layout-root">
+        {/* Header Row - exact same as chatbotV17 */}
+        <div className="header-row">
+          <ClientHeader />
         </div>
-      </ThemeProvider>
+
+        {/* Main Content Row - exact same as chatbotV17 */}
+        <div className="main-content-row">
+          {children}
+        </div>
+
+        {/* Footer Row - empty for S2 but maintaining structure */}
+        <div className="footer-row">
+          {/* S2 doesn't need footer nav, but keeping the row for consistent layout */}
+        </div>
+      </div>
     </AuthProvider>
   );
 }

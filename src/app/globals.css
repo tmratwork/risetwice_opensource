@@ -7,19 +7,6 @@
   --foreground: #3b503c;
 }
 
-:root.dark {
-  --background: #131314;
-  /* Adjusted to match Claude.ai's brown/dark gray undertone */
-  --foreground: #ededed;
-}
-
-/* Direct color application as suggested by WebAI */
-.dark body,
-html.dark body,
-body.dark {
-  background-color: #131314 !important;
-}
-
 body {
   color: var(--foreground);
   background: var(--background);
