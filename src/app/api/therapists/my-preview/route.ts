@@ -52,6 +52,9 @@ export async function POST(request: NextRequest) {
           prompt_title,
           status,
           is_public
+        ),
+        s2_ai_style_configs!s2_ai_style_configs_therapist_profile_id_fkey(
+          opening_statement
         )
       `)
       .eq('user_id', userId)
@@ -84,6 +87,7 @@ export async function POST(request: NextRequest) {
     // Transform the data to match our frontend interface
     const completeProfile = therapist.s2_complete_profiles?.[0] || {};
     const aiPrompt = therapist.s2_ai_therapist_prompts?.[0] || {};
+    const aiStyleConfig = therapist.s2_ai_style_configs?.[0] || {};
 
     const transformedTherapist = {
       id: therapist.id,
@@ -102,6 +106,7 @@ export async function POST(request: NextRequest) {
       ageRangesTreated: completeProfile.age_ranges_treated || [],
       lgbtqAffirming: completeProfile.lgbtq_affirming,
       sessionFees: completeProfile.session_fees,
+      openingStatement: aiStyleConfig.opening_statement,
       // AI Preview specific data
       aiPrompt: {
         id: aiPrompt.id,

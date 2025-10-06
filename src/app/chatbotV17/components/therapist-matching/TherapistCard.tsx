@@ -15,6 +15,7 @@ export interface Therapist {
   languagesSpoken?: string[];
   genderIdentity?: string;
   clonedVoiceId?: string;
+  openingStatement?: string;
 }
 
 interface TherapistCardProps {

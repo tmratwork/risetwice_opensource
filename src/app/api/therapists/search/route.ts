@@ -29,6 +29,9 @@ interface DatabaseTherapist {
     lgbtq_affirming?: boolean;
     session_fees?: string;
   }>;
+  s2_ai_style_configs?: Array<{
+    opening_statement?: string;
+  }>;
 }
 
 export async function GET(request: NextRequest) {
@@ -71,10 +74,14 @@ export async function GET(request: NextRequest) {
           age_ranges_treated,
           lgbtq_affirming,
           session_fees
+        ),
+        s2_ai_style_configs!s2_ai_style_configs_therapist_profile_id_fkey(
+          opening_statement
         )
       `)
       .eq('is_active', true)
-      .eq('s2_complete_profiles.is_active', true);
+      .eq('s2_complete_profiles.is_active', true)
+      .eq('s2_ai_style_configs.is_active', true);
 
     // Apply filters
     if (query) {
@@ -126,6 +133,7 @@ export async function GET(request: NextRequest) {
     // Transform the data to match our frontend interface
     const transformedTherapists = therapists.map((therapist: DatabaseTherapist) => {
       const completeProfile = therapist.s2_complete_profiles?.[0] || {};
+      const aiStyleConfig = therapist.s2_ai_style_configs?.[0] || {};
 
       return {
         id: therapist.id,
@@ -143,7 +151,8 @@ export async function GET(request: NextRequest) {
         treatmentApproaches: completeProfile.treatment_approaches || [],
         ageRangesTreated: completeProfile.age_ranges_treated || [],
         lgbtqAffirming: completeProfile.lgbtq_affirming,
-        sessionFees: completeProfile.session_fees
+        sessionFees: completeProfile.session_fees,
+        openingStatement: aiStyleConfig.opening_statement
       };
     });
 

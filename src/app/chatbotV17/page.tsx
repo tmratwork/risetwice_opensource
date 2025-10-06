@@ -138,6 +138,9 @@ export default function ChatBotV17Page() {
   // Handle therapist AI preview (replaces demo buttons)
   const handleTryAIPreview = useCallback(async (therapist: Therapist) => {
     console.log('[V17] Starting AI preview for therapist:', therapist.fullName);
+    console.log('[V17] 🔍 Therapist object keys:', Object.keys(therapist));
+    console.log('[V17] 🔍 Has openingStatement?', !!therapist.openingStatement);
+    console.log('[V17] 🔍 openingStatement value:', therapist.openingStatement);
     setSelectedTherapist(therapist);
     setLoadingPrompt(true);
     setPromptError(null); // Clear any previous errors
@@ -179,13 +182,20 @@ export default function ChatBotV17Page() {
           console.log(`[V17] 🎤 Using default voice (no cloned voice available for ${therapist.fullName})`);
         }
 
+        // Log opening statement if available
+        if (therapist.openingStatement) {
+          console.log(`[V17] 👋 Using custom opening statement for ${therapist.fullName}:`, therapist.openingStatement.substring(0, 100) + '...');
+        } else {
+          console.log(`[V17] 👋 No custom opening statement for ${therapist.fullName}, using default`);
+        }
+
         // Create conversation if needed
         if (!store.conversationId) {
           await store.createConversation();
         }
 
-        // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice
-        await startSession('ai_preview', voiceId, generatedTherapistPrompt);
+        // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice + custom opening statement
+        await startSession('ai_preview', voiceId, generatedTherapistPrompt, therapist.openingStatement);
 
         console.log(`[V17] ✅ AI preview started with comprehensive prompt for: ${therapist.fullName}`);
       } else {
@@ -515,15 +525,6 @@ export default function ChatBotV17Page() {
       });
     }
   }, [store.conversationHistory]);
-
-  // Debug render states
-  console.log('[V17] Render states:', {
-    showMatching,
-    showDetailedView,
-    detailedTherapistData: !!detailedTherapistData,
-    selectedTherapist: !!selectedTherapist,
-    isConnected
-  });
 
   // Show detailed therapist view
   if (showDetailedView && detailedTherapistData) {

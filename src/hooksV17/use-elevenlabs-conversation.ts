@@ -19,6 +19,9 @@ export function useElevenLabsConversation() {
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
 
+  // Track custom first message for logging after connection
+  const customFirstMessageRef = useRef<string | null>(null);
+
   // WebRTC stream tracking for microphone mute control
   const activeStreamsRef = useRef<MediaStream[]>([]);
   const isMicrophoneMutedRef = useRef<boolean>(store.isMuted);
@@ -35,6 +38,17 @@ export function useElevenLabsConversation() {
         userId: user?.uid || 'anonymous',
         specialist: store.triageSession?.currentSpecialist
       });
+
+      // Log whether custom first message or default greeting will be used
+      if (customFirstMessageRef.current) {
+        logV17('👋 AI Preview will use CUSTOM opening statement', {
+          preview: customFirstMessageRef.current.substring(0, 100) + '...',
+          fullLength: customFirstMessageRef.current.length
+        });
+      } else {
+        logV17('👋 AI Preview will use DEFAULT greeting (no custom opening statement provided)');
+      }
+
       store.setIsConnected(true);
       store.setConnectionState('connected');
       setIsPreparing(false);
@@ -59,6 +73,9 @@ export function useElevenLabsConversation() {
       // Reset thinking states on disconnect
       store.setIsUserSpeaking(false);
       store.setIsThinking(false);
+
+      // Clear custom first message ref
+      customFirstMessageRef.current = null;
     },
 
 
@@ -375,17 +392,22 @@ export function useElevenLabsConversation() {
   //   }
   // }, [conversation, store.isConnected]);
 
-  // Start session with specific specialist agent (with optional demo parameters)
-  const startSession = useCallback(async (specialistType: string = 'triage', demoVoiceId?: string, demoPromptAppend?: string) => {
+  // Start session with specific specialist agent (with optional demo parameters and custom first message)
+  const startSession = useCallback(async (specialistType: string = 'triage', demoVoiceId?: string, demoPromptAppend?: string, customFirstMessage?: string) => {
     try {
       setIsPreparing(true);
-      
+
+      // Store custom first message in ref for logging after connection
+      customFirstMessageRef.current = customFirstMessage || null;
+
       logV17('🚀 Starting ElevenLabs session', {
         specialistType,
         userId: user?.uid || 'anonymous',
         isDemoRequest: !!(demoVoiceId || demoPromptAppend),
         demoVoiceId,
-        demoPromptLength: demoPromptAppend?.length || 0
+        demoPromptLength: demoPromptAppend?.length || 0,
+        hasCustomFirstMessage: !!customFirstMessage,
+        customFirstMessagePreview: customFirstMessage?.substring(0, 50)
       });
 
       // 1. Load saved voice preferences from localStorage
@@ -440,15 +462,24 @@ export function useElevenLabsConversation() {
       });
 
       // 3. Start conversation with agent using WebRTC if available (v0.6.1+ feature)
+      // Include custom first message override if provided
       await conversation.startSession({
         agentId: agent.agent_id,
         connectionType: 'webrtc', // Use WebRTC for better audio quality
-        userId: user?.uid || undefined // Optional user tracking
+        userId: user?.uid || undefined, // Optional user tracking
+        ...(customFirstMessage && {
+          overrides: {
+            agent: {
+              firstMessage: customFirstMessage
+            }
+          }
+        })
       });
 
       logV17('✅ ElevenLabs session started successfully', {
         agentId: agent.agent_id,
-        specialistType
+        specialistType,
+        usedCustomFirstMessage: !!customFirstMessage
       });
 
       return agent.agent_id;
