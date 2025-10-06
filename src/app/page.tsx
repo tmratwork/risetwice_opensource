@@ -10,7 +10,7 @@ export default function Home() {
 
   // Automatically redirect to the latest chatbot on component mount
   useEffect(() => {
-    router.push('/chatbotV16');
+    router.push('/chatbotV17');
   }, [router]);
 
   return (
@@ -23,7 +23,7 @@ export default function Home() {
           <p className="mb-4 text-sm text-gray-600">If you are not routed automatically, please click below:</p>
 
           <Link
-            href="/chatbotV16"
+            href="/chatbotV17"
             className="bg-blue-500 text-white py-3 px-4 rounded-lg text-center hover:bg-blue-600 transition"
           >
             Let&apos;s Talk
