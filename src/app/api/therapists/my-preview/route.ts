@@ -30,6 +30,7 @@ export async function POST(request: NextRequest) {
         user_id,
         full_name,
         title,
+        other_title,
         degrees,
         primary_location,
         gender_identity,
@@ -89,10 +90,15 @@ export async function POST(request: NextRequest) {
     const aiPrompt = therapist.s2_ai_therapist_prompts?.[0] || {};
     const aiStyleConfig = therapist.s2_ai_style_configs?.[0] || {};
 
+    // Use other_title if title is "Other" and other_title exists
+    const displayTitle = therapist.title === 'Other' && therapist.other_title
+      ? therapist.other_title
+      : therapist.title;
+
     const transformedTherapist = {
       id: therapist.id,
       fullName: therapist.full_name,
-      title: therapist.title,
+      title: displayTitle,
       degrees: therapist.degrees || [],
       primaryLocation: therapist.primary_location,
       genderIdentity: therapist.gender_identity,

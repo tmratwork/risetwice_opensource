@@ -50,11 +50,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Merge the data from both tables into a comprehensive therapist object
+    // Use other_title if title is "Other" and other_title exists
+    const displayTitle = basicProfile.title === 'Other' && basicProfile.other_title
+      ? basicProfile.other_title
+      : basicProfile.title;
+
     const detailedTherapist = {
       // From s2_therapist_profiles (basic info)
       id: basicProfile.id,
       fullName: basicProfile.full_name,
-      title: basicProfile.title,
+      title: displayTitle,
       degrees: basicProfile.degrees,
       primaryLocation: basicProfile.primary_location,
       offersOnline: basicProfile.offers_online,
