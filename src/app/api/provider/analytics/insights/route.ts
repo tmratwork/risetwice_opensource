@@ -40,7 +40,7 @@ export async function GET(request: NextRequest) {
     // Get conversation analyses for these sessions
     const sessionIds = sessions?.map(s => s.session_id).filter(Boolean) || [];
 
-    let conversationAnalyses = [];
+    let conversationAnalyses: Array<{ conversation_id: string; analysis_result: unknown }> = [];
     if (sessionIds.length > 0) {
       const { data: analyses, error: analysesError } = await supabase
         .from('v16_conversation_analyses')

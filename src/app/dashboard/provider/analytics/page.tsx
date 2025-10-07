@@ -434,7 +434,7 @@ interface UsersTabProps {
 }
 
 const UsersTab: React.FC<UsersTabProps> = ({ usersData, filter, onFilterChange }) => {
-  const [selectedUser, setSelectedUser] = useState<EngagedUser | null>(null);
+  const [, setSelectedUser] = useState<EngagedUser | null>(null);
 
   if (!usersData) {
     return (
