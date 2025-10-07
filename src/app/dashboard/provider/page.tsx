@@ -131,12 +131,12 @@ const ProviderDashboard: React.FC = () => {
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 View patient interactions, preview performance, and engagement metrics.
               </p>
-              <div className="inline-flex items-center px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 text-sm rounded-full border border-blue-200 dark:border-blue-800">
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Coming Soon
-              </div>
+              <Link
+                href="/dashboard/provider/analytics"
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors"
+              >
+                View Analytics
+              </Link>
             </div>
           </div>
 

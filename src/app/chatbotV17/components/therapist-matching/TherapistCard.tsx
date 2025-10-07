@@ -16,6 +16,7 @@ export interface Therapist {
   genderIdentity?: string;
   clonedVoiceId?: string;
   openingStatement?: string;
+  userId?: string; // Firebase UID for analytics tracking
 }
 
 interface TherapistCardProps {
@@ -37,6 +38,28 @@ const TherapistCard: React.FC<TherapistCardProps> = ({
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [contactInfoClicked, setContactInfoClicked] = useState(false);
+
+  // Track analytics event
+  const trackAnalyticsEvent = async (eventType: string, eventData?: Record<string, unknown>) => {
+    try {
+      // Get current user from auth context if available
+      const userId = typeof window !== 'undefined' ? localStorage.getItem('userId') : null;
+
+      await fetch('/api/provider/analytics/events', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider_user_id: (therapist as { userId?: string }).userId,
+          anonymous_user_id: userId,
+          event_type: eventType,
+          event_data: eventData
+        })
+      });
+    } catch (error) {
+      console.error('Failed to track analytics event:', error);
+      // Don't block user action if tracking fails
+    }
+  };
 
   const formatDegrees = (degrees: string[]) => {
     return degrees.join(', ');
@@ -206,8 +229,11 @@ const TherapistCard: React.FC<TherapistCardProps> = ({
                 <button
                   onClick={() => {
                     setContactInfoClicked(true);
-                    // TODO: Track contact button click in provider analytics dashboard (when implemented)
-                    // This should send: { providerId: therapist.id, timestamp: Date.now(), profileView: 'shorthand' }
+                    // Track contact button click for provider analytics
+                    trackAnalyticsEvent('contact_click', {
+                      profileView: 'card',
+                      contactMethod: 'button_click'
+                    });
                   }}
                   disabled={contactInfoClicked}
                   className="font-bold px-6 py-2 rounded-lg transition-colors hover:opacity-80 disabled:opacity-50"
