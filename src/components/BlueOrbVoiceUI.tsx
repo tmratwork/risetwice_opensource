@@ -3,7 +3,6 @@
 import React, { useRef, useEffect, useState, useMemo } from 'react';
 import { audioLogger } from '@/hooksV15';
 import { webrtcAudioIntegration } from '@/hooksV11/webrtc-audio-extensions';
-import { useTheme } from '@/contexts/theme-context';
 import ThinkingDotsAnimation from './ThinkingDotsAnimation';
 
 interface Particle {
@@ -53,7 +52,6 @@ function BlueOrbVoiceUI({
   onClick,
   draggable = false,
 }: BlueOrbVoiceUIProps) {
-  const { theme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationRef = useRef<number | null>(null);
   const particlesRef = useRef<Particle[]>([]);
@@ -65,15 +63,9 @@ function BlueOrbVoiceUI({
   // Add refs to track the current state props
   const isSpeakingRef = useRef(isSpeaking);
   const currentVolumeRef = useRef(currentVolume);
-  
-  // Theme-aware thinking dots color
-  const thinkingDotsColor = useMemo(() => {
-    if (theme === 'dark') {
-      return '#ffd700'; // Gold for dark mode (current color)
-    } else {
-      return '#374151'; // Dark gray for light mode (better contrast)
-    }
-  }, [theme]);
+
+  // Thinking dots color - hardcoded for light mode (dark theme removed)
+  const thinkingDotsColor = '#374151'; // Dark gray for light mode
 
   // Drag state
   const [isDragging, setIsDragging] = useState(false);

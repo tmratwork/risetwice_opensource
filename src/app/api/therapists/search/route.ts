@@ -144,6 +144,7 @@ export async function GET(request: NextRequest) {
 
       return {
         id: therapist.id,
+        userId: (therapist as { user_id?: string }).user_id, // Firebase UID for analytics
         fullName: therapist.full_name,
         title: displayTitle,
         degrees: therapist.degrees || [],

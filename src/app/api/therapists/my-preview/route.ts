@@ -97,6 +97,7 @@ export async function POST(request: NextRequest) {
 
     const transformedTherapist = {
       id: therapist.id,
+      userId: therapist.user_id, // Firebase UID for analytics
       fullName: therapist.full_name,
       title: displayTitle,
       degrees: therapist.degrees || [],

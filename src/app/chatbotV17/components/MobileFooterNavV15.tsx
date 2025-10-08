@@ -14,10 +14,10 @@ export function MobileFooterNavV15({ }: MobileFooterNavV15Props = {}) {
   const [isBugReportModalOpen, setIsBugReportModalOpen] = useState(false);
 
   return (
-    <nav className="bg-white dark:bg-[#131314] border-t border-sage-400 dark:border-gray-800 flex px-4 py-3 relative">
+    <nav className="bg-white border-t border-sage-400 flex px-4 py-3 relative">
       <Link
         href="/chatbotV16"
-        className={`flex-1 flex flex-col items-center text-xs relative ${pathname === '/chatbotV16' || pathname.startsWith('/chatbotV16/') ? 'text-green-600 dark:text-green-400 font-bold' : 'text-gray-500 dark:text-gray-400'}`}
+        className={`flex-1 flex flex-col items-center text-xs relative ${pathname === '/chatbotV16' || pathname.startsWith('/chatbotV16/') ? 'text-green-600 font-bold' : 'text-gray-500'}`}
       >
         {/* Active tab indicator line */}
         {(pathname === '/chatbotV16' || pathname.startsWith('/chatbotV16/')) && (
@@ -32,7 +32,7 @@ export function MobileFooterNavV15({ }: MobileFooterNavV15Props = {}) {
 
       <Link
         href="/chatbotV17"
-        className={`flex-1 flex flex-col items-center text-xs relative ${pathname === '/chatbotV17' || pathname.startsWith('/chatbotV17/') ? 'text-green-600 dark:text-green-400 font-bold' : 'text-gray-500 dark:text-gray-400'}`}
+        className={`flex-1 flex flex-col items-center text-xs relative ${pathname === '/chatbotV17' || pathname.startsWith('/chatbotV17/') ? 'text-green-600 font-bold' : 'text-gray-500'}`}
       >
         {/* Active tab indicator line */}
         {(pathname === '/chatbotV17' || pathname.startsWith('/chatbotV17/')) && (
