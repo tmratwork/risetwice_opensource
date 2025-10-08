@@ -585,7 +585,7 @@ export default function ChatBotV17Page() {
           )}
 
           {/* Therapist Results */}
-          <div className="flex-1 overflow-y-auto" style={{ marginTop: 0 }}>
+          <div className="flex-1" style={{ marginTop: 0, paddingBottom: '20px' }}>
             {/* Disclaimer - inside scrollable area */}
             <div className="mt-0 mb-6">
               <div className="w-full h-px bg-gray-300 mb-6"></div>

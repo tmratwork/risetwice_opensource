@@ -357,7 +357,7 @@ html.dark body {
     right: 0;
     bottom: 0;
   }
-  
+
   /* Ensure footer row sticks to bottom on mobile */
   .footer-row {
     position: sticky;
@@ -366,14 +366,31 @@ html.dark body {
     background-color: var(--bg-primary);
     z-index: 100; /* Higher z-index to ensure it's always on top */
   }
-  
+
   /* Adjust main content to account for fixed positioning */
   .main-content-row {
     height: 100%;
     overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-bottom: env(safe-area-inset-bottom, 0px); /* Account for iOS notch */
   }
-  
+
+  /* Fix for matching/listing pages - ensure content scrolls properly */
+  .main-container {
+    overflow-y: visible; /* Allow content to extend */
+    overflow-x: hidden;
+    min-height: auto; /* Don't constrain height on mobile */
+    padding-bottom: 80px; /* Extra space for footer */
+  }
+
+  /* Ensure nested scrollable areas work properly */
+  .flex-1.overflow-y-auto {
+    overflow-y: visible !important; /* Prevent nested scroll containers on mobile */
+    height: auto !important;
+    min-height: auto !important;
+  }
+
   /* Dark mode support for footer */
   .dark .footer-row {
     background-color: #131314;
