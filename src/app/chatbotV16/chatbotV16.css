@@ -20,8 +20,7 @@
   min-height: 0; /* Critical: allow shrinking so flex children work properly */
   display: flex;
   flex-direction: column;
-  overflow-y: auto; /* Allow vertical scrolling for content pages like resources */
-  overflow-x: hidden; /* Prevent horizontal scroll */
+  overflow: hidden; /* No longer the scroll container - children handle their own scrolling */
 }
 
 /* Footer Row */
@@ -48,7 +47,8 @@
   display: flex;
   flex-direction: column;
   position: relative;
-  overflow: hidden; /* Prevent overflow beyond grid row */
+  overflow-y: auto; /* Now the scroll container for all content */
+  overflow-x: hidden; /* Prevent horizontal overflow */
   min-height: 0; /* Critical: allow shrinking so inheritance works */
 }
 
@@ -370,26 +370,19 @@ html.dark body {
   /* Adjust main content to account for fixed positioning */
   .main-content-row {
     height: 100%;
-    overflow-y: auto;
-    overflow-x: hidden;
+    overflow: hidden;
     -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
     padding-bottom: env(safe-area-inset-bottom, 0px); /* Account for iOS notch */
   }
 
   /* Fix for matching/listing pages - ensure content scrolls properly */
   .main-container {
-    overflow-y: visible; /* Allow content to extend */
+    overflow-y: auto; /* Consistent scroll container on mobile */
     overflow-x: hidden;
     min-height: auto; /* Don't constrain height on mobile */
     padding-bottom: 80px; /* Extra space for footer */
   }
 
-  /* Ensure nested scrollable areas work properly */
-  .flex-1.overflow-y-auto {
-    overflow-y: visible !important; /* Prevent nested scroll containers on mobile */
-    height: auto !important;
-    min-height: auto !important;
-  }
 
   /* Dark mode support for footer */
   .dark .footer-row {
