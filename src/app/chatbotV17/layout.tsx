@@ -119,10 +119,12 @@ export default function ChatBotV17Layout({
             {children}
           </div>
 
-          {/* Footer Row */}
-          <div className="footer-row">
-            <MobileFooterNavWithDebug />
-          </div>
+          {/* Footer Row - Conditional based on deployment */}
+          {process.env.NEXT_PUBLIC_FOOTER_TYPE !== 'none' && (
+            <div className="footer-row">
+              <MobileFooterNavWithDebug />
+            </div>
+          )}
         </div>
 
         {/* V17 Search Progress Toast */}
