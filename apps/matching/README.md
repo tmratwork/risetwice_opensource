@@ -40,14 +40,14 @@ NEXT_PUBLIC_FOOTER_TYPE=none
 
 ### Local Testing
 
-To test this configuration locally:
+**Note:** Local testing from `apps/matching` directory is not supported. The configuration is designed specifically for Vercel deployment, which handles parent directory access differently.
 
-```bash
-cd apps/matching
-NEXT_PUBLIC_FOOTER_TYPE=none npx next dev -p 3001
-```
+To test changes before deploying:
+1. Test from the root directory: `npm run dev` (runs main app)
+2. Set `NEXT_PUBLIC_FOOTER_TYPE=none` in root `.env.local` to preview footer-hidden mode
+3. Visit `localhost:3000/chatbotV17`
 
-Visit `localhost:3001` and the footer should be hidden.
+Or deploy to Vercel preview environment for full testing.
 
 ### Notes
 
