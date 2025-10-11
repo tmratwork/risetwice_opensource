@@ -3,6 +3,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { anthropic } from '@/lib/anthropic';
+import { getClaudeModel } from '@/config/models';
 
 export const dynamic = 'force-dynamic';
 
@@ -193,7 +194,7 @@ Please merge this information intelligently and return the updated profile as JS
     let anthropicResponse;
     try {
       anthropicResponse = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model: getClaudeModel(),
         max_tokens: 16000,
         temperature: 0.2,
         system: systemPrompt,

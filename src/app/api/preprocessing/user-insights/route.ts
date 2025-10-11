@@ -6,6 +6,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { anthropic } from '@/lib/anthropic';
+import { getClaudeModel } from '@/config/models';
 
 // Define Supabase error interface
 interface SupabaseError {
@@ -507,7 +508,7 @@ Format your response as a JSON array with these fields for each insight:
         }
 
         const { content } = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",  // Use the current Claude model
+          model: getClaudeModel(),
           max_tokens: 8000,
           temperature: 0.2,  // Keep temperature low for factual analysis
           system: systemPrompt,

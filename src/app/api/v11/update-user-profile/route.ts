@@ -7,6 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { anthropic } from '@/lib/anthropic';
 import fs from 'fs';
 import path from 'path';
+import { getClaudeModel } from '@/config/models';
 
 // Interface for profile prompt response
 // interface ProfilePromptsResponse {
@@ -639,7 +640,7 @@ export async function POST(req: Request) {
 
         // Log the full Claude API configuration
         const claudeConfig = {
-          model: "claude-sonnet-4-20250514",
+          model: getClaudeModel(),
           max_tokens: 16000,
           temperature: 0.2,
           system: systemPrompt,
@@ -658,7 +659,7 @@ export async function POST(req: Request) {
 
         // Call Claude to merge the profiles
         const mergeResponse = await anthropic.messages.create({
-          model: "claude-sonnet-4-20250514",
+          model: getClaudeModel(),
           max_tokens: 4000,
           temperature: 0.2,
           system: systemPrompt,

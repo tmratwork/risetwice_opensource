@@ -16,7 +16,7 @@ const anthropicApiKey = process.env.ANTHROPIC_API_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
 // Get the correct Claude model from config
-const CLAUDE_MODEL = getClaudeModel(); // Returns CLAUDE_SONNET_4
+const CLAUDE_MODEL = getClaudeModel(); // Returns CLAUDE_SONNET_4_5
 
 // Dev mode comprehensive logging
 const isDevelopment = process.env.NODE_ENV === 'development';

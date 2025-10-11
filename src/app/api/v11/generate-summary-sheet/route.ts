@@ -6,6 +6,7 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { anthropic } from '@/lib/anthropic';
 import { logWarmHandoffServer } from '@/utils/server-logger';
+import { getClaudeModel } from '@/config/models';
 
 interface GenerateSummaryRequest {
   userId: string;
@@ -591,7 +592,7 @@ ${allConversationsText}`;
 
     try {
       const { content } = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: getClaudeModel(),
         max_tokens: 16000, // increased max tokens because user profile gets too big. LT solution is better manage user profile length
         temperature: 0.2,  // Keep temperature low for factual analysis
         system: systemPrompt,

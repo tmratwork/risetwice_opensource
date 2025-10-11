@@ -1571,7 +1571,7 @@ export default function PreprocessingPage() {
                     <span>{result.concept_count}</span>
 
                     <span className="text-gray-400">Model:</span>
-                    <span>claude-sonnet-4-20250514</span>
+                    <span>claude-sonnet-4-5-20250929</span>
                   </div>
                 </div>
               </div>
@@ -1673,7 +1673,7 @@ export default function PreprocessingPage() {
                     <span>{result.character_count}</span>
 
                     <span className="text-gray-400">Model:</span>
-                    <span>claude-sonnet-4-20250514</span>
+                    <span>claude-sonnet-4-5-20250929</span>
                   </div>
                 </div>
               </div>
@@ -1821,7 +1821,7 @@ export default function PreprocessingPage() {
                     <span>{result.line_count}</span>
 
                     <span className="text-gray-400">Model:</span>
-                    <span>claude-sonnet-4-20250514</span>
+                    <span>claude-sonnet-4-5-20250929</span>
                   </div>
                 </div>
               </div>

@@ -35,7 +35,7 @@ This `route.ts` file:
 
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { getChatModel } from '@/config/models';
+import { getChatModel, getClaudeModel } from '@/config/models';
 
 export const maxDuration = 300; // Set maximum duration allowed for HTTP call request response to 300 seconds (5 minutes)
 export const dynamic = 'force-dynamic';
@@ -457,11 +457,11 @@ async function handleTextAnalysis(req: NextRequest, requestId: string) {
     try {
       const analysisStart = Date.now();
       console.log(`[Request ${requestId}] Starting Claude analysis at ${new Date(analysisStart).toISOString()}...`);
-      console.log(`[Request ${requestId}] Using model: claude-sonnet-4-20250514`);
+      console.log(`[Request ${requestId}] Using model: ${getClaudeModel()}`);
 
       // Use Claude for analysis
       const response = await anthropic.messages.create({
-        model: "claude-sonnet-4-20250514",
+        model: getClaudeModel(),
         max_tokens: 4096, // this is the max token for this model
         system: systemPrompt || "You are a helpful AI assistant specializing in mathematics education.",
         messages: [

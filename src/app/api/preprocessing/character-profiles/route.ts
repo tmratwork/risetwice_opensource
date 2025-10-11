@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { generateCharacterProfilesFromBook } from '@/services/characterProfiles';
 import { supabase } from '@/lib/supabase';
+import { getClaudeModel } from '@/config/models';
 
 // Force dynamic responses to prevent caching
 export const dynamic = 'force-dynamic';
@@ -120,7 +121,7 @@ export async function POST(req: Request) {
     console.log(`${logPrefix} Database: Supabase`);
     console.log(`${logPrefix} Table: book_character_profiles`);
     console.log(`${logPrefix} Total Characters: ${profiles.length}`);
-    console.log(`${logPrefix} AI Model: claude-sonnet-4-20250514`);
+    console.log(`${logPrefix} AI Model: ${getClaudeModel()}`);
     console.log(`${logPrefix} Characters: ${profiles.map(p => p.character_name).join(', ')}`);
     console.log(`${logPrefix} =======================================`);
 

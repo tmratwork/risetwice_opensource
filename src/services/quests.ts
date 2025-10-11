@@ -849,7 +849,7 @@ No predefined key concepts are available for this book. Please identify the most
 
   try {
     console.log(`[generate_quest] Sending streaming request to Claude to generate ${DEBUG.TESTING ? DEBUG.TEST_NUM_QUESTS : DEBUG.NORMAL_NUM_QUESTS} quests...`);
-    console.log(`[generate_quest] Model: claude-sonnet-4-20250514`);
+    console.log(`[generate_quest] Model: ${getClaudeModel()}`);
     console.log(`[generate_quest] Max tokens: 32000`);
     console.log(`[generate_quest] Temperature: 0.7`);
     updateQuestProgress(bookId, 45, 'Sending request to Claude AI');

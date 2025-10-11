@@ -30,6 +30,7 @@ export const MODELS = {
   // Anthropic Models
   // new model, but expensive: claude-opus-4-1-20250805
   ANTHROPIC: {
+    CLAUDE_SONNET_4_5: "claude-sonnet-4-5-20250929",
     CLAUDE_SONNET_4: "claude-sonnet-4-20250514",
     CLAUDE_SONNET_3_5: "claude-3-5-sonnet-20241022"
   },
@@ -56,7 +57,7 @@ export const getTranscriptionModel = (): string => {
 };
 
 export const getClaudeModel = (): string => {
-  return MODELS.ANTHROPIC.CLAUDE_SONNET_4;
+  return MODELS.ANTHROPIC.CLAUDE_SONNET_4_5;
 };
 
 // Updated to use GPT-5 models by default

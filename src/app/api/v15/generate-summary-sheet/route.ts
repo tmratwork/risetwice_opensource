@@ -10,6 +10,7 @@ import { supabase } from '@/lib/supabase';
 import { anthropic } from '@/lib/anthropic';
 import { logWarmHandoffServer } from '@/utils/server-logger';
 import { PostgrestError } from '@supabase/supabase-js';
+import { getClaudeModel } from '@/config/models';
 
 export const dynamic = 'force-dynamic';
 
@@ -273,7 +274,7 @@ async function processConversationsAndUpdateSummary(
     });
 
     const { content } = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 16000,
       temperature: 0.2,
       system: processedSystemPrompt,

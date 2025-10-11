@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { extractKeyConceptsFromBook } from '@/services/bookConcepts';
 import { supabase } from '@/lib/supabase';
+import { getClaudeModel } from '@/config/models';
 
 // Force dynamic responses to prevent caching
 export const dynamic = 'force-dynamic';
@@ -123,7 +124,7 @@ export async function POST(req: Request) {
       console.log(`${logPrefix} - Failed Chapters: ${concepts.processing_info.failed_chapters?.length || 0}`);
     }
 
-    console.log(`${logPrefix} AI Model: claude-sonnet-4-20250514`);
+    console.log(`${logPrefix} AI Model: ${getClaudeModel()}`);
     console.log(`${logPrefix} =======================================`);
 
     // Create response object

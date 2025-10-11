@@ -8,6 +8,7 @@
 import { NextResponse } from 'next/server';
 import { generateOpeningLinesFromBook } from '@/services/openingLines';
 import { supabase } from '@/lib/supabase';
+import { getClaudeModel } from '@/config/models';
 
 // Force dynamic responses to prevent caching
 export const dynamic = 'force-dynamic';
@@ -177,7 +178,7 @@ export async function POST(req: Request) {
     console.log(`${logPrefix} Database: Supabase`);
     console.log(`${logPrefix} Table: opening_lines_v1`);
     console.log(`${logPrefix} Total Lines: ${openingLines.length}`);
-    console.log(`${logPrefix} AI Model: claude-sonnet-4-20250514`);
+    console.log(`${logPrefix} AI Model: ${getClaudeModel()}`);
     console.log(`${logPrefix} =======================================`);
 
     const response = {

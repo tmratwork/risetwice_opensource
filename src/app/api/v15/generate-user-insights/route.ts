@@ -13,6 +13,7 @@ import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
 import { anthropic } from '@/lib/anthropic';
 import { PostgrestError } from '@supabase/supabase-js';
+import { getClaudeModel } from '@/config/models';
 
 export const dynamic = 'force-dynamic';
 
@@ -237,7 +238,7 @@ async function processConversationsAndUpdateInsights(
     console.log(`[user_insights] Starting Claude analysis for ${conversations.length} conversations`);
 
     const { content } = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 16000,
       temperature: 0.2,
       system: processedSystemPrompt,

@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
 import * as path from 'path';
 import { logProgressUpdateServer } from '@/utils/server-logger';
+import { getClaudeModel } from '@/config/models';
 
 // Anthropic streaming event types
 interface StreamEvent {
@@ -224,7 +225,7 @@ Return the structured data as clean JSON.`;
 
   try {
     const response = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 2048,
       messages: [
         { role: "user", content: formatPrompt }
@@ -1112,7 +1113,7 @@ Include details about what services they provide.`;
   try {
     // Make the API request to Claude with web search enabled and streaming
     const stream = await anthropic.messages.create({
-      model: "claude-sonnet-4-20250514",
+      model: getClaudeModel(),
       max_tokens: 4096,
       messages: [
         { role: "user", content: resourcePrompt }
