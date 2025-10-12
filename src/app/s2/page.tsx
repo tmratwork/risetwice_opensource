@@ -261,10 +261,14 @@ const S2CaseSimulation: React.FC = () => {
   // Show loading while authentication or data is initializing
   if (authLoading || dataLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p style={{ color: 'var(--text-secondary)' }}>Initializing authentication...</p>
+      <div className="chatbot-v16-wrapper">
+        <div className="main-container">
+          <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+              <p style={{ color: 'var(--text-secondary)' }}>Initializing authentication...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -273,20 +277,24 @@ const S2CaseSimulation: React.FC = () => {
   // Show sign-in prompt if not authenticated
   if (!user || !firebaseAvailable) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-        <div className="text-center p-8 rounded-lg shadow-md max-w-md" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-          <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Authentication Required</h2>
-          <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
-            You need to sign in to access S2 Case Simulation.
-          </p>
-          <p className="text-sm text-blue-600">
-            Please use the &quot;Sign In&quot; button in the top navigation.
-          </p>
-          {!firebaseAvailable && (
-            <p className="text-sm text-orange-600 mt-2">
-              Firebase authentication is currently unavailable.
-            </p>
-          )}
+      <div className="chatbot-v16-wrapper">
+        <div className="main-container">
+          <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <div className="text-center p-8 rounded-lg shadow-md max-w-md" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+              <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Authentication Required</h2>
+              <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
+                You need to sign in to access S2 Case Simulation.
+              </p>
+              <p className="text-sm text-blue-600">
+                Please use the &quot;Sign In&quot; button in the top navigation.
+              </p>
+              {!firebaseAvailable && (
+                <p className="text-sm text-orange-600 mt-2">
+                  Firebase authentication is currently unavailable.
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -418,104 +426,148 @@ const S2CaseSimulation: React.FC = () => {
   // Render current step
   switch (currentStep) {
     case 'welcome':
-      return <WelcomeScreen onNext={handleNext} />;
-      
+      return (
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <WelcomeScreen onNext={handleNext} />
+          </div>
+        </div>
+      );
+
     case 'profile':
       return (
-        <TherapistProfileForm
-          profile={sessionData.therapistProfile}
-          onUpdate={updateTherapistProfile}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <TherapistProfileForm
+              profile={sessionData.therapistProfile}
+              onUpdate={updateTherapistProfile}
+              onNext={handleNext}
+              onBack={handleBack}
+              onStepNavigation={handleStepNavigation}
+              canSkipToStep={canSkipToStep}
+              stepCompletionStatus={stepCompletionStatus}
+            />
+          </div>
+        </div>
       );
-      
+
     case 'patient-description':
       return (
-        <PatientDescriptionForm
-          description={sessionData.patientDescription.description}
-          onUpdate={updatePatientDescription}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <PatientDescriptionForm
+              description={sessionData.patientDescription.description}
+              onUpdate={updatePatientDescription}
+              onNext={handleNext}
+              onBack={handleBack}
+              onStepNavigation={handleStepNavigation}
+              canSkipToStep={canSkipToStep}
+              stepCompletionStatus={stepCompletionStatus}
+            />
+          </div>
+        </div>
       );
-      
+
     case 'ai-style':
       return (
-        <AIStyleCustomization
-          style={sessionData.aiStyle}
-          onUpdate={updateAIStyle}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <AIStyleCustomization
+              style={sessionData.aiStyle}
+              onUpdate={updateAIStyle}
+              onNext={handleNext}
+              onBack={handleBack}
+              onStepNavigation={handleStepNavigation}
+              canSkipToStep={canSkipToStep}
+              stepCompletionStatus={stepCompletionStatus}
+            />
+          </div>
+        </div>
       );
-      
+
     case 'license-verification':
       return (
-        <LicenseVerification
-          licenseData={sessionData.licenseVerification}
-          onUpdate={updateLicenseVerification}
-          onNext={handleNext}
-          onSkip={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <LicenseVerification
+              licenseData={sessionData.licenseVerification}
+              onUpdate={updateLicenseVerification}
+              onNext={handleNext}
+              onSkip={handleNext}
+              onBack={handleBack}
+              onStepNavigation={handleStepNavigation}
+              canSkipToStep={canSkipToStep}
+              stepCompletionStatus={stepCompletionStatus}
+            />
+          </div>
+        </div>
       );
-      
+
     case 'complete-profile':
       return (
-        <CompleteProfile
-          profileData={sessionData.completeProfile}
-          onUpdate={updateCompleteProfile}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <CompleteProfile
+              profileData={sessionData.completeProfile}
+              onUpdate={updateCompleteProfile}
+              onNext={handleNext}
+              onBack={handleBack}
+              onStepNavigation={handleStepNavigation}
+              canSkipToStep={canSkipToStep}
+              stepCompletionStatus={stepCompletionStatus}
+            />
+          </div>
+        </div>
       );
-      
+
     case 'preparation':
       return (
-        <SessionPreparation
-          sessionData={sessionData}
-          onNext={handleNext}
-          onBack={handleBack}
-          onUpdateSessionData={updateSessionData}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <SessionPreparation
+              sessionData={sessionData}
+              onNext={handleNext}
+              onBack={handleBack}
+              onUpdateSessionData={updateSessionData}
+              onStepNavigation={handleStepNavigation}
+              canSkipToStep={canSkipToStep}
+              stepCompletionStatus={stepCompletionStatus}
+            />
+          </div>
+        </div>
       );
-      
+
     case 'session':
       return (
-        <SessionInterface
-          sessionData={sessionData}
-          onEndSession={handleNext}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <SessionInterface
+              sessionData={sessionData}
+              onEndSession={handleNext}
+            />
+          </div>
+        </div>
       );
-      
+
     case 'onboarding-complete':
       return (
-        <OnboardingComplete
-          onBack={handleBack}
-        />
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <OnboardingComplete
+              onBack={handleBack}
+            />
+          </div>
+        </div>
       );
-      
+
     default:
-      return <WelcomeScreen onNext={handleNext} />;
+      return (
+        <div className="chatbot-v16-wrapper">
+          <div className="main-container">
+            <WelcomeScreen onNext={handleNext} />
+          </div>
+        </div>
+      );
   }
 };
 
