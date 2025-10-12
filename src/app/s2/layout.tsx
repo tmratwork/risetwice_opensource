@@ -27,7 +27,14 @@ export default function S2Layout({
 
         {/* Main Content Row - exact same as chatbotV17 */}
         <div className="main-content-row">
-          {children}
+          <div style={{
+            height: '100%',
+            overflowY: 'auto',
+            overflowX: 'hidden',
+            WebkitOverflowScrolling: 'touch'
+          }}>
+            {children}
+          </div>
         </div>
 
         {/* Footer Row - empty for S2 but maintaining structure */}
