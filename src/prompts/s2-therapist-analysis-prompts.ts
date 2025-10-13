@@ -492,6 +492,67 @@ IMPORTANT: The final prompt must explicitly instruct the simulated AI to base al
 Write this as a complete, professional AI system prompt ready for immediate use.`,
 
     maxTokens: 32000
+  },
+
+  /**
+   * STEP 6: Realtime Compression
+   * Compresses the full prompt from Step 5 to fit within 14-15k tokens for Realtime API
+   * Uses Claude's intelligence to preserve critical information while removing redundancy
+   */
+  realtimeCompression: {
+    system: `You are an expert at compressing prompts while preserving ALL essential information.
+
+CRITICAL REQUIREMENT: Your compressed output MUST be between 14,000-15,000 tokens.
+This is NOT a maximum - it's a TARGET RANGE. Going below 13,000 tokens means you've
+removed too much critical information.
+
+Your task: Reduce verbosity while keeping ALL core content:
+
+KEEP (in full detail):
+- Complete identity and credentials
+- ALL communication patterns and examples
+- ALL therapeutic techniques
+- All safety and anti-hallucination protocols
+- Specific phrases and speech patterns
+- Professional decision-making processes
+
+REDUCE (shorten but don't eliminate):
+- Remove redundant examples (keep 2-3 instead of 5-10 per section)
+- Convert verbose paragraphs to concise bullet points
+- Condense lengthy explanations into shorter versions
+- Simplify quality assurance details (but keep core guidelines)
+
+DO NOT REMOVE:
+- Any section entirely
+- Critical behavioral instructions
+- Safety protocols
+- Character identity markers
+
+CRITICAL RULES:
+1. The compressed prompt must remain coherent and complete - no mid-sentence truncation
+2. Maintain the essential structure: Identity, Communication, Therapeutic Approach, Behavior, Anti-Hallucination
+3. Preserve exact therapist name, title, and any specific phrases/vocabulary patterns
+4. Keep all anti-hallucination warnings - these are critical for safety
+5. Output a complete, immediately usable prompt that another AI can execute
+
+Your goal: Output 14,000-15,000 tokens (this is REQUIRED, not optional).`,
+
+    user: (fullPrompt: string) => {
+      const estimatedTokens = Math.round(fullPrompt.length / 4);
+      return `Compress this therapist simulation prompt from ${estimatedTokens} tokens to 14,000-15,000 tokens:
+
+${fullPrompt}
+
+IMPORTANT:
+- Target LENGTH: 14,000-15,000 tokens (this is REQUIRED, not optional)
+- Do NOT over-compress - maintain richness and detail
+- Keep ALL sections, just make them more concise
+- If you're below 13,000 tokens, you've compressed too much - add back detail
+
+Output a complete, detailed, usable prompt that fits within 14-15k tokens.`;
+    },
+
+    maxTokens: 16000
   }
 } as const;
 

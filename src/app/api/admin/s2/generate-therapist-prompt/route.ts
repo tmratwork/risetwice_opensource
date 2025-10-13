@@ -184,7 +184,8 @@ function getStepNumber(step: string): number {
     'conversationPatterns': 2,
     'therapeuticStyle': 3,
     'personalitySynthesis': 4,
-    'finalPromptGeneration': 5
+    'finalPromptGeneration': 5,
+    'realtimeCompression': 6
   };
   return stepMap[step] || 0;
 }
@@ -195,7 +196,8 @@ function getStepName(step: string): string {
     'conversationPatterns': 'Conversation Pattern Analysis',
     'therapeuticStyle': 'Therapeutic Style Assessment',
     'personalitySynthesis': 'Personality & Communication Synthesis',
-    'finalPromptGeneration': 'Final Prompt Generation'
+    'finalPromptGeneration': 'Final Prompt Generation',
+    'realtimeCompression': 'Realtime Compression'
   };
   return stepNames[step] || 'Unknown Step';
 }
@@ -230,27 +232,27 @@ export async function POST(request: NextRequest) {
     logDevMode('0-data-aggregation', 'DATA', therapistData as unknown as Record<string, unknown>, therapistId);
 
     // Multi-step Claude AI analysis for maximum quality
-    console.log(`[s2_prompt_generation] 🔄 Beginning 5-step AI analysis workflow...`);
+    console.log(`[s2_prompt_generation] 🔄 Beginning 6-step AI analysis workflow...`);
 
     // Step 1: Raw Data Analysis
-    console.log(`[s2_prompt_generation] 📊 Step 1/5: Raw Data Analysis`);
+    console.log(`[s2_prompt_generation] 📊 Step 1/6: Raw Data Analysis`);
     const profileAnalysis = await callClaudeAPI('dataAnalysis', therapistData);
 
     // Step 2: Conversation Pattern Analysis
-    console.log(`[s2_prompt_generation] 💬 Step 2/5: Conversation Pattern Analysis`);
+    console.log(`[s2_prompt_generation] 💬 Step 2/6: Conversation Pattern Analysis`);
     const conversationAnalysis = await callClaudeAPI('conversationPatterns', therapistData.sessions || [], profileAnalysis);
 
     // Step 3: Therapeutic Style Assessment
-    console.log(`[s2_prompt_generation] 🎯 Step 3/5: Therapeutic Style Assessment`);
+    console.log(`[s2_prompt_generation] 🎯 Step 3/6: Therapeutic Style Assessment`);
     const styleAssessment = await callClaudeAPI('therapeuticStyle', therapistData.ai_style_config, conversationAnalysis, profileAnalysis);
 
     // Step 4: Personality & Communication Synthesis
-    console.log(`[s2_prompt_generation] 🧠 Step 4/5: Personality & Communication Synthesis`);
+    console.log(`[s2_prompt_generation] 🧠 Step 4/6: Personality & Communication Synthesis`);
     const allPreviousAnalyses = `PROFILE ANALYSIS:\n${profileAnalysis}\n\nCONVERSATION ANALYSIS:\n${conversationAnalysis}\n\nSTYLE ASSESSMENT:\n${styleAssessment}`;
     const personalitySynthesis = await callClaudeAPI('personalitySynthesis', allPreviousAnalyses);
 
-    // Step 5: Final Prompt Generation
-    console.log(`[s2_prompt_generation] ✨ Step 5/5: Final Prompt Generation`);
+    // Step 5: Final Prompt Generation (comprehensive, ~30k tokens)
+    console.log(`[s2_prompt_generation] ✨ Step 5/6: Final Prompt Generation`);
     const finalAnalyses = `${allPreviousAnalyses}\n\nPERSONALITY SYNTHESIS:\n${personalitySynthesis}`;
     const sampleConversations = (therapistData.sessions || []).slice(0, 3).map(session => ({
       sessionNumber: session.session_number,
@@ -258,7 +260,11 @@ export async function POST(request: NextRequest) {
       totalMessages: session.messages.length,
       truncated: session.messages.length > 500
     }));
-    const generatedPrompt = await callClaudeAPI('finalPromptGeneration', finalAnalyses, sampleConversations, therapistData.profile);
+    const fullPrompt = await callClaudeAPI('finalPromptGeneration', finalAnalyses, sampleConversations, therapistData.profile);
+
+    // Step 6: Realtime Compression (compress to ~15k tokens)
+    console.log(`[s2_prompt_generation] 🗜️ Step 6/6: Realtime Compression`);
+    const compressedPrompt = await callClaudeAPI('realtimeCompression', fullPrompt);
 
     console.log(`[s2_prompt_generation] ✅ Multi-step analysis complete for ${therapistData.profile?.full_name || 'unknown therapist'}`);
 
@@ -271,10 +277,11 @@ export async function POST(request: NextRequest) {
       personalitySynthesis
     });
 
-    // Save the generated prompt with full analysis metadata
+    // Save both full and compressed prompts with analysis metadata
     const savedPrompt = await savePromptToDatabase(
       therapistData.profile?.id || '',
-      generatedPrompt,
+      compressedPrompt,  // Compressed version for Realtime API
+      fullPrompt,        // Full version for Chat Completions API
       therapistData,
       {
         profileAnalysis,
@@ -714,13 +721,14 @@ async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: un
 
 async function savePromptToDatabase(
   therapistProfileId: string,
-  promptText: string,
+  compressedPromptText: string,
+  fullPromptText: string,
   therapistData: TherapistData,
   conversationAnalysis: Record<string, unknown>,
   completenessScore: number,
   confidenceScore: number
 ) {
-  console.log(`[s2_prompt_generation] 💾 Saving prompt to database...`);
+  console.log(`[s2_prompt_generation] 💾 Saving prompts to database...`);
 
   // Calculate next version number
   const { data: existingPrompts } = await supabase
@@ -754,16 +762,25 @@ async function savePromptToDatabase(
   // Generate prompt title
   const promptTitle = `AI Simulation - ${therapistData.profile?.full_name || 'Unknown'} (v${nextVersion})`;
 
+  // Calculate token counts for logging
+  const compressedTokens = estimateTokenCount(compressedPromptText);
+  const fullTokens = estimateTokenCount(fullPromptText);
+
+  console.log(`[s2_prompt_generation] 📊 Prompt sizes:`);
+  console.log(`[s2_prompt_generation]    - Full prompt: ${fullTokens} tokens (for Chat Completions API)`);
+  console.log(`[s2_prompt_generation]    - Compressed prompt: ${compressedTokens} tokens (for Realtime API)`);
+
   const { data: savedPrompt, error } = await supabase
     .from('s2_ai_therapist_prompts')
     .insert({
       therapist_profile_id: therapistProfileId,
-      prompt_text: promptText,
+      prompt_text: compressedPromptText,
+      full_prompt_text: fullPromptText,
       prompt_version: nextVersion,
       prompt_title: promptTitle,
       generated_by: CLAUDE_MODEL,
       generation_method: 'comprehensive-analysis',
-      prompt_length: promptText.length,
+      prompt_length: compressedPromptText.length,
       source_data_summary: sourceDataSummary,
       conversation_analysis: conversationAnalysis,
       completeness_score: completenessScore,
@@ -778,7 +795,7 @@ async function savePromptToDatabase(
     throw new Error('Failed to save prompt to database');
   }
 
-  console.log(`[s2_prompt_generation] ✅ Prompt saved with ID: ${savedPrompt.id}, Version: ${nextVersion}`);
+  console.log(`[s2_prompt_generation] ✅ Both prompts saved with ID: ${savedPrompt.id}, Version: ${nextVersion}`);
   return savedPrompt;
 }
 
