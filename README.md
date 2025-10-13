@@ -1,3 +1,6 @@
+  Beta channel:
+  https://risetwice-opensource-git-beta-min-way-ai.vercel.app
+  
   To see this code in action, visit https://www.r2ai.me
 
   To view all prompts, visit https://www.r2ai.me/prompts
