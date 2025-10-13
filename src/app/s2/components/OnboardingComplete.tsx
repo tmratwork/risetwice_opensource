@@ -85,11 +85,11 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
           </div>
 
           <h1 className="text-4xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
-            Congratulations! Your AI Preview is Ready
+            Congratulations! Your AI Preview is Being Created
           </h1>
           <p className="text-lg max-w-3xl mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Your personalized AI Preview has been created successfully. Patients can now experience 
-            a realistic preview of what therapy sessions with you would be like, helping ensure 
+            Patients can now experience
+            a realistic preview of what therapy sessions with you would be like, helping ensure
             better matches from day one.
           </p>
         </div>

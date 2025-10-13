@@ -11,7 +11,7 @@ export interface StepCompletionStatus {
   completeProfile: boolean;
 }
 
-export type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
+export type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'customize-ai-prompt' | 'complete-profile' | 'onboarding-complete';
 
 // Validation functions for each step
 export function validateProfileStep(profile: unknown): boolean {
@@ -105,7 +105,7 @@ export function canSkipToStepWithData(
 ): boolean {
   const stepOrder: FlowStep[] = [
     'welcome', 'profile', 'patient-description', 'preparation', 'session',
-    'ai-style', 'license-verification', 'complete-profile', 'onboarding-complete'
+    'ai-style', 'license-verification', 'customize-ai-prompt', 'complete-profile', 'onboarding-complete'
   ];
 
   const currentIndex = stepOrder.indexOf(currentStep);
@@ -147,6 +147,10 @@ export function canSkipToStepWithData(
     case 'complete-profile':
       // Independent step - accessible if profile is completed OR already completed
       return stepCompletionStatus.profile || stepCompletionStatus.completeProfile;
+
+    case 'customize-ai-prompt':
+      // Optional step - always accessible if license verification is done OR if profile is completed
+      return stepCompletionStatus.profile || stepCompletionStatus.licenseVerification;
 
     case 'onboarding-complete':
       // Can access if at least profile is completed
@@ -202,6 +206,7 @@ export function getStepDisplayStatus(
     'session': 'session',
     'ai-style': 'aiStyle',
     'license-verification': 'licenseVerification',
+    'customize-ai-prompt': null, // Optional step - no completion tracking
     'complete-profile': 'completeProfile',
     'onboarding-complete': null
   };

@@ -457,16 +457,11 @@ async function aggregateTherapistData(therapistId: string): Promise<TherapistDat
   }
 
   console.log(`[s2_prompt_generation] ✅ Found ${sessions?.length || 0} sessions`);
-  sessions?.forEach((session) => {
-    console.log(`[s2_prompt_generation] 📊 Session ${session.session_number}: ${session.status}, ${session.message_count} messages reported`);
-  });
 
   // Get messages for each session
-  console.log(`[s2_prompt_generation] 💭 Fetching messages for each session...`);
+  console.log(`[s2_prompt_generation] 💭 Fetching messages for all sessions...`);
   const sessionsWithMessages = await Promise.all(
     (sessions || []).map(async (session) => {
-      console.log(`[s2_prompt_generation] 🔍 Fetching messages for session ${session.session_number} (ID: ${session.id})...`);
-
       const { data: messages, error: messagesError } = await supabase
         .from('s2_session_messages')
         .select(`
@@ -495,13 +490,16 @@ async function aggregateTherapistData(therapistId: string): Promise<TherapistDat
       const therapistMessages = messages?.filter(m => m.role === 'therapist') || [];
       const patientMessages = messages?.filter(m => m.role === 'ai_patient') || [];
 
-      console.log(`[s2_prompt_generation] ✅ Session ${session.session_number}: ${messages?.length || 0} total messages (${therapistMessages.length} therapist, ${patientMessages.length} patient)`);
+      // Only log sessions with messages
+      if (messages?.length && messages.length > 0) {
+        console.log(`[s2_prompt_generation] ✅ Session ${session.session_number}: ${messages.length} total messages (${therapistMessages.length} therapist, ${patientMessages.length} patient)`);
 
-      if (messages?.length) {
-        console.log(`[s2_prompt_generation] 📝 Sample messages from session ${session.session_number}:`);
-        messages.slice(0, 3).forEach((msg, msgIndex) => {
-          console.log(`[s2_prompt_generation]   ${msgIndex + 1}. ${msg.role}: "${msg.content?.substring(0, 50)}..."`);
-        });
+        if (messages.length >= 3) {
+          console.log(`[s2_prompt_generation] 📝 Sample messages from session ${session.session_number}:`);
+          messages.slice(0, 3).forEach((msg, msgIndex) => {
+            console.log(`[s2_prompt_generation]   ${msgIndex + 1}. ${msg.role}: "${msg.content?.substring(0, 50)}..."`);
+          });
+        }
       }
 
       return {
@@ -516,12 +514,9 @@ async function aggregateTherapistData(therapistId: string): Promise<TherapistDat
   const lowQualitySessions = sessionsWithMessages.filter(session => session.messages.length < MIN_MESSAGES_FOR_QUALITY);
   const qualitySessions = sessionsWithMessages.filter(session => session.messages.length >= MIN_MESSAGES_FOR_QUALITY);
 
-  // Log filtered sessions clearly
+  // Log filtered sessions summary
   if (lowQualitySessions.length > 0) {
-    console.log(`[s2_prompt_generation] 🗑️ FILTERING LOW QUALITY SESSIONS (< ${MIN_MESSAGES_FOR_QUALITY} messages):`);
-    lowQualitySessions.forEach(session => {
-      console.log(`[s2_prompt_generation] 🗑️ - Session ${session.session_number}: ${session.messages.length} messages (EXCLUDED from analysis)`);
-    });
+    console.log(`[s2_prompt_generation] 🗑️ Filtered out ${lowQualitySessions.length} low quality sessions (< ${MIN_MESSAGES_FOR_QUALITY} messages)`);
   }
 
   if (qualitySessions.length > 0) {
@@ -567,6 +562,7 @@ async function aggregateTherapistData(therapistId: string): Promise<TherapistDat
 }
 
 // Core Claude API calling function for multi-step analysis
+// CODE VERSION: 2025-01-13 - Streaming API to prevent timeouts on large responses
 async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: unknown[]): Promise<string> {
   const promptConfig = S2_ANALYSIS_PROMPTS[step];
 
@@ -582,6 +578,7 @@ async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: un
   console.log(`[s2_prompt_generation] 🔍 Step ${String(step)}:`);
   console.log(`[s2_prompt_generation] 📊 - Estimated input tokens: ${inputTokens}`);
   console.log(`[s2_prompt_generation] 📤 - Max output tokens: ${promptConfig.maxTokens}`);
+  console.log(`[s2_prompt_generation] 🌊 - Using streaming API (prevents timeout on large responses)`);
 
   // Dev logging: Log the full prompt sent to Claude
   const stepNumber = getStepNumber(String(step));
@@ -609,8 +606,10 @@ async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: un
         messages: [{
           role: 'user',
           content: userPrompt
-        }]
-      })
+        }],
+        stream: true  // Enable streaming to prevent timeout
+      }),
+      signal: AbortSignal.timeout(1800000) // 30 minute absolute timeout as safety net
     });
 
     if (!response.ok) {
@@ -618,8 +617,74 @@ async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: un
       throw new Error(`Claude API error for step ${String(step)}: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
-    const data = await response.json();
-    const result = data.content[0].text;
+    // Handle streaming response
+    if (!response.body) {
+      throw new Error('Response body is null');
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let result = '';
+    let lastLogTime = Date.now();
+    let chunkCount = 0;
+    let buffer = ''; // Buffer to handle incomplete lines across chunks
+
+    console.log(`[s2_prompt_generation] 📥 Receiving streaming response...`);
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      // Decode chunk and add to buffer
+      buffer += decoder.decode(value, { stream: true });
+
+      // Split by newlines, keeping incomplete last line in buffer
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+      for (const line of lines) {
+        const trimmedLine = line.trim();
+        if (!trimmedLine) continue;
+
+        if (trimmedLine.startsWith('data: ')) {
+          const jsonStr = trimmedLine.slice(6);
+
+          // Skip special SSE markers
+          if (jsonStr === '[DONE]') {
+            console.log(`[s2_prompt_generation] 🏁 - Stream complete (DONE marker)`);
+            continue;
+          }
+
+          try {
+            const data = JSON.parse(jsonStr);
+
+            // Handle different event types
+            if (data.type === 'content_block_delta') {
+              // Accumulate text chunks
+              if (data.delta?.text) {
+                result += data.delta.text;
+                chunkCount++;
+
+                // Log progress every 5 seconds
+                const now = Date.now();
+                if (now - lastLogTime > 5000) {
+                  const currentTokens = estimateTokenCount(result);
+                  console.log(`[s2_prompt_generation] 📊 - Streaming progress: ${currentTokens} tokens received (${chunkCount} chunks)`);
+                  lastLogTime = now;
+                }
+              }
+            } else if (data.type === 'message_stop') {
+              console.log(`[s2_prompt_generation] 🏁 - Stream complete`);
+            } else if (data.type === 'error') {
+              throw new Error(`Stream error: ${data.error?.message || 'Unknown error'}`);
+            }
+          } catch (parseError) {
+            // Log but don't fail on parse errors - might be incomplete chunk
+            console.warn(`[s2_prompt_generation] ⚠️ Failed to parse SSE line: ${jsonStr.substring(0, 100)}...`);
+          }
+        }
+      }
+    }
 
     const outputTokens = estimateTokenCount(result);
     console.log(`[s2_prompt_generation] ✅ Step ${String(step)} complete:`);

@@ -28,9 +28,9 @@ export const MODELS = {
   },
 
   // Anthropic Models
-  // new model, but expensive: claude-opus-4-1-20250805
+  // Latest available models from Anthropic
   ANTHROPIC: {
-    CLAUDE_SONNET_4_5: "claude-sonnet-4-5-20250929",
+    CLAUDE_SONNET_4_5: "claude-sonnet-4-5-20250929",  // Claude Sonnet 4.5 (newest, best model)
     CLAUDE_SONNET_4: "claude-sonnet-4-20250514",
     CLAUDE_SONNET_3_5: "claude-3-5-sonnet-20241022"
   },

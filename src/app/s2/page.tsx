@@ -16,10 +16,11 @@ import SessionInterface from './components/SessionInterface';
 import AIStyleCustomization from './components/AIStyleCustomization';
 import LicenseVerification from './components/LicenseVerification';
 import CompleteProfile from './components/CompleteProfile';
+import CustomizeAIPrompt from './components/CustomizeAIPrompt';
 import OnboardingComplete from './components/OnboardingComplete';
 
 // Flow steps (imported from validation utils)
-// type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
+// type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'customize-ai-prompt' | 'complete-profile' | 'onboarding-complete';
 
 // Types
 interface TherapistProfile {
@@ -313,6 +314,9 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('license-verification');
         break;
       case 'license-verification':
+        setCurrentStep('customize-ai-prompt');
+        break;
+      case 'customize-ai-prompt':
         setCurrentStep('complete-profile');
         break;
       case 'complete-profile':
@@ -341,8 +345,11 @@ const S2CaseSimulation: React.FC = () => {
       case 'license-verification':
         setCurrentStep('ai-style');
         break;
-      case 'complete-profile':
+      case 'customize-ai-prompt':
         setCurrentStep('license-verification');
+        break;
+      case 'complete-profile':
+        setCurrentStep('customize-ai-prompt');
         break;
       case 'onboarding-complete':
         setCurrentStep('complete-profile');
@@ -353,7 +360,7 @@ const S2CaseSimulation: React.FC = () => {
   const handleStepNavigation = (targetStep: FlowStep) => {
     const stepOrder: FlowStep[] = [
       'welcome', 'profile', 'patient-description', 'preparation', 'session',
-      'ai-style', 'license-verification', 'complete-profile', 'onboarding-complete'
+      'ai-style', 'license-verification', 'customize-ai-prompt', 'complete-profile', 'onboarding-complete'
     ];
 
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -478,6 +485,17 @@ const S2CaseSimulation: React.FC = () => {
         <CompleteProfile
           profileData={sessionData.completeProfile}
           onUpdate={updateCompleteProfile}
+          onNext={handleNext}
+          onBack={handleBack}
+          onStepNavigation={handleStepNavigation}
+          canSkipToStep={canSkipToStep}
+          stepCompletionStatus={stepCompletionStatus}
+        />
+      );
+
+    case 'customize-ai-prompt':
+      return (
+        <CustomizeAIPrompt
           onNext={handleNext}
           onBack={handleBack}
           onStepNavigation={handleStepNavigation}

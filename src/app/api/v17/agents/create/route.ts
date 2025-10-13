@@ -110,25 +110,58 @@ export async function POST(request: NextRequest) {
       demoPromptLength: demoPromptAppend?.length || 0
     });
 
-    // 1. GET AI INSTRUCTIONS from Supabase (same as V16)
-    const { data: aiPromptArray, error: promptError } = await supabase
-      .rpc('get_ai_prompt_by_type', {
-        target_prompt_type: specialistType,
-        requesting_user_id: userId || null
-      });
-    
-    const aiPrompt = aiPromptArray?.[0] || null;
+    // 1. GET AI INSTRUCTIONS from Supabase
+    // For ai_preview, check provider-specific customizations first, then fall back to global default
+    let aiPrompt = null;
+    let promptError = null;
+
+    if (specialistType === 'ai_preview' && userId) {
+      // Try to get provider-specific AI preview prompt first
+      logV17('🔍 Checking for provider-specific AI preview prompt', { userId });
+
+      const { data: providerPrompt, error: providerError } = await supabase
+        .from('s2_provider_ai_preview_prompts')
+        .select('prompt_content')
+        .eq('user_id', userId)
+        .eq('is_active', true)
+        .single();
+
+      if (providerPrompt && !providerError) {
+        logV17('✅ Using provider-specific AI preview prompt', {
+          userId,
+          promptLength: providerPrompt.prompt_content.length
+        });
+        aiPrompt = { prompt_content: providerPrompt.prompt_content };
+      } else {
+        logV17('📘 No provider-specific prompt found, falling back to global default', {
+          userId,
+          error: providerError?.message
+        });
+      }
+    }
+
+    // If no provider-specific prompt (or not ai_preview), use standard RPC
+    if (!aiPrompt) {
+      const { data: aiPromptArray, error: rpcError } = await supabase
+        .rpc('get_ai_prompt_by_type', {
+          target_prompt_type: specialistType,
+          requesting_user_id: userId || null
+        });
+
+      aiPrompt = aiPromptArray?.[0] || null;
+      promptError = rpcError;
+    }
 
     if (promptError || !aiPrompt) {
       logV17('❌ Failed to load AI prompt', { promptError, specialistType });
-      return NextResponse.json({ 
-        error: `Failed to load ${specialistType} prompt from database` 
+      return NextResponse.json({
+        error: `Failed to load ${specialistType} prompt from database`
       }, { status: 500 });
     }
 
     // Prepare final AI instructions (base + optional demo append)
     let finalPromptContent = aiPrompt.prompt_content || `You are a ${specialistType} AI assistant specialized in mental health support.`;
-    
+
     // Append demo prompt if provided
     if (demoPromptAppend) {
       finalPromptContent += demoPromptAppend;
