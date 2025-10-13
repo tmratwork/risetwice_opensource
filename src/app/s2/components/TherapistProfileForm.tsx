@@ -7,7 +7,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 import CustomMultiSelect from './CustomMultiSelect';
-import { StepCompletionStatus } from '@/utils/s2-validation';
+import { StepCompletionStatus, FlowStep } from '@/utils/s2-validation';
 
 interface TherapistProfile {
   fullName: string;
@@ -27,8 +27,6 @@ interface TherapistProfile {
   culturalBackgrounds?: string[];
   otherCulturalBackground?: string;
 }
-
-type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
 
 interface TherapistProfileFormProps {
   profile: TherapistProfile;

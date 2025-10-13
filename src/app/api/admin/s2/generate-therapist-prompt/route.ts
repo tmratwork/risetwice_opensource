@@ -310,7 +310,7 @@ export async function POST(request: NextRequest) {
     console.log(`[s2_prompt_generation] ⏱️ - Total Processing Time: ${durationMinutes} minutes`);
     console.log(`[s2_prompt_generation] 📈 - Completeness Score: ${completenessScore}`);
     console.log(`[s2_prompt_generation] 🎯 - Confidence Score: ${confidenceScore}`);
-    console.log(`[s2_prompt_generation] 📝 - Generated Prompt Length: ${generatedPrompt.length} characters`);
+    console.log(`[s2_prompt_generation] 📝 - Generated Prompt Length: ${compressedPrompt.length} characters`);
     console.log(`[s2_prompt_generation] 💾 - Saved as: ${savedPrompt.id} (v${savedPrompt.prompt_version})`);
 
     // Save the complete dev log file
@@ -319,7 +319,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       therapistName: therapistData.profile?.full_name || 'Unknown',
-      prompt: generatedPrompt,
+      prompt: compressedPrompt,
       promptId: savedPrompt.id,
       promptVersion: savedPrompt.prompt_version,
       processingTimeMinutes: durationMinutes,
@@ -688,6 +688,7 @@ async function callClaudeAPI(step: keyof typeof S2_ANALYSIS_PROMPTS, ...args: un
           } catch (parseError) {
             // Log but don't fail on parse errors - might be incomplete chunk
             console.warn(`[s2_prompt_generation] ⚠️ Failed to parse SSE line: ${jsonStr.substring(0, 100)}...`);
+            console.warn(`parseError: ${parseError}`)
           }
         }
       }

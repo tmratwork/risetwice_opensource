@@ -6,9 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
-import { StepCompletionStatus } from '@/utils/s2-validation';
-
-type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'preparation' | 'session' | 'onboarding-complete';
+import { StepCompletionStatus, FlowStep } from '@/utils/s2-validation';
 
 interface LicenseVerificationData {
   licenseType: string;

@@ -6,9 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
-import { StepCompletionStatus } from '@/utils/s2-validation';
-
-type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'ai-style' | 'license-verification' | 'complete-profile' | 'customize-ai-prompt' | 'preparation' | 'session' | 'onboarding-complete';
+import { StepCompletionStatus, FlowStep } from '@/utils/s2-validation';
 
 interface CustomizeAIPromptProps {
   onNext: () => void;
@@ -187,7 +185,7 @@ const CustomizeAIPrompt: React.FC<CustomizeAIPromptProps> = ({
       {onStepNavigation && canSkipToStep && stepCompletionStatus && (
         <StepNavigator
           currentStep="customize-ai-prompt"
-          onNavigate={onStepNavigation}
+          onStepClick={onStepNavigation}
           canSkipToStep={canSkipToStep}
           stepCompletionStatus={stepCompletionStatus}
         />
