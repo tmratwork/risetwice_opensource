@@ -190,7 +190,7 @@ const TherapistCard: React.FC<TherapistCardProps> = ({
 
           {/* Actions */}
           <div className="flex flex-col gap-3 mt-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <button
                 onClick={() => {
                   if (onViewMore) {
@@ -199,13 +199,13 @@ const TherapistCard: React.FC<TherapistCardProps> = ({
                     setIsExpanded(!isExpanded);
                   }
                 }}
-                className="font-medium text-sm"
+                className="font-medium text-sm text-left"
                 style={{ color: 'var(--button-primary)' }}
               >
                 View More
               </button>
 
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {/* Advanced Settings Button - Only show in provider mode */}
                 {isProviderMode && onAdvancedSettings && (
                   <button
