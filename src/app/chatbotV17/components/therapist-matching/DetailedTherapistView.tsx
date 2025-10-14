@@ -102,9 +102,9 @@ const DetailedTherapistView: React.FC<DetailedTherapistViewProps> = ({
   };
 
   return (
-    <div className="min-h-screen relative" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="relative" style={{ backgroundColor: 'var(--bg-secondary)', minHeight: '100%' }}>
       {/* Back Arrow - Fixed position at top of screen */}
-      <div className="fixed top-4 left-4 z-50">
+      <div className="sticky top-4 left-4 z-50 mb-4">
         <button
           onClick={onBack}
           className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors shadow-lg"
@@ -117,7 +117,7 @@ const DetailedTherapistView: React.FC<DetailedTherapistViewProps> = ({
       </div>
 
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-6 pt-20">
+      <div className="max-w-4xl mx-auto px-6 pb-8">
         <div className="bg-white rounded-lg shadow-sm border p-8">
           {/* Header Section */}
           <div className="flex items-start gap-6 mb-8">

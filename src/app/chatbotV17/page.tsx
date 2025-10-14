@@ -529,12 +529,16 @@ export default function ChatBotV17Page() {
   // Show detailed therapist view
   if (showDetailedView && detailedTherapistData) {
     return (
-      <DetailedTherapistView
-        therapist={detailedTherapistData}
-        onBack={handleBackToMatchingFromDetail}
-        onTryAIPreview={handleTryAIPreview}
-        loadingPrompt={loadingPrompt}
-      />
+      <div className="chatbot-v16-wrapper">
+        <div className="main-container">
+          <DetailedTherapistView
+            therapist={detailedTherapistData}
+            onBack={handleBackToMatchingFromDetail}
+            onTryAIPreview={handleTryAIPreview}
+            loadingPrompt={loadingPrompt}
+          />
+        </div>
+      </div>
     );
   }
 
