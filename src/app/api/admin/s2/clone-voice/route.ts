@@ -223,7 +223,9 @@ export async function POST(request: NextRequest) {
       .update({
         cloned_voice_id: voiceId,
         voice_last_cloned_at: new Date().toISOString(),
-        voice_cloning_session_count: selectedSessions.length
+        voice_cloning_session_count: selectedSessions.length,
+        ai_preview_status: 'completed',
+        ai_preview_generated_at: new Date().toISOString()
       })
       .eq('id', therapistProfileId);
 
@@ -249,6 +251,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[voice_cloning] 🎉 Voice cloning completed successfully!`);
+    console.log(`[voice_cloning] ✅ AI Preview status set to "completed"`);
     console.log(`[voice_cloning] 📊 Final stats: ${selectedSessions.length} sessions, ${selectedMinutes}m ${selectedSeconds}s audio, voice ID: ${voiceId}`);
 
     return NextResponse.json({

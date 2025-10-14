@@ -165,6 +165,8 @@ export async function GET(request: NextRequest) {
         culturalBackgrounds: profile.cultural_backgrounds,
         otherCulturalBackground: profile.other_cultural_background,
         completionStatus: profile.profile_completion_status,
+        ai_preview_status: profile.ai_preview_status,
+        ai_preview_generated_at: profile.ai_preview_generated_at,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at
       } : null

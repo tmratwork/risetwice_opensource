@@ -15,6 +15,8 @@ const ProviderDashboard: React.FC = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [, setUserRole] = useState<UserRole | null>(null);
+  const [aiPreviewStatus, setAiPreviewStatus] = useState<string | null>(null);
+  const [aiPreviewGeneratedAt, setAiPreviewGeneratedAt] = useState<string | null>(null);
 
   useEffect(() => {
     async function checkAccess() {
@@ -33,6 +35,14 @@ const ProviderDashboard: React.FC = () => {
         if (role !== 'provider') {
           router.push('/dashboard/patient');
           return;
+        }
+
+        // Fetch AI Preview generation status
+        const response = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
+        const data = await response.json();
+        if (data.success && data.profile) {
+          setAiPreviewStatus(data.profile.ai_preview_status || 'not_started');
+          setAiPreviewGeneratedAt(data.profile.ai_preview_generated_at);
         }
 
         setLoading(false);
@@ -105,15 +115,61 @@ const ProviderDashboard: React.FC = () => {
                   Test AI Preview
                 </h3>
               </div>
+
+              {/* Show warning if AI Preview is still generating */}
+              {aiPreviewStatus === 'generating' && (
+                <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-amber-900 mb-1">AI Preview is still generating</p>
+                      <p className="text-xs text-amber-800">
+                        This process takes approximately 30 minutes. Please refresh this page later to test your AI Preview.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show success message if completed */}
+              {aiPreviewStatus === 'completed' && aiPreviewGeneratedAt && (
+                <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-green-900">AI Preview ready</p>
+                      <p className="text-xs text-green-800">
+                        Generated {new Date(aiPreviewGeneratedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                 Experience your AI Preview as patients would.
               </p>
-              <Link
-                href="/chatbotV17?provider=true"
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-              >
-                Test My AI Preview
-              </Link>
+
+              {aiPreviewStatus === 'completed' ? (
+                <Link
+                  href="/chatbotV17?provider=true"
+                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                >
+                  Test My AI Preview
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed"
+                  title="AI Preview is not ready yet"
+                >
+                  Test My AI Preview
+                </button>
+              )}
             </div>
 
             {/* Analytics & Insights */}

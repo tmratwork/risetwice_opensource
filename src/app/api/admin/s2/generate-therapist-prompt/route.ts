@@ -313,6 +313,22 @@ export async function POST(request: NextRequest) {
     console.log(`[s2_prompt_generation] 📝 - Generated Prompt Length: ${compressedPrompt.length} characters`);
     console.log(`[s2_prompt_generation] 💾 - Saved as: ${savedPrompt.id} (v${savedPrompt.prompt_version})`);
 
+    // Update AI Preview status to 'completed' after successful prompt generation
+    const { error: statusError } = await supabase
+      .from('s2_therapist_profiles')
+      .update({
+        ai_preview_status: 'completed',
+        ai_preview_generated_at: new Date().toISOString()
+      })
+      .eq('id', savedPrompt.therapist_profile_id);
+
+    if (statusError) {
+      console.error('[s2_prompt_generation] ⚠️ Failed to update AI Preview status:', statusError);
+      // Don't fail the request - prompt generation was successful
+    } else {
+      console.log('[s2_prompt_generation] ✅ AI Preview status set to "completed"');
+    }
+
     // Save the complete dev log file
     saveDevLogFile();
 
