@@ -16,10 +16,12 @@ export default function DashboardLayout({
       {/* Main Content */}
       {children}
 
-      {/* Fixed Footer */}
-      <div className="fixed bottom-0 left-0 right-0 z-50">
-        <MobileFooterNavV15 />
-      </div>
+      {/* Fixed Footer - Conditional based on deployment */}
+      {process.env.NEXT_PUBLIC_FOOTER_TYPE !== 'none' && (
+        <div className="fixed bottom-0 left-0 right-0 z-50">
+          <MobileFooterNavV15 />
+        </div>
+      )}
     </AuthProvider>
   );
 }
