@@ -1,0 +1,2217 @@
+// src/app/chatbotV16/page.tsx
+
+"use client";
+
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from 'react';
+import { useAuth } from '@/contexts/auth-context';
+import { User } from 'firebase/auth';
+import { useWebRTCStore } from '@/stores/webrtc-store';
+// V16: Use proper Supabase functions hook for executable functions
+import { useSupabaseFunctions } from '@/hooksV16/use-supabase-functions';
+import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
+// V16-specific components (reusing V15 components)
+import { AudioOrbV15 } from './components/AudioOrbV15';
+// Use V11's voice and tool choice defaults
+import { DEFAULT_VOICE, DEFAULT_TOOL_CHOICE } from '../chatbotV11/prompts';
+// V16 greeting logging
+import { logGreetingInstructions } from '@/lib/greeting-logger';
+// Import V11's map display component for V16 to use
+import MapResourcesDisplay from '../chatbotV11/MapResourcesDisplay';
+// V15 CSS styles (reusing for V16)
+import '../chatbotV11/chatbotV11.css';
+
+// Conversation types (from V11 for compatibility)
+interface Conversation {
+  id: string; // Unique ID for React rendering and tracking
+  role: string; // "user" or "assistant"
+  text: string; // User or assistant message
+  timestamp: string; // ISO string for message time
+  isFinal: boolean; // Whether the transcription is final
+  status?: "speaking" | "processing" | "final" | "thinking"; // Status for real-time conversation states
+}
+
+// V16 Triage AI interface types
+interface AIPrompt {
+  id: string;
+  type: string;
+  content: string;
+  voice_settings?: Record<string, unknown>;
+  metadata?: Record<string, unknown>;
+}
+
+// TriageSession interface now imported from store
+
+// Main chat component implementing V16 Triage AI architecture
+const ChatBotV16Component = memo(function ChatBotV16Component({
+  user,
+  triagePrompt,
+  resumableConversation,
+  onLetsTalk,
+  shouldResume,
+  isCheckingResume,
+  loadFunctionsForAI
+}: {
+  user: User | null;
+  triagePrompt: AIPrompt | null;
+  resumableConversation: ResumableConversation | null;
+  onLetsTalk: () => void;
+  shouldResume: boolean;
+  setShouldResume: (value: boolean) => void;
+  isCheckingResume: boolean;
+  loadFunctionsForAI: (aiType: string) => Promise<unknown[]>;
+}) {
+  const renderTimestamp = performance.now();
+  // console.log('[triage][resume] 🔄 ChatBotV16Component RENDER START:', {
+  //   timestamp: renderTimestamp,
+  //   hasUser: !!user,
+  //   hasTriagePrompt: !!triagePrompt,
+  //   hasResumableConversation: !!resumableConversation,
+  //   resumableConversationId: resumableConversation?.id,
+  //   hasOnLetsTalk: !!onLetsTalk,
+  //   onLetsTalkType: typeof onLetsTalk,
+  //   shouldResume,
+  //   isCheckingResume,
+  //   willShowResumeCheckbox: !!(user && resumableConversation && !isCheckingResume)
+  // });
+  const [mapVisible, setMapVisible] = useState(false);
+  const [currentSearchId, setCurrentSearchId] = useState<string | null>(null);
+
+  // V16 Triage session state - now using Zustand store to persist across component re-mounts
+  const triageSession = useWebRTCStore(state => state.triageSession);
+  const setTriageSession = useWebRTCStore(state => state.setTriageSession);
+  const updateTriageSession = useWebRTCStore(state => state.updateTriageSession);
+
+  // Functions now passed as prop - exactly like AI instructions
+
+  // Ref for auto-scrolling conversation
+  const conversationHistoryRef = useRef<HTMLDivElement>(null);
+
+  // FIXED: Use memoized selectors for Zustand to prevent unnecessary re-renders
+  const isConnected = useWebRTCStore(state => state.isConnected);
+  const connectionState = useWebRTCStore(state => state.connectionState);
+  const isPreparing = useWebRTCStore(state => state.isPreparing);
+  const conversation = useWebRTCStore(state => state.conversation);
+  const userMessage = useWebRTCStore(state => state.userMessage);
+
+  // Get stable function references - these are action functions that don't change
+  const sendMessage = useWebRTCStore(state => state.sendMessage);
+  const addConversationMessage = useWebRTCStore(state => state.addConversationMessage);
+  const updateUserMessage = useWebRTCStore(state => state.updateUserMessage);
+  const clearUserMessage = useWebRTCStore(state => state.clearUserMessage);
+
+  // Register functions from hooks - this should be stable but let's track it
+  const renderCount = useRef(0);
+  renderCount.current++;
+  // Reduced logging - only log excessive renders
+  if (renderCount.current > 10 && renderCount.current % 10 === 0) {
+    // console.log('[zustand-webrtc] 🚨 ChatBotV16Component excessive renders: #' + renderCount.current + ' at', new Date().toISOString());
+  }
+
+  // Functions now loaded in same fetchTriagePrompt function (simplified)
+
+  // Simplified Resume Checkbox
+  const resumeCheckboxJSX = null; /*useMemo(() => {
+    if (!user || !resumableConversation || isCheckingResume) return null;
+
+    return (
+      <div className="flex items-center mt-4 space-x-2">
+        <input
+          type="checkbox"
+          id="resume-checkbox"
+          checked={shouldResume}
+          style={{ pointerEvents: 'auto' }}
+          ref={(el) => {
+            if (el) {
+              const computed = window.getComputedStyle(el);
+    // console.log('[resume] 🔍 Checkbox input DOM/CSS:', {
+                element: el,
+                hasOnClick: !!el.onclick,
+                hasOnChange: !!el.onchange,
+                pointerEvents: computed.pointerEvents,
+                position: computed.position,
+                zIndex: computed.zIndex,
+                display: computed.display,
+                visibility: computed.visibility,
+                opacity: computed.opacity,
+                clientRect: el.getBoundingClientRect()
+              });
+    // console.log('[resume] ⚛️ Checkbox handler attachment:', {
+                hasOnChange: !!el.onchange,
+                reactProps: Object.keys(el).filter(key => key.startsWith('__react'))
+              });
+            }
+          }}
+          onClickCapture={() => console.log('[resume] ⬇️ Checkbox input - click captured')}
+          onClick={() => console.log('[resume] 🖱️ Checkbox input - click fired')}
+          onChange={(e) => {
+    // console.log('[V16] 🔄 RESUME: Checkbox onChange fired:', e.target.checked);
+    // console.log('[V16] ✅ RESUME: Resume checkbox toggled:', e.target.checked);
+    // console.log('[V16] 🔍 RESUME: shouldResume state changing:', {
+              from: shouldResume,
+              to: e.target.checked,
+              hasUser: !!user,
+              hasConversation: !!resumableConversation,
+              timestamp: performance.now()
+            });
+            setShouldResume(e.target.checked);
+          }}
+          onMouseDown={() => console.log('[triage][resume] 🖱️ Checkbox mousedown'))
+          onMouseUp={() => console.log('[triage][resume] 🖱️ Checkbox mouseup'))
+          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 pointer-events-auto"
+        />
+        <label
+          htmlFor="resume-checkbox"
+          className="text-sm text-gray-300 cursor-pointer"
+          style={{ pointerEvents: 'auto' }}
+          onClick={(e) => console.log('[triage][resume] 🏷️ Label clicked:', e.target))
+        >
+          Resume previous conversation
+        </label>
+      </div>
+    );
+  }, [user, resumableConversation, isCheckingResume, shouldResume, setShouldResume]); */
+
+  // CRITICAL: Global event debugging - test if ANY clicks reach React
+  useEffect(() => {
+    const testClickHandler = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      // console.log('[triage][resume] 🌐 GLOBAL: Native click detected on document', {
+      target: target,
+        tagName: target?.tagName || 'unknown',
+          className: target?.className || 'none',
+            clientX: e.clientX,
+              clientY: e.clientY
+    });
+};
+
+const testMouseHandler = (e: MouseEvent) => {
+  // console.log('[resume] 🖱️ GLOBAL: Mouse move detected', {
+  clientX: e.clientX,
+    clientY: e.clientY
+});
+    };
+
+document.addEventListener('click', testClickHandler, true); // Use capture
+document.addEventListener('mousemove', testMouseHandler, { passive: true, once: true }); // Only log once
+
+return () => {
+  document.removeEventListener('click', testClickHandler, true);
+  document.removeEventListener('mousemove', testMouseHandler);
+};
+  }, []);
+
+// Functions are now registered at page level to prevent scope issues
+
+// CRITICAL: Set selectedBookId for message persistence (missing in V16)
+useEffect(() => {
+  // V16 uses same book ID as V15 for message persistence
+  const specificBookId = 'f95206aa-165e-4c49-b43a-69d91bef8ed4';
+  localStorage.setItem('selectedBookId', specificBookId);
+  // console.log('[V16] 📚 CRITICAL: Set selectedBookId for message persistence:', specificBookId);
+}, []);
+
+// Subscribe to transcript events to update conversation
+useEffect(() => {
+  // console.log('[V16] 📝 MESSAGE: Setting up transcript subscription for triage/specialist AI');
+
+  // Map to track incomplete messages for streaming updates
+  const incompleteMessages = new Map<string, Conversation>();
+
+  const unsubscribe = useWebRTCStore.getState().onTranscript((message) => {
+    // console.log('[V16] 📥 MESSAGE: Transcript event received', {
+    messageId: message.id,
+      isComplete: message.metadata?.isTranscriptComplete || false,
+        role: (message.metadata as { role?: string })?.role || "assistant",
+          dataLength: message.data?.length || 0,
+            specialist: triageSession.currentSpecialist || 'triage'
+  });
+
+  const { id, data, metadata } = message;
+  const isComplete = metadata?.isTranscriptComplete || false;
+
+  // Check if this is a user message (from custom role in the handler)
+  const messageRole = (metadata as { role?: string })?.role || "assistant";
+
+  if (isComplete) {
+    // Final transcript - replace empty bubble or streaming version
+    // console.log('[message_persistence] Adding final transcript to conversation:', { data, role: messageRole });
+    // console.log('[message_persistence] [CONTENT_DEBUG] Final transcript content length:', data.length);
+    // console.log('[message_persistence] [CONTENT_DEBUG] Final transcript preview:', data.substring(0, 100) + (data.length > 100 ? '...' : ''));
+    // console.log('[message_persistence] [CONTENT_DEBUG] Final transcript full content:', data);
+
+    const currentState = useWebRTCStore.getState();
+    const updatedConversation = [...currentState.conversation];
+
+    if (messageRole === "user") {
+      // For user messages, find and replace the most recent user bubble (empty, "Thinking...", or streaming)
+      const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
+
+      if (lastUserMessageIndex >= 0) {
+        // console.log('[message_persistence] Replacing user bubble with final transcript and saving to database');
+
+        // Remove the existing user bubble from UI
+        const filteredConversation = updatedConversation.filter((_, index) => index !== lastUserMessageIndex);
+        useWebRTCStore.setState({
+          conversation: filteredConversation
+        });
+
+        // Add the final complete user message (this will save to database)
+        addConversationMessage({
+          id: `user-final-${id}`,
+          role: "user",
+          text: data,
+          timestamp: new Date().toISOString(),
+          isFinal: true,
+          status: "final"
+        });
+      } else {
+        // console.log('[message_persistence] No user bubble found, adding final message directly');
+        addConversationMessage({
+          id: `user-final-${id}`,
+          role: "user",
+          text: data,
+          timestamp: new Date().toISOString(),
+          isFinal: true,
+          status: "final"
+        });
+      }
+    } else {
+      // For assistant messages, use existing logic
+      const finalMessage: Conversation = {
+        id: `${messageRole}-final-${id}`,
+        role: messageRole,
+        text: data,
+        timestamp: new Date().toISOString(),
+        isFinal: true,
+        status: "final"
+      };
+
+      const existingStreamingMessage = incompleteMessages.get(id);
+      if (existingStreamingMessage) {
+        // console.log('[message_persistence] Replacing streaming message with final version and saving to database');
+
+        // Remove the streaming message from UI
+        const filteredConversation = currentState.conversation.filter(msg => msg.id !== existingStreamingMessage.id);
+        useWebRTCStore.setState({
+          conversation: filteredConversation
+        });
+
+        // Add the final complete message (this will save to database)
+        addConversationMessage(finalMessage);
+
+        incompleteMessages.delete(id);
+      } else {
+        // console.log('[message_persistence] No streaming message found, adding final message directly');
+        addConversationMessage(finalMessage);
+      }
+    }
+  } else {
+    // Streaming transcript - update or create incomplete message
+    // console.log('[message_persistence] Updating streaming transcript:', { data, role: messageRole });
+
+    if (messageRole === "user") {
+      // For user streaming messages, find and update the existing bubble instead of creating new ones
+      const currentState = useWebRTCStore.getState();
+      const updatedConversation = [...currentState.conversation];
+      const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
+
+      if (lastUserMessageIndex >= 0) {
+        // console.log('[message_persistence] Updating existing user bubble with streaming text');
+        updatedConversation[lastUserMessageIndex] = {
+          ...updatedConversation[lastUserMessageIndex],
+          text: data, // Replace with streaming text (not append since user deltas are usually complete)
+          status: "speaking",
+          isFinal: false
+        };
+
+        useWebRTCStore.setState({
+          conversation: updatedConversation
+        });
+      }
+    } else {
+      // For assistant messages, use existing streaming logic
+      const existingMessage = incompleteMessages.get(id);
+
+      if (existingMessage) {
+        // Update existing incomplete message
+        const updatedMessage: Conversation = {
+          ...existingMessage,
+          text: existingMessage.text + data,
+          timestamp: new Date().toISOString()
+        };
+
+        incompleteMessages.set(id, updatedMessage);
+
+        // Update in conversation by removing old and adding updated
+        const currentState = useWebRTCStore.getState();
+        const filteredConversation = currentState.conversation.filter(msg => msg.id !== existingMessage.id);
+
+        useWebRTCStore.setState({
+          conversation: [...filteredConversation, updatedMessage]
+        });
+      } else {
+        // Create new incomplete message
+        const newMessage: Conversation = {
+          id: `${messageRole}-streaming-${id}`,
+          role: messageRole,
+          text: data,
+          timestamp: new Date().toISOString(),
+          isFinal: false,
+          status: "speaking"
+        };
+
+        incompleteMessages.set(id, newMessage);
+        addConversationMessage(newMessage);
+      }
+    }
+  }
+});
+
+// console.log('[V16] ✅ MESSAGE: Transcript subscription set up successfully');
+
+return () => {
+  // console.log('[V16] 🧹 MESSAGE: Cleaning up transcript subscription');
+  unsubscribe();
+};
+  }, [addConversationMessage, triageSession.currentSpecialist]);
+
+// Auto-scroll to bottom when conversation changes
+useEffect(() => {
+  if (conversationHistoryRef.current) {
+    const scrollContainer = conversationHistoryRef.current;
+    scrollContainer.scrollTop = scrollContainer.scrollHeight;
+  }
+}, [conversation]);
+
+// Update triage session when resumable conversation changes (for resume flow)
+// Only run this during initial load, not after handoffs
+useEffect(() => {
+  if (resumableConversation?.currentSpecialist && !triageSession.isHandoffPending) {
+    // console.log('[triageAI] 🔄 RESUME: Updating triage session with specialist from resumable conversation', {
+    specialist: resumableConversation.currentSpecialist,
+      conversationId: resumableConversation.id,
+        currentTriageSpecialist: triageSession.currentSpecialist
+  });
+
+// Only update if we're not already on the correct specialist (prevent overriding handoffs)
+if (triageSession.currentSpecialist !== resumableConversation.currentSpecialist) {
+  // console.log('[triageAI] 🚨 RESET-DEBUG Line 407: Resume specialist update', {
+  from: triageSession.currentSpecialist,
+    to: resumableConversation.currentSpecialist,
+      resumableId: resumableConversation.id,
+        timestamp: new Date().toISOString()
+});
+updateTriageSession({
+  currentSpecialist: resumableConversation.currentSpecialist,
+  conversationId: resumableConversation.id
+});
+      }
+    }
+  }, [resumableConversation?.currentSpecialist, resumableConversation?.id, triageSession.isHandoffPending, triageSession.currentSpecialist]);
+
+// Debug: Track triageSession.currentSpecialist changes
+useEffect(() => {
+  // console.log('[triageAI] 🔍 DEBUG: triageSession.currentSpecialist changed:', {
+  currentSpecialist: triageSession.currentSpecialist,
+    sessionId: triageSession.sessionId,
+      conversationId: triageSession.conversationId,
+        isHandoffPending: triageSession.isHandoffPending,
+          timestamp: new Date().toISOString(),
+            stack: new Error().stack?.split('\n').slice(0, 3).join('\n') // Show call stack for debugging
+});
+  }, [triageSession.currentSpecialist]);
+
+// Initialize V16 page
+useEffect(() => {
+  // console.log('[triageAI] 🚨 RESET-DEBUG: Component Mount/Re-mount detected', {
+  initialSpecialist: triageSession.currentSpecialist,
+    timestamp: new Date().toISOString()
+});
+// console.log('[V16] 🚀 Triage AI Page Initialized');
+optimizedAudioLogger.info('webrtc', 'v16_triage_page_initialized', {
+  timestamp: Date.now()
+});
+
+return () => {
+  // console.log('[V16] 🧹 Triage AI Page Cleanup');
+  optimizedAudioLogger.info('webrtc', 'v16_triage_page_cleanup', {
+    timestamp: Date.now()
+  });
+};
+  }, []);
+
+
+// Listen for specialist handoff events from triage AI
+useEffect(() => {
+  const handleSpecialistHandoff = async (e: Event) => {
+    const handoffStartTime = performance.now();
+    const handoffSessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+
+    // console.log(`[HANDOFF-DEBUG] ===== HANDOFF EVENT LISTENER TRIGGERED =====`);
+    // console.log(`[HANDOFF-DEBUG] Handoff Session ID: ${handoffSessionId}`);
+    // console.log(`[HANDOFF-DEBUG] Event trigger time: ${handoffStartTime.toFixed(3)}ms since page load`);
+
+    const customEvent = e as CustomEvent<{
+      specialistType: string;
+      contextSummary: string;
+      conversationId: string;
+      sessionId?: string;
+      dispatchedAt?: number;
+      responseSessionId?: string;
+    }>;
+
+    // console.log(`[HANDOFF-DEBUG] Raw event received:`, e);
+    // console.log(`[HANDOFF-DEBUG] Custom event detail:`, customEvent.detail);
+    // console.log(`[HANDOFF-DEBUG] Event correlation data:`, {
+    handoffSessionId,
+      originalSessionId: customEvent.detail.sessionId || 'MISSING',
+        responseSessionId: customEvent.detail.responseSessionId || 'MISSING',
+          dispatchedAt: customEvent.detail.dispatchedAt || 'MISSING',
+            receivedAt: handoffStartTime
+  });
+
+// console.log(`[HANDOFF-DEBUG] HANDOFF EVENT RECEIVED! Triage AI requesting handoff to: ${customEvent.detail.specialistType}`);
+// console.log(`[HANDOFF-DEBUG] Context summary: ${customEvent.detail.contextSummary}`);
+// console.log(`[HANDOFF-DEBUG] Conversation ID: ${customEvent.detail.conversationId}`);
+
+// console.log(`[HANDOFF-DEBUG] 🔄 Step 1/5: HANDOFF INITIATED - Triage → ${customEvent.detail.specialistType}`, {
+handoffSessionId,
+  specialist: customEvent.detail.specialistType,
+    conversationId: customEvent.detail.conversationId,
+      contextLength: customEvent.detail.contextSummary?.length || 0,
+        timestamp: new Date().toISOString(),
+          eventProcessingDelay: customEvent.detail.dispatchedAt ?
+            (handoffStartTime - customEvent.detail.dispatchedAt).toFixed(3) + 'ms' : 'UNKNOWN'
+      });
+
+const { specialistType, contextSummary, conversationId } = customEvent.detail;
+
+try {
+  const step1StartTime = performance.now();
+  // console.log(`[HANDOFF-DEBUG] ⏳ Step 1/5: MARKING HANDOFF AS PENDING`);
+  // console.log(`[HANDOFF-DEBUG] Step 1 start time: ${step1StartTime.toFixed(3)}ms`);
+  // console.log(`[HANDOFF-DEBUG] Current triage session state:`, triageSession);
+
+  // Mark handoff as pending
+  // console.log('[triageAI] 🚨 RESET-DEBUG Line 475: Handoff pending', {
+  handoffSessionId,
+    currentSpecialist: triageSession.currentSpecialist,
+      targetSpecialist: specialistType,
+        timestamp: new Date().toISOString()
+});
+
+updateTriageSession({
+  isHandoffPending: true,
+  contextSummary
+});
+
+const step1CompletionTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] ✅ Step 1/5 COMPLETED: Handoff marked as pending (${(step1CompletionTime - step1StartTime).toFixed(3)}ms)`);
+// console.log(`[HANDOFF-DEBUG] Updated session state - isHandoffPending: true`);
+
+const step2StartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] ⏳ Step 2/5: ENDING TRIAGE SESSION CLEANLY`);
+// console.log(`[HANDOFF-DEBUG] Step 2 start time: ${step2StartTime.toFixed(3)}ms`);
+// End current session cleanly
+const endResponse = await fetch('/api/v16/end-session', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    conversationId,
+    specialistType: 'triage',
+    contextSummary,
+    reason: 'handoff_to_specialist'
+  })
+});
+
+const step2CompletionTime = performance.now();
+if (!endResponse.ok) {
+  // console.warn(`[HANDOFF-DEBUG] ⚠️ Step 2/5: End session warning: ${endResponse.status} ${endResponse.statusText}`);
+  // console.warn(`[HANDOFF-DEBUG] End session response body:`, await endResponse.text());
+} else {
+  // console.log(`[HANDOFF-DEBUG] ✅ Step 2/5 COMPLETED: Triage session ended successfully (${(step2CompletionTime - step2StartTime).toFixed(3)}ms)`);
+}
+
+const step3StartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] ⏳ Step 3/5: WEBRTC DISCONNECT`);
+// console.log(`[HANDOFF-DEBUG] Step 3 start time: ${step3StartTime.toFixed(3)}ms`);
+// console.log(`[HANDOFF-DEBUG] NOTE: Audio completion is now handled by volume detection in onResponseDone before handoff dispatch`);
+
+// Now disconnect WebRTC
+const disconnectStartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] 🔌 Initiating WebRTC disconnect`);
+const disconnect = useWebRTCStore.getState().disconnect;
+disconnect();
+// console.log(`[HANDOFF-DEBUG] WebRTC disconnect called (${(performance.now() - disconnectStartTime).toFixed(3)}ms)`);
+
+// Small delay for clean disconnect
+const delayStartTime = performance.now();
+await new Promise(resolve => setTimeout(resolve, 1000));
+// console.log(`[HANDOFF-DEBUG] Clean disconnect delay completed (${(performance.now() - delayStartTime).toFixed(3)}ms)`);
+
+const step3CompletionTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] ✅ Step 3/5 COMPLETED: Audio completion and WebRTC disconnect (${(step3CompletionTime - step3StartTime).toFixed(3)}ms)`);
+
+const step4StartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] ⏳ Step 4/5: STARTING ${specialistType.toUpperCase()} SPECIALIST SESSION`);
+// console.log(`[HANDOFF-DEBUG] Step 4 start time: ${step4StartTime.toFixed(3)}ms`);
+// console.log(`[triageAI] 📡 API CALL: Preparing handoff start-session request`, {
+endpoint: '/api/v16/start-session',
+  method: 'POST',
+    userId: user?.uid,
+      specialistType,
+      conversationId,
+      contextSummary: contextSummary?.substring(0, 500) + '...',
+        timestamp: new Date().toISOString()
+        });
+
+// Start specialist session with timeout and retry logic
+const startSpecialistSession = async (retryCount = 0): Promise<Response> => {
+  const maxRetries = 3;
+  const timeoutMs = 15000; // 15 seconds timeout
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    const response = await fetch('/api/v16/start-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        userId: user?.uid,
+        specialistType,
+        conversationId,
+        contextSummary
+      }),
+      signal: controller.signal
+    });
+
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error) {
+    // console.warn(`[triageAI] ⚠️ Start-session attempt ${retryCount + 1}/${maxRetries} failed:`, error);
+
+    if (retryCount < maxRetries - 1) {
+      const delayMs = Math.min(1000 * Math.pow(2, retryCount), 5000); // Exponential backoff, max 5s
+      // console.log(`[triageAI] 🔄 Retrying start-session in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
+      return startSpecialistSession(retryCount + 1);
+    }
+
+    throw error;
+  }
+};
+
+const startResponse = await startSpecialistSession();
+
+// console.log(`[triageAI] 📡 API RESPONSE: Handoff start-session response received`, {
+status: startResponse.status,
+  statusText: startResponse.statusText,
+    ok: startResponse.ok,
+      headers: Object.fromEntries(startResponse.headers.entries()),
+        timestamp: new Date().toISOString()
+        });
+
+if (!startResponse.ok) {
+  const errorText = await startResponse.text();
+  // console.error(`[triageAI] ❌ API ERROR: Handoff start-session failed`, {
+  status: startResponse.status,
+    statusText: startResponse.statusText,
+      errorText,
+      userId: user?.uid,
+        specialistType,
+        conversationId,
+        timestamp: new Date().toISOString()
+});
+throw new Error(`Failed to start specialist session: ${startResponse.status} ${errorText}`);
+        }
+
+const sessionData = await startResponse.json();
+// console.log(`[triageAI] ✅ API SUCCESS: Handoff start-session response parsed`, {
+hasSession: !!sessionData.session,
+  hasPrompt: !!sessionData.session?.prompt,
+    hasContent: !!sessionData.session?.prompt?.content,
+      promptLength: sessionData.session?.prompt?.content?.length || 0,
+        hasVoiceSettings: !!sessionData.session?.prompt?.voice_settings,
+          sessionKeys: sessionData.session ? Object.keys(sessionData.session) : [],
+            timestamp: new Date().toISOString()
+        });
+// console.log(`[triage][handoff] ✅ Specialist session started`, {
+specialistType,
+  promptLength: sessionData.session.prompt.content.length,
+    hasVoiceSettings: !!sessionData.session.prompt.voice_settings
+        });
+
+// Update triage session state
+// console.log(`[triageAI][handoff] Updating triage session state:`, {
+currentSpecialist: specialistType,
+  conversationId,
+  contextSummaryLength: contextSummary.length
+        });
+// console.log('[triageAI] 🚨 RESET-DEBUG Line 581: Handoff completion (COMPLETE OBJECT REPLACEMENT)', {
+from: triageSession.currentSpecialist,
+  to: specialistType,
+    sessionId: sessionData.session.conversationId || '',
+      timestamp: new Date().toISOString()
+        });
+setTriageSession({
+  sessionId: sessionData.session.conversationId || '',
+  currentSpecialist: specialistType,
+  conversationId,
+  contextSummary,
+  isHandoffPending: false
+});
+
+const functionLoadStartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] 📋 Loading functions for new specialist: ${specialistType}`);
+// console.log(`[HANDOFF-DEBUG] Function load start time: ${functionLoadStartTime.toFixed(3)}ms`);
+
+// V16: Load functions for the new specialist using hook - REQUIRED
+try {
+  await loadFunctionsForAI(specialistType);
+  const functionLoadCompletionTime = performance.now();
+  // console.log(`[HANDOFF-DEBUG] ✅ Specialist functions loaded successfully (${(functionLoadCompletionTime - functionLoadStartTime).toFixed(3)}ms)`);
+  // console.log(`[HANDOFF-DEBUG] Functions registered to FunctionRegistryManager for: ${specialistType}`);
+
+  // Functions are automatically registered to FunctionRegistryManager by the hook useEffect
+
+} catch (functionError) {
+  // console.error(`[triage][functions] ❌ CRITICAL ERROR: Failed to load specialist functions for ${specialistType}:`, functionError);
+
+  // V16 BREAKING ERROR: Specialist function loading is required
+  const errorMessage = `V16 SPECIALIST FUNCTIONS FAILED TO LOAD: ${(functionError as Error).message}. Cannot hand off to ${specialistType} specialist without their functions from Supabase.`;
+
+  optimizedAudioLogger.error('triage', 'specialist_function_load_failed', functionError as Error, {
+    specialistType,
+    conversationId,
+    errorType: 'specialist_function_loading_failure'
+  });
+
+  throw new Error(errorMessage);
+}
+
+// Create context-aware greeting based on the retrieved context
+let contextAwareGreeting = `Hello! I'm your ${specialistType} specialist.`;
+
+if (sessionData.session.contextSummary && !sessionData.session.contextSummary.includes('Resuming conversation from')) {
+  // Extract key context for personalized greeting
+  const contextPreview = sessionData.session.contextSummary.substring(0, 150);
+  contextAwareGreeting = `Hello! I'm your ${specialistType} specialist. I understand you've been discussing ${contextPreview.toLowerCase()}... I'm here to provide focused support for your specific situation. How can I best help you today?`;
+} else {
+  contextAwareGreeting = `Hello! I'm your ${specialistType} specialist. I've reviewed what you discussed with our triage team, and I'm here to provide focused support for your specific needs. How can I help you today?`;
+}
+
+// Update WebRTC config with enhanced specialist prompt (includes context)
+const newConfig = {
+  enableDiagnostics: true,
+  timeout: 120000,
+  retryAttempts: 3,
+  instructions: sessionData.session.prompt.content, // This is the enhanced prompt from server
+  voice: sessionData.session.prompt.voice_settings?.voice || DEFAULT_VOICE,
+  tool_choice: DEFAULT_TOOL_CHOICE,
+  greetingInstructions: contextAwareGreeting
+};
+
+// console.log(`[triageAI][handoff] WebRTC config prepared:`, {
+instructionsLength: sessionData.session.prompt.content?.length || 0,
+  greetingInstructionsLength: contextAwareGreeting.length,
+    hasContextSummary: !!sessionData.session.contextSummary,
+      voice: sessionData.session.prompt.voice_settings?.voice || DEFAULT_VOICE
+        });
+
+// console.log(`[triageAI][handoff] Context-aware greeting created:`, {
+greetingLength: contextAwareGreeting.length,
+  hasSpecificContext: sessionData.session.contextSummary && !sessionData.session.contextSummary.includes('Resuming conversation from'),
+    greetingPreview: contextAwareGreeting.substring(0, 100) + '...'
+        });
+
+const step4CompletionTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] ✅ Step 4/5 COMPLETED: Specialist session started and functions loaded (${(step4CompletionTime - step4StartTime).toFixed(3)}ms)`);
+
+const step5StartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] ⏳ Step 5/5: RE-INITIALIZING WEBRTC WITH SPECIALIST CONFIG`);
+// console.log(`[HANDOFF-DEBUG] Step 5 start time: ${step5StartTime.toFixed(3)}ms`);
+// console.log(`[HANDOFF-DEBUG] Specialist instructions preview:`, {
+handoffSessionId,
+  instructionsStart: sessionData.session.prompt.content?.substring(0, 200) + '...',
+    instructionsEnd: sessionData.session.prompt.content?.substring(-200) || '',
+      totalLength: sessionData.session.prompt.content?.length,
+        includesContextKeyword: sessionData.session.prompt.content?.includes('IMPORTANT CONTEXT FROM TRIAGE AI') || false,
+          includesSessionReset: sessionData.session.prompt.content?.includes('NEW SPECIALIST SESSION') || false
+        });
+
+// Clear conversation history to ensure fresh specialist session
+const historyStartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] 🧹 Clearing conversation history for fresh specialist session`);
+useWebRTCStore.setState({ conversation: [], hasActiveConversation: false });
+// console.log(`[HANDOFF-DEBUG] Conversation history cleared (${(performance.now() - historyStartTime).toFixed(3)}ms)`);
+
+// Re-initialize with specialist config
+const preInitStartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] 🔧 Pre-initializing WebRTC with specialist config`);
+const preInitialize = useWebRTCStore.getState().preInitialize;
+await preInitialize(newConfig);
+// console.log(`[HANDOFF-DEBUG] Pre-initialization completed (${(performance.now() - preInitStartTime).toFixed(3)}ms)`);
+
+// Reconnect with specialist AI
+const connectStartTime = performance.now();
+// console.log(`[HANDOFF-DEBUG] 🔄 Initiating WebRTC reconnection to specialist`);
+const connect = useWebRTCStore.getState().connect;
+connect();
+// console.log(`[HANDOFF-DEBUG] WebRTC connect called (${(performance.now() - connectStartTime).toFixed(3)}ms)`);
+
+const step5CompletionTime = performance.now();
+const totalHandoffTime = step5CompletionTime - handoffStartTime;
+
+    // console.log(`[HANDOFF-DEBUG] ✅ Step 5/5 COMPLETED: WebRTC reconnected with specialist config (${(step5CompletionTime - step5StartTime).toFixed(3)}ms)`);
+    // console.log(`[HANDOFF-DEBUG] 🎉 HANDOFF COMPLETED SUCCESSFULLY`);
+    // console.log(`[HANDOFF-DEBUG] ===== HANDOFF PERFORMANCE SUMMARY =====`);
+    // console.log(`[HANDOFF-DEBUG] Handoff Session ID: ${handoffSessionId}`);
+    // console.log(`[HANDOFF-DEBUG] Total handoff time: ${totalHandoffTime.toFixed(3)}ms`);
+    // console.log(`[HANDOFF-DEBUG] Step 1 (mark pending): ${(step1CompletionTime - step1StartTime).toFixed(3)}ms`);
+    // console.log(`[HANDOFF-DEBUG] Step 2 (end triage): ${(step2CompletionTime - step2StartTime).toFixed(3)}ms`);
+    // console.log(`[HANDOFF-DEBUG] Step 3 (audio completion): ${(step3CompletionTime - step3StartTime).toFixed(3)}ms`);
+    // console.log(`[HANDOFF-DEBUG] Step 4 (start specialist): ${(step4CompletionTime - step4StartTime).toFixed(3)}ms`);
+    // console.log(`[HANDOFF-DEBUG] Step 5 (reconnect): ${(step5CompletionTime - step5StartTime).toFixed(3)}ms`);
+    // console.log(`[HANDOFF-DEBUG] Successfully connected to ${specialistType} specialist`);
+    // console.log(`[HANDOFF-DEBUG] Handoff completion timestamp: ${new Date().toISOString()}`);
+
+      } catch (error) {
+  // console.error(`[triageAI][handoff] ❌ HANDOFF FAILED: Triage → ${specialistType}`, {
+  error: (error as Error).message,
+    conversationId,
+    specialistType
+});
+optimizedAudioLogger.error('triage', 'handoff_failed', error as Error, {
+  specialistType,
+  conversationId
+});
+
+// Reset handoff state on failure
+// console.log('[triageAI] 🚨 RESET-DEBUG Line 688: Handoff failure recovery', {
+currentSpecialist: triageSession.currentSpecialist,
+  keepingSpecialist: true,
+    timestamp: new Date().toISOString()
+        });
+updateTriageSession({
+  isHandoffPending: false
+});
+
+// Show error to user
+addConversationMessage({
+  id: `handoff-error-${Date.now()}`,
+  role: 'assistant',
+  text: `I apologize, but there was an issue connecting you with the ${specialistType} specialist. Let me continue helping you directly.`,
+  timestamp: new Date().toISOString(),
+  isFinal: true,
+  status: 'final'
+});
+      }
+    };
+
+// console.log(`[triageAI] 👂 Event listener REGISTERED for specialist_handoff events`);
+// console.log(`[V16] 👂 Listening for specialist handoff events`);
+window.addEventListener('specialist_handoff', handleSpecialistHandoff);
+
+return () => {
+  // console.log(`[triageAI] 🔇 Event listener REMOVED for specialist_handoff events`);
+  // console.log(`[V16] 🔇 Removing specialist handoff event listener`);
+  window.removeEventListener('specialist_handoff', handleSpecialistHandoff);
+};
+  }, [user, addConversationMessage, loadFunctionsForAI]);
+
+
+// Listen for map display events from mental health functions
+useEffect(() => {
+  const handleDisplayResourceMap = (e: CustomEvent<{ searchId: string }>) => {
+    // console.log(`%c [V16-MAP-DISPLAY] 🗺️ Displaying map for search ID: ${e.detail.searchId}`, 'background: #1e3a5f; color: #32CD32; font-weight: bold; padding: 4px; border-radius: 4px;');
+    optimizedAudioLogger.info('map', 'display_resource_map_triggered', {
+      searchId: e.detail.searchId
+    });
+    setCurrentSearchId(e.detail.searchId);
+    setMapVisible(true);
+  };
+
+  window.addEventListener('display_resource_map', handleDisplayResourceMap as EventListener);
+
+  return () => {
+    window.removeEventListener('display_resource_map', handleDisplayResourceMap as EventListener);
+  };
+}, []);
+
+// V15 GREENFIELD FIX: Removed ai_end_session event listener
+// Voice-activated end session now uses the same graceful flow as button clicks
+// The end_session function returns success, AI says goodbye, WebRTC handles completion
+
+// REMOVED: Static orb visualization state - now using enhanced AudioOrbV15 component
+
+// Memoized callback for closing the map
+const handleCloseMap = useCallback(() => {
+  // console.log(`%c [V16-MAP-DISPLAY] 🚪 Closing map display`, 'background: #1e3a5f; color: #ffcc00; font-weight: bold; padding: 4px; border-radius: 4px;');
+  optimizedAudioLogger.info('map', 'map_closed_by_user');
+  setMapVisible(false);
+  setCurrentSearchId(null);
+}, []);
+
+// Handle send message - memoized to prevent recreation on every render
+const handleSendMessage = useCallback(() => {
+  if (!userMessage.trim() || !isConnected) {
+    return;
+  }
+
+  // console.log('[V16] 📤 USER: Sending text message', {
+  messageLength: userMessage.length,
+    connectionState,
+    specialist: triageSession.currentSpecialist || 'triage',
+      isHandoffPending: triageSession.isHandoffPending
+});
+
+optimizedAudioLogger.logUserAction('message_sent', {
+  messageLength: userMessage.length,
+  connectionState
+});
+
+// Add user message to conversation immediately when typed
+const userMessageObj: Conversation = {
+  id: `user-typed-${Date.now()}`,
+  role: "user",
+  text: userMessage,
+  timestamp: new Date().toISOString(),
+  isFinal: true,
+  status: "final"
+};
+
+addConversationMessage(userMessageObj);
+
+const success = sendMessage(userMessage);
+
+if (success) {
+  clearUserMessage();
+} else {
+  optimizedAudioLogger.error('webrtc', 'send_message_failed', new Error('Message send failed'), {
+    messageLength: userMessage.length
+  });
+  // Don't clear the message if sending failed, allow user to retry
+}
+  }, [userMessage, isConnected, connectionState, addConversationMessage, sendMessage, clearUserMessage]);
+
+return (
+  <div
+    className="main-container"
+    ref={(el) => {
+      if (el) {
+        const computed = window.getComputedStyle(el);
+        // console.log('[resume] 🏠 Main container DOM/CSS:', {
+        element: el,
+          className: el.className,
+            pointerEvents: computed.pointerEvents,
+              position: computed.position,
+                zIndex: computed.zIndex,
+                  overflow: computed.overflow,
+                    width: computed.width,
+                      height: computed.height,
+                        clientRect: el.getBoundingClientRect()
+      });
+
+      // CSS Override Detection Functions
+      function logCSSCascade(element: Element, elementName: string, phase: string) {
+        const allRules = [];
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules) {
+              if ((rule as CSSStyleRule).selectorText && element.matches((rule as CSSStyleRule).selectorText)) {
+                allRules.push({
+                  selector: (rule as CSSStyleRule).selectorText,
+                  styles: (rule as CSSStyleRule).style.cssText,
+                  sheet: sheet.href || 'inline',
+                  specificity: (rule as CSSStyleRule).selectorText.split(/[\s,]+/).length // Basic specificity
+                });
+              }
+            }
+          } catch (e) {
+            // console.log('error: ', e)
+          }
+        }
+        // console.log(`[layout-css-cascade] ${elementName}-${phase}: rules=${JSON.stringify(allRules)}`);
+      }
+
+      function logStyleOverrides(element: Element, elementName: string, phase: string) {
+        const computed = getComputedStyle(element);
+        const expected = ({
+          'v11-layout-root': { display: 'grid', gridTemplateRows: 'auto 1fr auto', height: '100dvh', overflow: 'hidden' },
+          'main-content-row': { overflow: 'auto', display: 'flex', flexDirection: 'column' },
+          'footer-row': { display: 'block' }
+        } as Record<string, Record<string, string>>)[elementName];
+
+        if (expected) {
+          Object.keys(expected).forEach(prop => {
+            const actual = computed.getPropertyValue(prop) || (computed as unknown as Record<string, string>)[prop];
+            const expectedVal = expected[prop];
+            const matches = actual === expectedVal;
+            // console.log(`[layout-style-check] ${elementName}-${phase}: ${prop} expected=${expectedVal}, actual=${actual}, matches=${matches}`);
+          });
+        }
+      }
+
+      function logClassApplication(element: Element, elementName: string, phase: string) {
+        const classList = Array.from(element.classList);
+        const hasExpectedClass = element.classList.contains(elementName);
+        // console.log(`[layout-class-check] ${elementName}-${phase}: hasClass=${hasExpectedClass}, allClasses=${JSON.stringify(classList)}`);
+
+        // Check if styles are actually defined for this class
+        let ruleFound = false;
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules) {
+              if ((rule as CSSStyleRule).selectorText === `.${elementName}`) {
+                ruleFound = true;
+                // console.log(`[layout-class-definition] ${elementName}-${phase}: ruleFound=true, styles=${(rule as CSSStyleRule).style.cssText}`);
+                break;
+              }
+            }
+          } catch (e) {
+            // console.log('error: ', e)
+          }
+        }
+        if (!ruleFound) {
+          // console.log(`[layout-class-definition] ${elementName}-${phase}: ruleFound=false`);
+        }
+      }
+
+      function logCSSSource(element: Element, property: string, elementName: string, phase: string) {
+        // Find what CSS rule is actually setting this property
+        const computed = getComputedStyle(element);
+        const value = computed.getPropertyValue(property) || (computed as unknown as Record<string, string>)[property];
+
+        for (const sheet of document.styleSheets) {
+          try {
+            for (const rule of sheet.cssRules) {
+              if ((rule as CSSStyleRule).selectorText && element.matches((rule as CSSStyleRule).selectorText) && (rule as CSSStyleRule).style[property as keyof CSSStyleDeclaration]) {
+                // console.log(`[layout-css-source] ${elementName}-${phase}: ${property}=${value} from selector="${(rule as CSSStyleRule).selectorText}" sheet="${sheet.href || 'inline'}"`);
+              }
+            }
+          } catch (e) {
+            // console.log('error: ', e)
+          }
+        }
+      }
+
+      // Run CSS Grid layout diagnostics
+      const layoutElements = [
+        { element: el.closest('.v11-layout-root'), name: 'v11-layout-root' },
+        { element: el.closest('.main-content-row'), name: 'main-content-row' },
+        { element: document.querySelector('.footer-row'), name: 'footer-row' }
+      ];
+
+      layoutElements.forEach(({ element, name }) => {
+        if (element) {
+          const phase = 'css-diagnostic';
+          logClassApplication(element, name, phase);
+          logStyleOverrides(element, name, phase);
+          logCSSCascade(element, name, phase);
+          logCSSSource(element, 'display', name, phase);
+          logCSSSource(element, 'overflow', name, phase);
+          if (name === 'v11-layout-root') {
+            logCSSSource(element, 'gridTemplateRows', name, phase);
+          }
+        }
+      });
+    }
+    }}
+    onClickCapture={(e) => console.log('[resume] ⬇️ Main container - click captured:', e.target)}
+    onClick={(e) => console.log('[resume] ⬆️ Main container - click bubbled:', e.target)}
+  >
+    {/* Start button overlay - positioned above chatbox with higher z-index - WITH DEBUGGING */}
+    {!isConnected && (
+      <div
+        className="start-button-overlay flex flex-col items-center"
+        ref={(el) => {
+          if (el) {
+            const computed = window.getComputedStyle(el);
+            // console.log('[resume] 🎯 Start overlay container DOM/CSS:', {
+            element: el,
+              className: el.className,
+    pointerEvents: computed.pointerEvents,
+    position: computed.position,
+    zIndex: computed.zIndex,
+    display: computed.display,
+    visibility: computed.visibility,
+    opacity: computed.opacity,
+    width: computed.width,
+    height: computed.height,
+    top: computed.top,
+    left: computed.left,
+    clientRect: el.getBoundingClientRect()
+              });
+            }
+          }}
+    onClickCapture={(e) => console.log('[resume] ⬇️ Start overlay - click captured:', e.target)}
+    onClick={(e) => {
+      // console.log('[resume] ⬆️ Start overlay - click bubbled:', e.target);
+      // console.log('[resume] 🖱️ Overlay clicked:', e.target);
+    }}
+    onMouseMove={(e) => {
+      // Z-index investigation - check what elements are at cursor position
+      const elements = document.elementsFromPoint(e.clientX, e.clientY);
+      if (elements.length > 1) { // Only log if there are multiple elements (potential overlay)
+        // console.log('[resume] 📍 Elements at cursor:', elements.slice(0, 3).map(el => ({
+        tag: el.tagName,
+          classes: el.className,
+    zIndex: window.getComputedStyle(el).zIndex,
+    pointerEvents: window.getComputedStyle(el).pointerEvents,
+    position: window.getComputedStyle(el).position
+              })));
+            }
+          }}
+        >
+    {/* Always show Let's Talk button - WITH DEBUGGING */}
+    <button
+      className={`control-button primary large-button rounded-full ${connectionState === 'connecting' ? 'connecting' : ''} ${isPreparing ? 'preparing' : ''}`}
+      ref={(el) => {
+        if (el) {
+          const computed = window.getComputedStyle(el);
+          // console.log('[resume] 🔍 Let\'s Talk button DOM/CSS:', {
+          element: el,
+            className: el.className,
+    disabled: el.disabled,
+    hasOnClick: !!el.onclick,
+    pointerEvents: computed.pointerEvents,
+    position: computed.position,
+    zIndex: computed.zIndex,
+    display: computed.display,
+    visibility: computed.visibility,
+    opacity: computed.opacity,
+    cursor: computed.cursor,
+    clientRect: el.getBoundingClientRect(),
+    style: el.getAttribute('style')
+                });
+              }
+            }}
+    onClickCapture={() => console.log('[resume] ⬇️ Let\'s Talk button - click captured')}
+    onClick={(e) => {
+      // console.log('[resume] 🖱️ Let\'s Talk button - click fired!');
+      // console.log('[resume] 🎯 Event details:', {
+      type: e.type,
+        target: e.target,
+    currentTarget: e.currentTarget,
+    bubbles: e.bubbles,
+    cancelable: e.cancelable,
+    defaultPrevented: e.defaultPrevented,
+    timeStamp: e.timeStamp
+              });
+    // console.log('[V16] 🚀 USER: Let\'s Talk clicked', {
+      shouldResume,
+      hasResumableConversation: !!resumableConversation,
+    specialist: triageSession.currentSpecialist || 'triage',
+    hasTriagePrompt: !!triagePrompt,
+    userMode: user ? 'authenticated' : 'anonymous'
+              });
+    onLetsTalk();
+            }}
+    onMouseDown={() => console.log('[resume] 🖱️ Let\'s Talk button mousedown')}
+    onMouseUp={() => console.log('[resume] 🖱️ Let\'s Talk button mouseup')}
+    onMouseEnter={() => console.log('[resume] 📍 Let\'s Talk button mouse enter')}
+    onMouseLeave={() => console.log('[resume] 📍 Let\'s Talk button mouse leave')}
+    disabled={connectionState === 'connecting' || isPreparing}
+    style={{ borderRadius: "9999px" }}
+          >
+    {connectionState === 'connecting' ? (
+      <>
+        <span className="spinner"></span>
+        Connecting...
+      </>
+    ) : isPreparing ? (
+      <>
+        <span className="spinner"></span>
+        Preparing...
+      </>
+    ) : (
+      "Let's Talk"
+    )}
+  </button>
+
+          {/* Show Resume checkbox if user has resumable conversation */ }
+{ resumeCheckboxJSX }
+
+{/* Spacing between Let's Talk and View conversation history */ }
+<div className="mt-8"></div>
+
+{/* Show View conversation history button for authenticated users */ }
+{
+  user && (
+    <button
+      onClick={() => window.location.href = '/chatbotV16/history'}
+      className="text-sm text-blue-400 hover:text-blue-300 underline mt-2 cursor-pointer pointer-events-auto"
+      style={{ pointerEvents: 'auto' }}
+      onClickCapture={() => console.log('[history] ⬇️ History button - click captured')}
+      onMouseDown={() => console.log('[history] 🖱️ History button mousedown')}
+      onMouseUp={() => console.log('[history] 🖱️ History button mouseup')}
+      ref={(el) => {
+        if (el) {
+          const computed = window.getComputedStyle(el);
+          // console.log('[history] 🔍 History button DOM/CSS:', {
+          element: el,
+            className: el.className,
+              hasOnClick: !!el.onclick,
+                pointerEvents: computed.pointerEvents,
+                  position: computed.position,
+                    zIndex: computed.zIndex,
+                      display: computed.display,
+                        visibility: computed.visibility,
+                          opacity: computed.opacity,
+                            cursor: computed.cursor,
+                              clientRect: el.getBoundingClientRect(),
+                                style: el.getAttribute('style')
+        });
+      }
+      }}
+            >
+  View conversation history
+            </button >
+          )}
+
+{/* Show checking resume status */ }
+{
+  user && isCheckingResume && (
+    <div className="text-xs text-gray-400 mt-2">
+      Checking for previous conversations...
+    </div>
+  )
+}
+        </div >
+      )}
+
+{/* Conversation container - naturally fills available space */ }
+<div className={`conversation-container ${!isConnected ? 'conversation-container-with-overlay' : ''}`} style={{ position: 'relative', zIndex: 1 }}>
+  <div className="conversation-history" ref={conversationHistoryRef}>
+    {conversation.map((msg) => (
+      <div
+        key={msg.id}
+        className={`message ${msg.role} ${!msg.isFinal ? 'animate-pulse' : ''}`}
+      >
+        {msg.role === 'assistant' && triageSession.currentSpecialist && (
+          <div className="text-xs font-medium text-blue-400 mb-1 uppercase tracking-wide">
+            {triageSession.currentSpecialist} AI
+          </div>
+        )}
+        {msg.text}
+        {!msg.isFinal && msg.status === 'speaking' && msg.text !== 'Thinking...' && msg.text !== 'Listening...' && (
+          <div className="text-xs opacity-50 mt-1">
+            Listening...
+          </div>
+        )}
+      </div>
+    ))}
+  </div>
+
+  {/* Text input - only show when connected */}
+  {isConnected && (
+    <form onSubmit={(e) => {
+      e.preventDefault();
+      handleSendMessage();
+    }} className="input-container">
+      <input
+        type="text"
+        value={userMessage}
+        onChange={(e) => updateUserMessage(e.target.value)}
+        placeholder="Type your message..."
+        className="text-input"
+      />
+      <button
+        type="submit"
+        className="send-button-new"
+        disabled={!userMessage.trim()}
+        aria-label="Send message"
+      >
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+          <path d="M6 12h16" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+    </form>
+  )}
+</div>
+
+{/* Enhanced Audio visualizer with real-time volume data */ }
+{
+  isConnected && (
+    <div className="visualization-container">
+      <AudioOrbV15 />
+    </div>
+  )
+}
+
+{/* Map Resources Display - reusing V11's proven component */ }
+<MapResourcesDisplay
+  searchId={currentSearchId || undefined}
+  visible={mapVisible}
+  onClose={handleCloseMap}
+/>
+
+{/* DIAGNOSTICS PANEL - NOT YET IMPLEMENTED
+          Commented out for alpha testing to avoid mock data confusion.
+          Currently shows hardcoded/fake data instead of real diagnostics.
+          Will implement real diagnostics if/when performance issues arise.
+          
+      {showDiagnostics && (
+        <DiagnosticsPanelV15
+          audioState={{
+            queueLength: 0,
+            isPlaying: false,
+            currentMessageId: null,
+            lastProcessedChunk: 0,
+            audioContextState: 'running',
+            totalChunksProcessed: 0,
+            totalPlaybackTime: 0
+          }}
+          connectionState={connectionState}
+          diagnostics={{
+            getEventHistory: () => [],
+            getPerformanceMetrics: () => {
+              const diagnostics = getDiagnostics();
+              const connection = diagnostics.connection as Record<string, unknown>;
+              return {
+                connectionTime: connection.connectionDuration as number || 0,
+                audioLatency: 0,
+                messageProcessingTime: 0,
+                memoryUsage: performance && 'memory' in performance ?
+                  (performance as unknown as { memory: { usedJSHeapSize: number } }).memory.usedJSHeapSize : 0
+              };
+            },
+            exportDiagnostics: () => JSON.stringify(getDiagnostics(), null, 2)
+          }}
+          onClose={() => setShowDiagnostics(false)}
+        />
+      )}
+      */}
+    </div >
+  );
+}, (prevProps, nextProps) => {
+  // FIXED: Custom comparison function for memo
+  const userChanged = prevProps.user?.uid !== nextProps.user?.uid;
+  const promptChanged = prevProps.triagePrompt?.id !== nextProps.triagePrompt?.id;
+  const conversationChanged = prevProps.resumableConversation?.id !== nextProps.resumableConversation?.id;
+  const onLetsTalkChanged = prevProps.onLetsTalk !== nextProps.onLetsTalk;
+  const shouldResumeChanged = prevProps.shouldResume !== nextProps.shouldResume;
+  const setShouldResumeChanged = prevProps.setShouldResume !== nextProps.setShouldResume;
+  const isCheckingChanged = prevProps.isCheckingResume !== nextProps.isCheckingResume;
+  const loadFunctionsChanged = prevProps.loadFunctionsForAI !== nextProps.loadFunctionsForAI;
+
+  const propsChanged = userChanged || promptChanged || conversationChanged || onLetsTalkChanged ||
+    shouldResumeChanged || setShouldResumeChanged || isCheckingChanged || loadFunctionsChanged;
+
+  // console.log('[resume] 🔍 MEMO COMPARISON:', {
+  timestamp: performance.now(),
+    propsChanged,
+    userChanged,
+    promptChanged,
+    conversationChanged,
+    onLetsTalkChanged,
+    shouldResumeChanged,
+    setShouldResumeChanged,
+    isCheckingChanged,
+    loadFunctionsChanged,
+    prevUserUid: prevProps.user?.uid,
+      nextUserUid: nextProps.user?.uid,
+        prevPromptId: prevProps.triagePrompt?.id,
+          nextPromptId: nextProps.triagePrompt?.id,
+            prevConversationId: prevProps.resumableConversation?.id,
+              nextConversationId: nextProps.resumableConversation?.id,
+                prevOnLetsTalkRef: prevProps.onLetsTalk,
+                  nextOnLetsTalkRef: nextProps.onLetsTalk,
+                    prevSetShouldResumeRef: prevProps.setShouldResume,
+                      nextSetShouldResumeRef: nextProps.setShouldResume,
+                        prevLoadFunctionsRef: prevProps.loadFunctionsForAI,
+                          nextLoadFunctionsRef: nextProps.loadFunctionsForAI,
+                            willRerender: propsChanged
+});
+
+if (propsChanged) {
+  // console.log('[resume] 🔄 ChatBotV16Component props changed, will re-render');
+} else {
+  // console.log('[resume] ✅ ChatBotV16Component props unchanged, skipping re-render');
+}
+
+return !propsChanged; // Return true to skip re-render, false to re-render
+});
+
+// V16: Simplified interfaces - no complex context states needed
+
+// Resume conversation interface
+interface ResumableConversation {
+  id: string;
+  currentSpecialist: string;
+  specialistHistory: unknown[];
+  createdAt: string;
+  lastActivityAt: string;
+  messages: unknown[];
+}
+
+// Main page component that initializes the Zustand WebRTC store
+// Main page component implementing V16 Triage AI architecture
+export default function ChatBotV16Page() {
+  const renderTimestamp = performance.now();
+  // console.log('[resume] 🔄 ChatBotV16Page MAIN RENDER at', renderTimestamp);
+
+  const { user, loading: authLoading } = useAuth();
+
+  // V16: Use Supabase functions hook for proper function execution
+  const {
+    functionDefinitions: triageFunctions,
+    functionRegistry,
+    loading: functionsLoading,
+    error: functionsError,
+    loadFunctionsForAI
+  } = useSupabaseFunctions();
+
+  // V16 State: AI instructions (prompts still loaded via API like before)
+  const [triagePrompt, setTriagePrompt] = useState<AIPrompt | null>(null);
+  const [promptsLoading, setPromptsLoading] = useState(true);
+
+  // Resume functionality state
+  const [resumableConversation, setResumableConversation] = useState<ResumableConversation | null>(null);
+  const [isCheckingResume, setIsCheckingResume] = useState(false);
+  const [shouldResume, setShouldResume] = useState(false); // Checkbox state
+  const [historyResumeId, setHistoryResumeId] = useState<string | null>(null); // For resuming from history
+
+  // Use ref to track if API call is in progress (doesn't trigger re-renders)
+  const isCheckingRef = useRef(false);
+
+  // FIXED: Stabilize user reference - place early to maintain hook order
+  const stableUser = useMemo(() => user, [user?.uid]);
+
+  // FIXED: Stabilize resumableConversation reference - place early to maintain hook order
+  const stableResumableConversation = useMemo(() => resumableConversation, [
+    resumableConversation?.id
+  ]);
+
+  // console.log('[resume] 🎯 Resume state debug:', {
+  timestamp: renderTimestamp,
+    hasUser: !!user,
+      userId: user?.uid,
+        hasResumableConversation: !!resumableConversation,
+          resumableConversationId: resumableConversation?.id,
+            isCheckingResume,
+            authLoading,
+            promptsLoading,
+            shouldShowResumeButton: !!(user && resumableConversation && !isCheckingResume)
+});
+
+// Check for history resume parameters on mount - MOVED TO MAINTAIN HOOK ORDER
+useEffect(() => {
+  if (typeof window !== 'undefined') {
+    const urlParams = new URLSearchParams(window.location.search);
+    const resumeParam = urlParams.get('resume');
+
+    if (resumeParam === 'true') {
+      const storedConversationId = localStorage.getItem('resumeConversationId');
+      const storedSpecialist = localStorage.getItem('resumeSpecialist');
+
+      if (storedConversationId) {
+        // console.log('[V16] 🔄 HISTORY-RESUME: Resuming conversation from history:', {
+        conversationId: storedConversationId,
+          specialist: storedSpecialist
+      });
+
+setHistoryResumeId(storedConversationId);
+setShouldResume(true);
+
+// Clean up localStorage
+localStorage.removeItem('resumeConversationId');
+localStorage.removeItem('resumeSpecialist');
+
+// Clean up URL
+const newUrl = window.location.pathname;
+window.history.replaceState({}, '', newUrl);
+        }
+      }
+    }
+  }, []);
+
+// V16 removes specialized context states - triage AI handles all routing decisions
+
+// Get store functions and state
+const preInitialize = useWebRTCStore(state => state.preInitialize);
+const clearAnonymousSession = useWebRTCStore(state => state.clearAnonymousSession);
+const connect = useWebRTCStore(state => state.connect);
+const setConversationId = useWebRTCStore(state => state.setConversationId);
+const registerFunctions = useWebRTCStore(state => state.registerFunctions);
+const setPreparing = useWebRTCStore(state => state.setPreparing);
+
+// V16 functions now loaded directly via API in useEffect above (simplified architecture)
+
+// FIXED: Resume conversation logic - now called from Let's Talk button when checkbox is checked
+const handleResumeConversation = useCallback(async () => {
+  const resumeCallbackTimestamp = performance.now();
+  // console.log('[resume] 🎯 handleResumeConversation CALLBACK CREATED at', resumeCallbackTimestamp);
+  // console.log('[V16] 🚀 RESUME: handleResumeConversation function called');
+  // Use the current value from state, don't put it in dependencies
+  const currentConversation = resumableConversation;
+  const currentUser = user;
+  const currentHistoryResumeId = historyResumeId;
+
+  // console.log('[V16] 🔍 RESUME: Pre-validation state check:', {
+  hasUser: !!currentUser,
+    userUid: currentUser?.uid,
+      userEmail: currentUser?.email,
+        hasConversation: !!currentConversation,
+          conversationId: currentConversation?.id,
+            conversationSpecialist: currentConversation?.currentSpecialist,
+              conversationLastActivity: currentConversation?.lastActivityAt,
+                historyResumeId: currentHistoryResumeId,
+                  resumeSource: currentHistoryResumeId ? 'history' : 'most_recent',
+                    timestamp: performance.now()
+});
+
+// Determine which conversation ID to use
+const conversationIdToResume = currentHistoryResumeId || currentConversation?.id;
+
+if (!currentUser?.uid || !conversationIdToResume) {
+  // console.error('[V16] ❌ RESUME: Cannot resume - no user or conversation ID');
+  // console.log('[V16] ❌ RESUME: Missing requirements details:', {
+  hasUser: !!currentUser?.uid,
+    hasConversation: !!currentConversation,
+      hasHistoryResumeId: !!currentHistoryResumeId,
+        conversationIdToResume,
+        userState: currentUser ? 'exists' : 'null',
+          conversationState: currentConversation ? 'exists' : 'null'
+});
+return;
+    }
+
+try {
+  // console.log('[V16] 🔄 RESUME: Starting conversation resume', {
+  conversationId: conversationIdToResume,
+    resumeSource: currentHistoryResumeId ? 'history' : 'most_recent',
+      specialist: currentConversation?.currentSpecialist,
+        messageCount: currentConversation?.messages?.length || 0,
+          hasMessages: !!currentConversation?.messages
+});
+
+if (currentConversation) {
+  // console.log('[V16] 🔍 RESUME: Current conversation messages check:', {
+  messagesExists: !!currentConversation.messages,
+    messagesType: typeof currentConversation.messages,
+      messagesLength: currentConversation.messages?.length || 0
+});
+      }
+
+// Resume the conversation via API
+const response = await fetch('/api/v16/resume-conversation', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    userId: currentUser.uid,
+    conversationId: conversationIdToResume
+  })
+});
+
+if (!response.ok) {
+  throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+}
+
+const data = await response.json();
+if (!data.success) {
+  throw new Error('Failed to resume conversation');
+}
+
+// console.log('[V16] ✅ RESUME: Conversation resumed successfully', {
+conversationId: data.conversation.id,
+  specialist: data.conversation.currentSpecialist,
+    messageCount: data.conversation.messages?.length || 0,
+      hasMessages: !!data.conversation.messages
+      });
+
+// console.log('[V16] 🔍 RESUME: API response messages check:', {
+messagesExists: !!data.conversation.messages,
+  messagesType: typeof data.conversation.messages,
+    messagesLength: data.conversation.messages?.length || 0,
+      fullConversationKeys: Object.keys(data.conversation)
+      });
+
+// Set conversation ID in store
+setConversationId(data.conversation.id);
+
+// Load conversation history into UI - FAIL LOUDLY if messages missing
+if (!data.conversation.messages) {
+  // console.error('[V16] ❌ CRITICAL: Resume API returned conversation without messages!', {
+  conversationId: data.conversation.id,
+    createdAt: data.conversation.createdAt,
+      lastActivity: data.conversation.lastActivityAt,
+        timespan: 'This conversation spans weeks - it MUST have messages!',
+          apiEndpoint: '/api/v16/resume-conversation',
+            expectedMessages: 'true',
+              actualMessages: 'undefined'
+});
+throw new Error(`BACKEND ERROR: Conversation ${data.conversation.id} missing messages array - this conversation has 6+ weeks of activity`);
+      }
+
+if (data.conversation.messages.length === 0) {
+  // console.error('[V16] ❌ CRITICAL: Resume API returned empty messages array!', {
+  conversationId: data.conversation.id,
+    timespan: 'May 13 to June 26 = 6+ weeks of activity',
+      expectation: 'Should have multiple messages',
+        actual: 'Empty array'
+});
+throw new Error(`BACKEND ERROR: Conversation ${data.conversation.id} has empty messages - but was active for 6+ weeks`);
+      }
+
+// Format conversation history for OpenAI
+const conversationHistory = data.conversation.messages.map((msg: { id: string; role: string; content: string; created_at: string }) => ({
+  id: msg.id,
+  role: msg.role as 'user' | 'assistant',
+  content: msg.content,
+  timestamp: msg.created_at
+}));
+
+// REMOVED: Don't load history into UI - let it rebuild naturally through message processing
+// This eliminates the double-loading conflict that causes infinite loops
+
+// Get the specialist to resume with
+const resumeSpecialist = data.conversation.currentSpecialist || 'triage';
+
+// Start session with the correct specialist
+// console.log(`[triageAI] 📡 API CALL: Resume conversation start-session request`, {
+endpoint: '/api/v16/start-session',
+  method: 'POST',
+    userId: currentUser.uid,
+      specialistType: resumeSpecialist,
+        conversationId: data.conversation.id,
+          contextSummary: `Resuming conversation from ${new Date(data.conversation.lastActivityAt).toLocaleString()}`,
+            timestamp: new Date().toISOString()
+      });
+
+const startResponse = await fetch('/api/v16/start-session', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    userId: currentUser.uid,
+    specialistType: resumeSpecialist,
+    conversationId: data.conversation.id,
+    contextSummary: `Resuming conversation from ${new Date(data.conversation.lastActivityAt).toLocaleString()}`
+  })
+});
+
+// console.log(`[triageAI] 📡 API RESPONSE: Resume start-session response received`, {
+status: startResponse.status,
+  statusText: startResponse.statusText,
+    ok: startResponse.ok,
+      headers: Object.fromEntries(startResponse.headers.entries()),
+        timestamp: new Date().toISOString()
+      });
+
+if (!startResponse.ok) {
+  const errorText = await startResponse.text();
+  // console.error(`[triageAI] ❌ API ERROR: Resume start-session failed`, {
+  status: startResponse.status,
+    statusText: startResponse.statusText,
+      errorText,
+      userId: currentUser.uid,
+        specialistType: resumeSpecialist,
+          conversationId: data.conversation.id,
+            timestamp: new Date().toISOString()
+});
+throw new Error(`Failed to start specialist session: ${startResponse.status} ${errorText}`);
+      }
+
+const sessionData = await startResponse.json();
+// console.log(`[triageAI] ✅ API SUCCESS: Resume start-session response parsed`, {
+hasSession: !!sessionData.session,
+  hasPrompt: !!sessionData.session?.prompt,
+    hasContent: !!sessionData.session?.prompt?.content,
+      promptLength: sessionData.session?.prompt?.content?.length || 0,
+        hasVoiceSettings: !!sessionData.session?.prompt?.voice_settings,
+          sessionKeys: sessionData.session ? Object.keys(sessionData.session) : [],
+            timestamp: new Date().toISOString()
+      });
+// console.log('[V16] ✅ RESUME: Specialist session started', {
+specialist: resumeSpecialist,
+  promptLength: sessionData.session.prompt.content.length
+      });
+
+// console.log('[systemInstructions] RESUME: Session data received from API:', {
+hasSession: !!sessionData.session,
+  hasPrompt: !!sessionData.session?.prompt,
+    hasContent: !!sessionData.session?.prompt?.content,
+      contentLength: sessionData.session?.prompt?.content?.length || 0,
+        contentPreview: sessionData.session?.prompt?.content?.substring(0, 100) || 'EMPTY'
+      });
+
+// CRITICAL: Include conversation history in the instructions BEFORE WebRTC config
+let instructionsWithHistory = sessionData.session.prompt.content;
+
+if (conversationHistory && conversationHistory.length > 0) {
+  // Limit to most recent 100 messages to prevent overwhelming the AI  
+  const recentHistory = conversationHistory.slice(-100);
+  const formattedHistory = recentHistory
+    .map((msg: Conversation) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.text}`)
+    .join('\n\n');
+
+  instructionsWithHistory += `\n\nPrevious conversation history (${recentHistory.length} most recent messages):\n-----------------------------------\n${formattedHistory}\n-----------------------------------\n\nContinue the conversation naturally. Reference previous discussion when relevant. Always respond with both text and audio.`;
+
+  // console.log('[systemInstructions] RESUME: Added conversation history to instructions:', {
+  originalLength: sessionData.session.prompt.content.length,
+    historyLength: formattedHistory.length,
+      finalLength: instructionsWithHistory.length,
+        messagesIncluded: recentHistory.length
+});
+      }
+
+// CRITICAL: Load functions for the specialist being resumed
+// console.log('[V16] 🔧 RESUME: Loading functions for specialist:', resumeSpecialist);
+const specialistFunctions = await loadFunctionsForAI(resumeSpecialist);
+// console.log('[V16] ✅ RESUME: Loaded functions for specialist:', {
+specialist: resumeSpecialist,
+  functionCount: specialistFunctions.length,
+    functionNames: specialistFunctions.map(f => (f as { name: string }).name).join(', ')
+      });
+
+// Configure WebRTC with the specialist prompt + conversation history, functions
+const resumeConfig = {
+  enableDiagnostics: true,
+  timeout: 120000,
+  retryAttempts: 3,
+  instructions: instructionsWithHistory, // Now includes conversation history
+  tools: specialistFunctions,
+  voice: sessionData.session.prompt.voice_settings?.voice || DEFAULT_VOICE,
+  tool_choice: DEFAULT_TOOL_CHOICE,
+  conversationHistory: [], // Clear this since history is now in instructions
+  isResume: true // Use conversation item injection for greeting
+};
+
+// Log resume config creation
+logGreetingInstructions('V16_RESUME_CONFIG_CREATED', {
+  greetingApproach: 'conversation_item_injection',
+  resumeSpecialist,
+  hasInstructions: !!resumeConfig.instructions,
+  instructionsLength: resumeConfig.instructions?.length || 0,
+  isResume: resumeConfig.isResume
+});
+
+// console.log('[systemInstructions] RESUME: WebRTC config created:', {
+hasInstructions: !!resumeConfig.instructions,
+  instructionsLength: resumeConfig.instructions?.length || 0,
+    instructionsPreview: resumeConfig.instructions?.substring(0, 100) || 'EMPTY',
+      hasConversationHistory: !!resumeConfig.conversationHistory,
+        conversationHistoryLength: resumeConfig.conversationHistory?.length || 0
+      });
+
+// Clear preparing state and start connection
+setPreparing(false);
+
+// Log before passing to WebRTC
+logGreetingInstructions('V16_BEFORE_PREINITIALIZE', {
+  greetingApproach: 'conversation_item_injection',
+  isResume: resumeConfig.isResume,
+  configKeys: Object.keys(resumeConfig).join(', ')
+});
+
+await preInitialize(resumeConfig);
+connect();
+
+    // console.log('[V16] 🎉 RESUME: Conversation resumed and connected successfully');
+
+    } catch (error) {
+  // console.error('[V16] ❌ RESUME: Failed to resume conversation', {
+  error: (error as Error).message,
+    conversationId: conversationIdToResume,
+      resumeSource: currentHistoryResumeId ? 'history' : 'most_recent'
+});
+
+optimizedAudioLogger.error('resume', 'conversation_resume_failed', error as Error, {
+  conversationId: conversationIdToResume,
+  userId: currentUser.uid,
+  resumeSource: currentHistoryResumeId ? 'history' : 'most_recent'
+});
+
+alert(`Failed to resume conversation: ${(error as Error).message}`);
+    } finally {
+  // Clear history resume ID after attempting resume
+  if (currentHistoryResumeId) {
+    setHistoryResumeId(null);
+  }
+}
+  }, [user?.uid, resumableConversation, historyResumeId]); // ✅ Include ALL dependencies
+
+// console.log('[resume] 🎯 handleResumeConversation DEPENDENCY CHECK:', {
+timestamp: performance.now(),
+  userUid: user?.uid,
+    resumableConversationId: resumableConversation?.id,
+      historyResumeId,
+      callbackRef: handleResumeConversation
+  });
+
+// NEW: Combined handler for Let's Talk button - handles both normal and resume flows
+const handleLetsTalk = useCallback(async () => {
+  const callbackTimestamp = performance.now();
+  // console.log('[resume] 🎯 handleLetsTalk CALLBACK CREATED at', callbackTimestamp);
+
+  // console.log('[V16] 🚀 USER: Let\'s Talk clicked', {
+  shouldResume,
+    hasResumableConversation: !!resumableConversation,
+      specialist: resumableConversation?.currentSpecialist || 'triage',
+        userMode: user ? 'authenticated' : 'anonymous'
+});
+
+// console.log('[V16] 🔍 RESUME: Let\'s Talk state analysis:', {
+shouldResume,
+  hasUser: !!user,
+    userUid: user?.uid,
+      hasResumableConversation: !!resumableConversation,
+        resumableConversationId: resumableConversation?.id,
+          resumableConversationSpecialist: resumableConversation?.currentSpecialist,
+            historyResumeId,
+            hasHistoryResumeId: !!historyResumeId,
+              allConditionsMet: shouldResume && (resumableConversation || historyResumeId) && user?.uid,
+                timestamp: performance.now()
+    });
+
+if (shouldResume && (resumableConversation || historyResumeId) && user?.uid) {
+  // Resume existing conversation (either most recent or from history)
+  // console.log('[V16] 🔄 RESUME: Starting resume flow from Let\'s Talk button');
+  await handleResumeConversation();
+} else {
+  // Start new conversation
+  // console.log('[V16] 🆕 NEW: Starting new triage session from Let\'s Talk button');
+  setPreparing(false);
+  connect();
+}
+  }, [shouldResume, resumableConversation, historyResumeId, user?.uid, handleResumeConversation, connect, setPreparing]);
+
+// console.log('[resume] 🎯 handleLetsTalk DEPENDENCY CHECK:', {
+timestamp: performance.now(),
+  shouldResume,
+  resumableConversationId: resumableConversation?.id,
+    historyResumeId,
+    userUid: user?.uid,
+      handleResumeConversationRef: handleResumeConversation,
+        connectRef: connect,
+          setPreparingRef: setPreparing,
+            callbackRef: handleLetsTalk
+  });
+
+// console.log('[resume] 🔧 Function reference debug:', {
+handleResumeConversationExists: !!handleResumeConversation,
+  handleResumeConversationType: typeof handleResumeConversation
+  });
+
+// Auto-trigger Let's Talk when coming from history with valid resume data - MOVED TO MAINTAIN HOOK ORDER
+useEffect(() => {
+  // Only make decision when all loading is complete
+  if (!authLoading && !promptsLoading && !functionsLoading) {
+    if (historyResumeId && shouldResume && user?.uid) {
+      // console.log('[V16] 🤖 AUTO-RESUME: Automatically triggering Let\'s Talk for history resume');
+      handleLetsTalk();
+    } else {
+      // console.log('[V16] 🎯 READY: No auto-connection needed, user can click Let\'s Talk');
+      setPreparing(false); // Clear preparing state - show "Let's Talk"
+    }
+  }
+}, [historyResumeId, shouldResume, user?.uid, authLoading, promptsLoading, functionsLoading, handleLetsTalk, setPreparing]);
+
+// Handle user authentication changes - clear anonymous session when user signs in
+useEffect(() => {
+  if (user) {
+    // console.log('[V16] 🔐 AUTH: User signed in, clearing anonymous session', {
+    userId: user.uid,
+      userEmail: user.email
+  });
+clearAnonymousSession();
+
+// Store authenticated user ID in localStorage
+if (typeof localStorage !== 'undefined') {
+  localStorage.setItem('userId', user.uid);
+}
+    } else {
+  // console.log('[V16] 🔒 AUTH: Anonymous mode or user signed out');
+  // User signed out - remove authenticated user ID
+  if (typeof localStorage !== 'undefined') {
+    localStorage.removeItem('userId');
+  }
+}
+  }, [user, clearAnonymousSession]);
+
+// V16 Configuration: Always starts with triage AI
+const webRTCConfig = useMemo(() => {
+  if (triagePrompt && triageFunctions) {
+    // console.log('[V16] ⚙️ CONFIG: Triage AI configuration ready', {
+    promptId: triagePrompt.id,
+      promptType: triagePrompt.type,
+        promptLength: triagePrompt.content.length,
+          functionsCount: triageFunctions.length,
+            hasVoiceSettings: !!triagePrompt.voice_settings,
+              hasMetadata: !!triagePrompt.metadata
+  });
+
+// console.log(`[triage] Triage AI config ready - ID: ${triagePrompt.id}, type: ${triagePrompt.type}, instructions length: ${triagePrompt.content.length}`);
+// console.log(`[triage] Functions ready - ${triageFunctions.length} functions loaded`);
+// console.log(`[triage] Triage AI instructions preview: ${triagePrompt.content.substring(0, 200)}...`);
+
+return {
+  enableDiagnostics: true,
+  timeout: 120000,
+  retryAttempts: 3,
+  instructions: triagePrompt.content,
+  tools: triageFunctions,
+  voice: (triagePrompt.voice_settings as Record<string, unknown>)?.voice as string || DEFAULT_VOICE,
+  tool_choice: DEFAULT_TOOL_CHOICE,
+  greetingInstructions: 'Hello! I\'m here to help assess your needs and connect you with the right support. What brings you here today?'
+};
+    } else {
+  // console.log('[V16] ⏳ CONFIG: Waiting for triage prompt and functions from Supabase', {
+  hasPrompt: !!triagePrompt,
+    hasFunctions: !!triageFunctions
+});
+return null;
+    }
+  }, [triagePrompt, triageFunctions]);
+
+// ALWAYS start with preparing state when screen loads
+useEffect(() => {
+  // console.log(`[V16-UI-STATE] Setting initial preparing state: true (always show Preparing... on load)`);
+  setPreparing(true);
+}, []); // Empty dependency array - only run once on mount
+
+// FIXED: Check for resumable conversations when user is authenticated - use stable reference
+useEffect(() => {
+  if (!stableUser?.uid) {
+    // console.log('[resume] 🔄 setResumableConversation(null) called at', performance.now());
+    setResumableConversation(null);
+    setIsCheckingResume(false);
+    isCheckingRef.current = false;
+    return;
+  }
+
+  const abortController = new AbortController();
+
+  const checkResumableConversation = async () => {
+    // Use ref for duplicate prevention instead of state (doesn't trigger re-renders)
+    if (isCheckingRef.current) {
+      // console.log('[V16] 🚫 RESUME: Already checking for resumable conversations, skipping duplicate call');
+      return;
+    }
+
+    isCheckingRef.current = true;
+    // console.log('[resume] 🔄 setIsCheckingResume(true) called at', performance.now());
+    setIsCheckingResume(true);
+
+    try {
+      // console.log('[V16] 📡 RESUME: Checking for resumable conversations', {
+      userId: stableUser.uid
+    });
+
+const response = await fetch(`/api/v16/get-resumable-conversation?userId=${stableUser.uid}`, {
+  signal: abortController.signal
+});
+
+if (!response.ok) {
+  throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+}
+
+const data = await response.json();
+
+// console.log('[V16] ✅ RESUME: API response received', data);
+
+// Check if request was aborted before updating state
+if (abortController.signal.aborted) {
+  // console.log('[V16] 🚫 RESUME: Request was aborted, skipping state update');
+  return;
+}
+
+if (data.success && data.hasResumableConversation) {
+  // console.log('[V16] ✅ RESUME: Found resumable conversation', {
+  conversationId: data.conversation.id,
+    specialist: data.conversation.currentSpecialist,
+      lastActivity: data.conversation.lastActivityAt
+});
+// console.log('[V16] 🔍 RESUME: Setting resumable conversation state:', {
+conversationData: data.conversation,
+  hasId: !!data.conversation.id,
+    hasSpecialist: !!data.conversation.currentSpecialist,
+      timestamp: performance.now()
+          });
+// console.log('[V16] 🔍 FULL CONVERSATION OBJECT:', {
+fullObject: JSON.stringify(data.conversation, null, 2),
+  hasMessages: !!data.conversation.messages,
+    messageCount: data.conversation.messages?.length || 0,
+      objectKeys: Object.keys(data.conversation)
+          });
+
+// Check if get-resumable-conversation API is missing messages
+if (!data.conversation.messages) {
+  // console.error('[V16] ❌ CRITICAL: get-resumable-conversation API missing messages!', {
+  conversationId: data.conversation.id,
+    createdAt: data.conversation.createdAt,
+      lastActivity: data.conversation.lastActivityAt,
+        timespan: 'This is a 6+ week old conversation - should have messages',
+          apiEndpoint: '/api/v16/get-resumable-conversation',
+            issue: 'Backend not returning messages with conversation metadata'
+});
+          }
+
+setResumableConversation(data.conversation);
+        } else {
+  // console.log('[V16] 📭 RESUME: No resumable conversations found');
+  // console.log('[resume] 🔄 setResumableConversation(null) called at', performance.now());
+  setResumableConversation(null);
+}
+      } catch (error) {
+  // Don't log abort errors as they're expected
+  if ((error as Error).name !== 'AbortError') {
+    // console.error('[V16] ❌ RESUME: Error checking resumable conversations', {
+    error: (error as Error).message,
+      userId: stableUser.uid
+  });
+  // console.log('[resume] 🔄 setResumableConversation(null) called at', performance.now());
+  setResumableConversation(null);
+} else {
+  // console.log('[V16] 🚫 RESUME: Request aborted cleanly');
+}
+      } finally {
+  if (!abortController.signal.aborted) {
+    isCheckingRef.current = false;
+    // console.log('[resume] 🔄 setIsCheckingResume(false) called at', performance.now());
+    setIsCheckingResume(false);
+    // console.log('[V16] 🏁 RESUME: Check completed');
+  }
+}
+    };
+
+checkResumableConversation();
+
+// Cleanup function to abort request on unmount or dependency change
+return () => {
+  // console.log('[V16] 🧹 RESUME: Aborting previous request');
+  abortController.abort();
+  isCheckingRef.current = false;
+};
+  }, [stableUser?.uid]); // Use stable reference
+
+// Debug state changes - track resumableConversation
+useEffect(() => {
+  // console.log('[V16] 🔍 STATE: resumableConversation changed:', {
+  value: resumableConversation,
+    hasValue: !!resumableConversation,
+      id: resumableConversation?.id,
+        specialist: resumableConversation?.currentSpecialist,
+          timestamp: performance.now()
+});
+  }, [resumableConversation]);
+
+// Debug state changes - track shouldResume
+useEffect(() => {
+  // console.log('[V16] 🔍 STATE: shouldResume changed:', {
+  value: shouldResume,
+    timestamp: performance.now()
+});
+  }, [shouldResume]);
+
+// V16: Fetch triage AI prompt on component mount
+useEffect(() => {
+  const fetchTriagePrompt = async () => {
+    try {
+      // console.log('[V16] 📡 FETCH: Loading triage AI prompt from Supabase', {
+      userId: user?.uid || 'anonymous',
+        endpoint: '/api/v16/load-prompt?type=triage'
+    });
+
+const response = await fetch('/api/v16/load-prompt?type=triage');
+if (!response.ok) {
+  const errorText = await response.text();
+  throw new Error(`HTTP ${response.status}: ${errorText}`);
+}
+
+const data = await response.json();
+if (!data.success || !data.prompt) {
+  throw new Error('Invalid triage prompt response format');
+}
+
+// console.log('[V16] ✅ FETCH: Triage prompt loaded successfully', {
+promptId: data.prompt.id,
+  promptType: data.prompt.type,
+    contentLength: data.prompt.content.length,
+      hasVoiceSettings: !!data.prompt.voice_settings,
+        hasMetadata: !!data.prompt.metadata
+        });
+
+setTriagePrompt(data.prompt);
+
+// [triage] Load functions using proper Supabase functions hook
+// console.log('[triage] 📡 FETCH: Loading triage functions using useSupabaseFunctions hook');
+await loadFunctionsForAI('triage');
+    // console.log('[triage] ✅ FETCH: Functions loaded via hook with executable implementations');
+
+      } catch (error) {
+  // console.error('[V16] ❌ CRITICAL FAILURE: Triage prompt load failed', {
+  error: (error as Error).message,
+    userId: user?.uid || 'anonymous',
+      endpoint: '/api/v16/load-prompt?type=triage'
+});
+
+optimizedAudioLogger.error('triage', 'prompt_load_failed', error as Error, {
+  userId: user?.uid || 'anonymous',
+  errorType: 'triage_prompt_missing'
+});
+
+// This is a breaking error per V16 spec
+alert(`V16 Triage System Failed!\n\n${(error as Error).message}\n\nThe triage AI prompt could not be loaded from Supabase. This is a configuration error that needs to be fixed by an administrator.`);
+      } finally {
+  // console.log('[V16] 🏁 FETCH: Triage prompt loading completed');
+  setPromptsLoading(false);
+}
+    };
+
+fetchTriagePrompt();
+  }, [user?.uid]); // Simple dependency like AI instructions
+
+// [triage] Register executable functions to FunctionRegistryManager when hook loads them
+useEffect(() => {
+  if (Object.keys(functionRegistry).length > 0) {
+    // console.log(`[triage] 📝 Registering ${Object.keys(functionRegistry).length} executable functions to FunctionRegistryManager`);
+
+    // Import FunctionRegistryManager and register the executable functions
+    import('@/stores/webrtc-store').then(({ FunctionRegistryManager }) => {
+      const manager = FunctionRegistryManager.getInstance();
+      manager.setRegistry(functionRegistry);
+      // console.log(`[triage] ✅ Functions registered to FunctionRegistryManager: ${Object.keys(functionRegistry).join(', ')}`);
+    });
+
+    // Also register to Zustand store for state tracking
+    registerFunctions({ supabase: triageFunctions || [] });
+  }
+}, [functionRegistry, triageFunctions, registerFunctions]);
+
+// [triage] Handle function loading errors  
+useEffect(() => {
+  if (functionsError) {
+    // console.error('[triage] ❌ CRITICAL FAILURE: Function loading failed', {
+    error: functionsError,
+      userId: user?.uid || 'anonymous'
+  });
+
+optimizedAudioLogger.error('triage', 'function_load_failed', new Error(functionsError), {
+  userId: user?.uid || 'anonymous',
+  errorType: 'supabase_function_loading_failure'
+});
+
+// This is a breaking error per V16 spec
+alert(`V16 Function System Failed!\n\n${functionsError}\n\nThe triage functions could not be loaded from Supabase. This is a configuration error that needs to be fixed by an administrator.`);
+    }
+  }, [functionsError, user?.uid]);
+
+// V16: No specialized context detection - triage AI handles everything
+
+// V16 OPTIMIZATION: Pre-initialize triage services with Supabase functions
+useEffect(() => {
+  const hasFunctions = (triageFunctions?.length || 0) > 0;
+
+  if (hasFunctions && !promptsLoading && webRTCConfig) {
+    // console.log('[V16] 🚀 OPTIMIZATION: Pre-initializing triage services', {
+    triageFunctions: triageFunctions?.length || 0,
+      userMode: user ? 'authenticated' : 'anonymous',
+        triageMode: 'v16_supabase'
+  });
+
+// Pre-initialize with triage AI configuration
+preInitialize(webRTCConfig)
+  .then(() => {
+    // console.log('[V16] ✅ OPTIMIZATION: Triage services pre-initialized successfully');
+  })
+  .catch((error) => {
+    // console.error('[V16] ❌ OPTIMIZATION FAILURE: Triage pre-initialization failed', {
+    error: (error as Error).message,
+      userId: user?.uid || 'anonymous',
+        configType: 'triage'
+  });
+
+optimizedAudioLogger.error('webrtc', 'v16_triage_pre_initialization_failed', error as Error, {
+  userId: user?.uid || 'anonymous',
+  errorType: 'triage_prompt_missing',
+  actionRequired: 'add_triage_prompt'
+});
+
+alert(`V16 Triage Pre-Initialization Failed!\n\n${error.message}\n\nThis is a configuration error that needs to be fixed by an administrator.`);
+        });
+    } else if (!webRTCConfig) {
+  // console.log('[V16] ⏳ OPTIMIZATION: Waiting for triage configuration before pre-initialization', {
+  hasPrompt: !!triagePrompt,
+    hasFunctions: !!triageFunctions,
+      promptsLoading
+});
+    } else if (!hasFunctions && !promptsLoading && webRTCConfig) {
+  // console.error('[V16] ❌ CRITICAL ERROR: V16 requires Supabase functions for pre-initialization', {
+  triageFunctions: triageFunctions?.length || 0,
+    hasPrompt: !!triagePrompt,
+      promptsLoading
+});
+      // Don't throw here as the WebRTC store will handle the error when connection is attempted
+    }
+  }, [preInitialize, webRTCConfig, user, triageFunctions, promptsLoading, functionsLoading, triagePrompt]);
+
+// V16: No auto-start - user always clicks "Let's Talk" to begin with triage AI
+
+// Show loading while auth, triage prompt, or functions are loading
+if (authLoading || promptsLoading || functionsLoading) {
+  // console.log('[V16] ⏳ LOADING: Displaying loading screen', {
+  authLoading,
+    promptsLoading,
+    functionsLoading,
+    hasTriagePrompt: !!triagePrompt,
+      hasFunctions: (triageFunctions?.length || 0) > 0
+});
+
+return (
+  <div className="flex items-center justify-center min-h-screen bg-[#131314] text-white">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+      <p>
+        {authLoading ? 'Loading...' :
+          promptsLoading ? 'Loading triage AI...' :
+            'Initializing triage system...'}
+      </p>
+    </div>
+  </div>
+);
+  }
+
+// console.log('[V16] 🎯 READY: Rendering main triage interface', {
+// hasTriagePrompt: !!triagePrompt,
+//   promptType: triagePrompt?.type,
+//     userMode: user ? 'authenticated' : 'anonymous',
+//       currentSpecialist: 'triage'
+//   });
+
+// V15 Anonymous support: Always proceed to main interface
+// Authentication is optional - users can use V15 without signing in
+// Login will be available in the header component if needed
+
+// console.log('[resume] 📤 PARENT RENDER - Passing props to ChatBotV16Component:', {
+// timestamp: performance.now(),
+//   hasUser: !!stableUser,
+//     hasTriagePrompt: !!triagePrompt,
+//       hasResumableConversation: !!stableResumableConversation,
+//         hasOnLetsTalk: !!handleLetsTalk,
+//           onLetsTalkType: typeof handleLetsTalk,
+//             onLetsTalkRef: handleLetsTalk,
+//               setShouldResumeRef: setShouldResume,
+//                 loadFunctionsForAIRef: loadFunctionsForAI,
+//                   shouldResume,
+//                   isCheckingResume,
+//                   historyResumeId,
+//                   stableUserRef: stableUser,
+//                     stableResumableConversationRef: stableResumableConversation
+//   });
+
+return (
+  <ChatBotV16Component
+    user={stableUser}
+    triagePrompt={triagePrompt}
+    resumableConversation={stableResumableConversation}
+    onLetsTalk={handleLetsTalk}
+    shouldResume={shouldResume}
+    setShouldResume={setShouldResume}
+    isCheckingResume={isCheckingResume}
+    loadFunctionsForAI={loadFunctionsForAI}
+  />
+);
+}

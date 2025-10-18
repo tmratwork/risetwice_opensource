@@ -3,6 +3,10 @@
     {
       "path": "/api/v16/scheduled-memory-processing",
       "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/admin/s2/process-ai-preview-jobs",
+      "schedule": "* * * * *"
     }
   ]
 }

@@ -1,0 +1,488 @@
+/* chatbotV16.css - Clean V16-specific styles */
+
+/* V16 Layout Root - CSS Grid three-row layout */
+.v16-layout-root {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  height: 100vh; /* Fixed viewport height for proper grid layout */
+  overflow: hidden; /* Prevent root from scrolling - scrolling happens in main-content-row */
+}
+
+/* Header Row */
+.header-row {
+  /* Auto height based on content */
+  z-index: 50; /* Ensure header stays above content */
+}
+
+/* Main Content Row */
+.main-content-row {
+  height: 100%;
+  min-height: 0; /* Critical: allow shrinking so flex children work properly */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* No longer the scroll container - children handle their own scrolling */
+}
+
+/* Footer Row */
+.footer-row {
+  /* Auto height based on content */
+  z-index: 50; /* Ensure footer stays above content */
+}
+
+/* Chat-specific wrapper - only used on chat pages */
+.chatbot-v16-wrapper {
+  flex: 1; /* Fill available space in main-content-row */
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* Allow shrinking */
+  overflow: hidden; /* Prevent scrolling in chat interface */
+}
+
+/* Main container */
+.main-container {
+  width: 100%;
+  margin: 0;
+  padding: 8px 12px;
+  flex: 1; /* Fill available space in flex parent */
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow-y: auto; /* Now the scroll container for all content */
+  overflow-x: hidden; /* Prevent horizontal overflow */
+  min-height: 0; /* Critical: allow shrinking so inheritance works */
+}
+
+/* Light/Dark theme variables */
+:root {
+  --bg-primary: #e7ece9;
+  --bg-secondary: #c1d7ca;
+  --border-color: #9dbbac;
+  --text-primary: #3b503c;
+  --text-secondary: #3b503c;
+  --button-primary: #9dbbac;
+  --button-hover: #3b503c;
+  --button-danger: #dc2626;
+  --button-danger-hover: #b91c1c;
+  --message-user: #9dbbac;
+  --message-assistant: #fdfefd;
+  --message-system: #e7ece9;
+  --comment-background: #fdfefd;
+  --warning-background: #3b503c;
+}
+
+:root.dark,
+html.dark {
+  --bg-primary: #131314;
+  --bg-secondary: #1e1e1f;
+  --border-color: #2a2a2a;
+  --text-primary: #f1f5f9;
+  --text-secondary: #94a3b8;
+  --button-primary: #9dbbac;
+  --button-hover: #3b503c;
+  --button-danger: #dc2626;
+  --button-danger-hover: #b91c1c;
+  --message-user: #2563eb;
+  --message-assistant: #222222;
+  --comment-background: #222222;
+  --message-system: #333333;
+  --warning-background: #3b503c;
+}
+
+/* Dark mode background colors */
+.dark .main-container,
+.dark .conversation-container,
+.dark body,
+html.dark body {
+  background-color: #131314 !important;
+}
+
+.dark .conversation-container {
+  background-color: #1e1e1f !important;
+}
+
+/* Control buttons */
+.control-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+  cursor: pointer;
+}
+
+.control-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.control-button.connecting {
+  opacity: 0.9 !important;
+  background-color: #3b82f6;
+  color: white !important;
+  cursor: wait;
+}
+
+.control-button.preparing {
+  opacity: 0.9 !important;
+  background-color: var(--button-primary);
+  color: white !important;
+  cursor: wait;
+}
+
+.control-button.primary {
+  background-color: var(--button-primary) !important;
+  color: white !important;
+  border-radius: 9999px !important;
+}
+
+.control-button.primary:hover:not(:disabled) {
+  background-color: var(--button-hover) !important;
+}
+
+.control-button.large-button {
+  font-size: 1.2rem !important;
+  padding: 0.75rem 2.5rem !important;
+  font-weight: 600 !important;
+  min-width: 140px !important;
+  background-color: var(--button-primary) !important;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2) !important;
+  transition: all 0.2s ease !important;
+  border-radius: 9999px !important;
+  color: white !important;
+}
+
+.control-button.large-button:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3) !important;
+  background-color: var(--button-hover) !important;
+}
+
+/* Conversation container for chat interface */
+.conversation-container {
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Fill available space in main container */
+  border-radius: 8px;
+  background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  overflow: hidden; /* Prevent content from spilling out */
+  margin-bottom: 0; /* Remove bottom margin */
+  margin-top: 20px !important; /* Prevent header overlap */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  min-height: 0; /* Allow flex shrinking */
+}
+
+.conversation-history {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  min-height: 0;
+  padding: 20px;
+  padding-bottom: 120px;
+  scroll-behavior: smooth;
+}
+
+/* Message styles */
+.message {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  max-width: 85%;
+  position: relative;
+  line-height: 1.5;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-size: 1rem;
+  display: block;
+  clear: both;
+  animation: messageFadeIn 0.3s ease-in-out;
+  word-wrap: break-word;
+}
+
+@keyframes messageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message.user {
+  float: right;
+  background-color: var(--message-user);
+  color: var(--text-primary);
+  border-bottom-right-radius: 4px;
+}
+
+.message.assistant {
+  float: left;
+  background-color: var(--message-assistant);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+
+.message.system {
+  margin-left: auto;
+  margin-right: auto;
+  float: none;
+  background-color: var(--message-system);
+  color: var(--text-secondary);
+  font-style: italic;
+  font-size: 0.85rem;
+  padding: 8px 12px;
+  max-width: 70%;
+  text-align: center;
+}
+
+/* Input container */
+.input-container {
+  display: flex;
+  padding: 16px;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  box-shadow: 0 -2px 5px rgba(0, 0, 0, 0.05);
+  position: relative;
+  z-index: 1;
+}
+
+.text-input {
+  flex: 1;
+  padding: 12px 16px;
+  border-radius: 24px;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  margin-left: 12px;
+  margin-right: 12px;
+  font-size: 1rem;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) inset;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: var(--button-primary);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* Visualization container */
+.visualization-container {
+  pointer-events: none; /* Allow clicks to pass through container */
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 10px 0; /* Reduced padding */
+  flex-shrink: 0; /* Don't shrink the orb container */
+  margin-top: auto; /* Push to bottom of flex container */
+}
+
+/* V15 Blue Orb specific styles */
+.blue-orb-v15 {
+  display: inline-flex;
+  flex-shrink: 0; /* Prevent flex container from shrinking */
+}
+
+.visualization-container .flex {
+  transition: transform 0.2s ease, opacity 0.2s ease;
+  pointer-events: auto;
+}
+
+.visualization-container .flex:hover {
+  opacity: 0.95;
+}
+
+.visualization-container .flex:active {
+  transform: scale(0.98);
+}
+
+/* Status indicator */
+.status-indicator {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 5px;
+}
+
+.status-indicator.connecting {
+  background-color: #ca8a04;
+  animation: pulse 1.5s infinite;
+}
+
+.status-indicator.connected {
+  background-color: #22c55e;
+}
+
+.status-indicator.disconnected {
+  background-color: #dc2626;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Mobile footer navigation */
+.mobile-footer-nav {
+  display: flex;
+}
+
+/* Hide navigation icons in header on chat pages */
+.nav-icons {
+  display: none;
+}
+
+/* Mobile-specific fixes for bottom navigation visibility */
+@media (max-width: 768px) {
+  /* Ensure footer is always visible on mobile */
+  .v16-layout-root {
+    height: 100vh;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+  }
+
+  /* Ensure footer row sticks to bottom on mobile */
+  .footer-row {
+    position: sticky;
+    bottom: 0;
+    background-color: white;
+    background-color: var(--bg-primary);
+    z-index: 100; /* Higher z-index to ensure it's always on top */
+  }
+
+  /* Adjust main content to account for fixed positioning */
+  .main-content-row {
+    height: 100%;
+    overflow: hidden;
+    -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+    padding-bottom: env(safe-area-inset-bottom, 0px); /* Account for iOS notch */
+  }
+
+  /* Fix for matching/listing pages - ensure content scrolls properly */
+  .main-container {
+    overflow-y: auto; /* Consistent scroll container on mobile */
+    overflow-x: hidden;
+    min-height: auto; /* Don't constrain height on mobile */
+    padding-bottom: 80px; /* Extra space for footer */
+  }
+
+
+  /* Dark mode support for footer */
+  .dark .footer-row {
+    background-color: #131314;
+  }
+}
+
+/* Modal overlay fix - ensure highest priority */
+[role="dialog"] {
+  position: fixed !important;
+  z-index: 999999 !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+}
+
+/* Spinner animation */
+.spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: white;
+  animation: spin 1s ease-in-out infinite;
+  margin-right: 8px;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Start button overlay - positioned above chatbox */
+.start-button-overlay {
+  position: absolute;
+  top: 20%; /* Position button higher up in the main area */
+  left: 0;
+  right: 0;
+  z-index: 100; /* Higher than chatbox */
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  pointer-events: none; /* Allow clicks through container */
+}
+
+.start-button-overlay .control-button {
+  pointer-events: auto; /* Re-enable clicks for button */
+}
+
+.start-button-overlay input[type="checkbox"],
+.start-button-overlay label {
+  pointer-events: auto !important; /* Re-enable clicks for checkbox and label */
+}
+
+.start-button-overlay .flex.items-center {
+  pointer-events: auto !important; /* Re-enable clicks for checkbox container */
+}
+
+/* Control triple layout for buttons */
+.control-triple {
+  display: flex !important;
+  width: 100% !important;
+  max-width: 500px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+.control-left {
+  flex: 1;
+  display: flex;
+  justify-content: flex-start;
+}
+
+.control-center {
+  flex: 2;
+  display: flex;
+  justify-content: center;
+}
+
+.control-right {
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .main-container {
+    padding: 6px 8px;
+  }
+
+  .visualization-container {
+    padding: 8px 0;
+  }
+  
+  .start-button-overlay {
+    padding: 12px;
+    top: 15%; /* Slightly higher on mobile for better proportion */
+  }
+}

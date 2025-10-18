@@ -286,11 +286,12 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       console.log('[S2] 📋 Full response data:', data);
 
       // Trigger AI prompt generation and voice cloning in the background (fire and forget)
-      // This is the same function that admin uses via "Generate AI Prompt" button
+      // Creates a job in s2_ai_preview_jobs table that will be processed by Vercel Cron worker
+      // Processing takes ~30 minutes and runs asynchronously
       if (data.therapistProfileId) {
-        console.log('[S2] 🤖 Triggering background AI prompt generation for therapist:', data.therapistProfileId);
+        console.log('[S2] 🤖 Creating background AI preview job for therapist:', data.therapistProfileId);
 
-        // Generate AI prompt
+        // Generate AI prompt (creates job, returns immediately)
         fetch('/api/admin/s2/generate-therapist-prompt', {
           method: 'POST',
           headers: {
@@ -299,11 +300,17 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
           body: JSON.stringify({
             therapistId: data.therapistProfileId
           })
-        }).then(() => {
-          console.log('[S2] ✅ AI prompt generation request sent successfully');
+        }).then(async (response) => {
+          const result = await response.json();
+          if (result.success) {
+            console.log('[S2] ✅ AI preview job created:', result.jobId);
+            console.log('[S2] ⏳ Job will be processed in background (~30 minutes)');
+          } else {
+            console.error('[S2] ❌ Failed to create AI preview job:', result.error);
+          }
         }).catch((error) => {
           // Silent failure - user doesn't need to know about this
-          console.error('[S2] ❌ Background AI prompt generation failed (non-blocking):', error);
+          console.error('[S2] ❌ Background AI preview job creation failed (non-blocking):', error);
         });
 
         // Clone voice (silent, parallel to AI prompt generation)
