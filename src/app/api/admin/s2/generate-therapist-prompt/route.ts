@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       .select('id, status')
       .eq('therapist_profile_id', therapistId)
       .in('status', ['pending', 'processing'])
-      .single();
+      .maybeSingle();
 
     if (existingJob) {
       console.log(`[s2_prompt_generation] ⏳ Job already exists with status: ${existingJob.status}`);
