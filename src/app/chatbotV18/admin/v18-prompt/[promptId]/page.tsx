@@ -47,38 +47,7 @@ export default function V18PromptPage() {
 
   // Functions state
   const [functions, setFunctions] = useState('[]');
-  const [functionTemplates, setFunctionTemplates] = useState<Array<{
-    id: string;
-    name: string;
-    description: string;
-    category: string;
-    function_definition: Record<string, unknown>;
-  }>>([]);
-  const [selectedTemplate, setSelectedTemplate] = useState('');
-
-  // Helper function to parse function names from JSON string
-  const getFunctionNames = (): string[] => {
-    try {
-      const parsedFunctions = JSON.parse(functions);
-      if (Array.isArray(parsedFunctions)) {
-        return parsedFunctions
-          .filter(func => func && typeof func === 'object' && func.name)
-          .map(func => func.name);
-      }
-    } catch (error) {
-      // Return empty array for invalid JSON
-      console.log('error: ', error)
-    }
-    return [];
-  };
-  const [isLoadingFunctionTemplates, setIsLoadingFunctionTemplates] = useState(false);
-  const [universalFunctions, setUniversalFunctions] = useState('[]');
   const [mergeWithUniversalFunctions, setMergeWithUniversalFunctions] = useState(true);
-  const [isLoadingUniversalFunctions, setIsLoadingUniversalFunctions] = useState(false);
-  const [functionValidationResult, setFunctionValidationResult] = useState<{
-    valid: boolean;
-    errors: string[];
-  } | null>(null);
 
   // UI state
   const [activeTab, setActiveTab] = useState<'prompts' | 'functions'>('prompts');
@@ -92,30 +61,11 @@ export default function V18PromptPage() {
 
   // Show merge options (V18 patient intake can merge with universal protocols)
   const shouldShowMerge = true;
-  const shouldShowMergeFunctions = true;
 
   // Calculate merged prompt content
   const mergedContent = shouldShowMerge && mergeWithUniversal && universalProtocols
     ? `${content}\\n\\n--- UNIVERSAL SPECIALIST PROTOCOLS ---\\n\\n${universalProtocols}`
     : content;
-
-  // Calculate merged functions content
-  const getMergedFunctions = () => {
-    try {
-      const specialistFunctions = JSON.parse(functions);
-      if (!mergeWithUniversalFunctions) {
-        return JSON.stringify(specialistFunctions, null, 2);
-      }
-
-      const universalFuncs = JSON.parse(universalFunctions);
-      const mergedArray = [...specialistFunctions, ...universalFuncs];
-      return JSON.stringify(mergedArray, null, 2);
-    } catch {
-      return functions;
-    }
-  };
-
-  const mergedFunctions = getMergedFunctions();
 
   useEffect(() => {
     // Get the current logged-in user's ID from Firebase
@@ -199,132 +149,15 @@ export default function V18PromptPage() {
     }
   };
 
-  const loadUniversalFunctions = async () => {
-    setIsLoadingUniversalFunctions(true);
-    try {
-      console.log(`[V18] 📡 ADMIN: Loading universal functions`);
-      const response = await fetch(`/api/v16/admin/ai-prompts?type=universal_functions`);
 
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success && data.prompt) {
-          console.log(`[V18] ✅ ADMIN: Universal functions loaded`);
-          setUniversalFunctions(JSON.stringify(data.prompt.functions || [], null, 2));
-        } else {
-          console.log(`[V18] 📭 ADMIN: No universal functions found`);
-          setUniversalFunctions('[]');
-        }
-      } else {
-        throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-      }
-    } catch (error) {
-      console.error(`[V18] ❌ ADMIN: Error loading universal functions:`, error);
-      setUniversalFunctions('[]');
-    } finally {
-      setIsLoadingUniversalFunctions(false);
-    }
-  };
 
-  const loadFunctionTemplates = async () => {
-    try {
-      setIsLoadingFunctionTemplates(true);
-      console.log(`[V18] 📡 ADMIN: Loading function templates`);
-      const response = await fetch('/api/v16/admin/function-templates');
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`[V18] 📊 ADMIN: API response:`, data);
-        if (data.success) {
-          console.log(`[V18] ✅ ADMIN: Function templates loaded:`, data.templates.length);
-          console.log(`[V18] 📋 ADMIN: Sample templates:`, data.templates.slice(0, 3));
-          setFunctionTemplates(data.templates);
-        } else {
-          console.error(`[V18] ❌ ADMIN: API returned error:`, data.error);
-        }
-      } else {
-        console.error(`[V18] ❌ ADMIN: Error loading function templates:`, response.status);
-        const errorText = await response.text();
-        console.error(`[V18] ❌ ADMIN: Error response:`, errorText);
-      }
-    } catch (error) {
-      console.error(`[V18] ❌ ADMIN: Error loading function templates:`, error);
-    } finally {
-      setIsLoadingFunctionTemplates(false);
-    }
-  };
-
-  const addTemplateFunction = () => {
-    if (!selectedTemplate) return;
-
-    const template = functionTemplates.find(t => t.id === selectedTemplate);
-    if (!template) return;
-
-    try {
-      const currentFunctions = JSON.parse(functions);
-      const newFunction = template.function_definition;
-
-      // Check if function already exists
-      const exists = currentFunctions.some((f: Record<string, unknown>) => f.name === newFunction.name);
-      if (exists) {
-        setStatusMessage(`Function "${newFunction.name}" already exists`);
-        return;
-      }
-
-      const updatedFunctions = [...currentFunctions, newFunction];
-      setFunctions(JSON.stringify(updatedFunctions, null, 2));
-      setSelectedTemplate('');
-      setStatusMessage(`Added function "${newFunction.name}"`);
-    } catch {
-      setStatusMessage('Error adding function - invalid JSON format');
-    }
-  };
-
-  const validateFunctions = () => {
-    try {
-      const functionsArray = JSON.parse(functions);
-      const errors: string[] = [];
-
-      if (!Array.isArray(functionsArray)) {
-        errors.push('Functions must be an array');
-      } else {
-        functionsArray.forEach((func: Record<string, unknown>, index: number) => {
-          if (!func.type || func.type !== 'function') {
-            errors.push(`Function ${index + 1}: Missing or invalid 'type' field`);
-          }
-          if (!func.name || typeof func.name !== 'string') {
-            errors.push(`Function ${index + 1}: Missing or invalid 'name' field`);
-          }
-          if (!func.description || typeof func.description !== 'string') {
-            errors.push(`Function ${index + 1}: Missing or invalid 'description' field`);
-          }
-          if (!func.parameters || typeof func.parameters !== 'object') {
-            errors.push(`Function ${index + 1}: Missing or invalid 'parameters' field`);
-          }
-        });
-      }
-
-      setFunctionValidationResult({
-        valid: errors.length === 0,
-        errors
-      });
-
-      setStatusMessage(errors.length === 0 ? 'Functions validation passed!' : `Validation failed: ${errors.length} errors found`);
-    } catch {
-      setFunctionValidationResult({
-        valid: false,
-        errors: ['Invalid JSON format']
-      });
-      setStatusMessage('Validation failed: Invalid JSON format');
-    }
-  };
 
   // Load current prompt when component mounts
   useEffect(() => {
     if (promptConfig) {
       loadCurrentPrompt();
       loadUniversalProtocols();
-      loadUniversalFunctions();
-      loadFunctionTemplates();
     }
   }, [promptConfig]);
 
