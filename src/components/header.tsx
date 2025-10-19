@@ -812,7 +812,7 @@ export function Header() {
                 {/* Navigation icons removed and moved to footer */}
             </nav>
             <div className="flex items-center gap-3">
-                {pathname === '/chatbotV17' && !providerLoading && (!isProvider || (isProvider && !hasProfile)) && (
+                {(pathname === '/chatbotV17' || pathname === '/chatbotV18/p1') && !providerLoading && (!isProvider || (isProvider && !hasProfile)) && (
                     <Link
                         href="/s2"
                         className="px-4 py-4 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"

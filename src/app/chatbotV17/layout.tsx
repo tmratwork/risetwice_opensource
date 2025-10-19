@@ -5,7 +5,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ChatStateProvider } from '@/contexts/chat-state-context';
 import { ClientHeader } from '@/components/client-header';
-import { MobileFooterNavV15 } from './components/MobileFooterNavV15';
+import { MobileFooterNavV18 } from '../chatbotV18/components/MobileFooterNavV18';
 import SearchProgressToast from './components/SearchProgressToast';
 // V17 uses V16 CSS styles for identical appearance
 import '../chatbotV16/chatbotV16.css';
@@ -72,28 +72,9 @@ function ElevenLabsMonitoringInit() {
   return null;
 }
 
-// Component to handle debug panel state and pass to MobileFooterNav
-function MobileFooterNavWithDebug() {
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
-
-  const toggleDebugPanel = () => {
-    const newState = !showDebugPanel;
-    setShowDebugPanel(newState);
-    
-    // Log debug panel toggle
-    console.log('[V17-USER] debug_panel_toggled', { showDebugPanel: newState });
-    
-    // Dispatch event for page component
-    window.dispatchEvent(new CustomEvent('toggleDebugPanel', {
-      detail: { showDebugPanel: newState }
-    }));
-  };
-
-  return (
-    <MobileFooterNavV15 
-      onToggleDebugPanel={toggleDebugPanel}
-    />
-  );
+// V17 Footer - using V18 footer with Match/Directory navigation
+function MobileFooterNavWrapper() {
+  return <MobileFooterNavV18 />;
 }
 
 // Define the layout component for chatbotV17
@@ -119,12 +100,10 @@ export default function ChatBotV17Layout({
             {children}
           </div>
 
-          {/* Footer Row - Conditional based on deployment */}
-          {process.env.NEXT_PUBLIC_FOOTER_TYPE !== 'none' && (
-            <div className="footer-row">
-              <MobileFooterNavWithDebug />
-            </div>
-          )}
+          {/* Footer Row - Always show V18 footer */}
+          <div className="footer-row">
+            <MobileFooterNavWrapper />
+          </div>
         </div>
 
         {/* V17 Search Progress Toast */}

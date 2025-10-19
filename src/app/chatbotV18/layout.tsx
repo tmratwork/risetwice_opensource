@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ClientHeader } from '@/components/client-header';
-import { MobileFooterNavV15 } from './components/MobileFooterNavV15';
+import { MobileFooterNavV18 } from './components/MobileFooterNavV18';
 import SearchProgressToast from './components/SearchProgressToast';
 // V16 uses simple console logging instead of V15 audioLogger
 // Import V16 CSS styles (independent of V11/V15)
@@ -69,28 +69,9 @@ function AudioMonitoringInit() {
   return null;
 }
 
-// Component to handle debug panel state and pass to MobileFooterNav
-function MobileFooterNavWithDebug() {
-  const [showDebugPanel, setShowDebugPanel] = useState(false);
-
-  const toggleDebugPanel = () => {
-    const newState = !showDebugPanel;
-    setShowDebugPanel(newState);
-    
-    // Log debug panel toggle
-    console.log('[V16-USER] debug_panel_toggled', { showDebugPanel: newState });
-    
-    // Dispatch event for page component
-    window.dispatchEvent(new CustomEvent('toggleDebugPanel', {
-      detail: { showDebugPanel: newState }
-    }));
-  };
-
-  return (
-    <MobileFooterNavV15 
-      onToggleDebugPanel={toggleDebugPanel}
-    />
-  );
+// V18 Footer - no debug panel needed
+function MobileFooterNavWrapper() {
+  return <MobileFooterNavV18 />;
 }
 
 // Define the layout component for chatbotV15
@@ -115,12 +96,10 @@ export default function ChatBotV16Layout({
           {children}
         </div>
 
-        {/* Footer Row - Conditional based on deployment */}
-        {process.env.NEXT_PUBLIC_FOOTER_TYPE !== 'none' && (
-          <div className="footer-row">
-            <MobileFooterNavWithDebug />
-          </div>
-        )}
+        {/* Footer Row - Always show V18 footer */}
+        <div className="footer-row">
+          <MobileFooterNavWrapper />
+        </div>
       </div>
 
       {/* V15 Search Progress Toast */}
