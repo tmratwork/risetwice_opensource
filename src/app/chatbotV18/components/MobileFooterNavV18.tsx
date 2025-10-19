@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { SwitchCamera, Blinds } from 'lucide-react';
+import { Handshake, BookUser } from 'lucide-react';
 
 export function MobileFooterNavV18() {
   const pathname = usePathname();
@@ -17,7 +17,7 @@ export function MobileFooterNavV18() {
         {(pathname === '/chatbotV18/p1' || pathname.startsWith('/chatbotV18/p1')) && (
           <div className="absolute -top-3 left-0 right-0 h-1 bg-green-600 dark:bg-green-500 rounded-full"></div>
         )}
-        <SwitchCamera
+        <Handshake
           size={24}
           strokeWidth={pathname === '/chatbotV18/p1' || pathname.startsWith('/chatbotV18/p1') ? 3 : 2}
           className="mb-1"
@@ -33,7 +33,7 @@ export function MobileFooterNavV18() {
         {(pathname === '/chatbotV17' || pathname.startsWith('/chatbotV17/')) && (
           <div className="absolute -top-3 left-0 right-0 h-1 bg-green-600 dark:bg-green-500 rounded-full"></div>
         )}
-        <Blinds
+        <BookUser
           size={24}
           strokeWidth={pathname === '/chatbotV17' || pathname.startsWith('/chatbotV17/') ? 3 : 2}
           className="mb-1"
