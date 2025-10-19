@@ -782,15 +782,22 @@ export class ConnectionManager {
     this.audioInputStream = stream;
 
     // V15: Apply initial mute state from store to match visual state
+    // V18: Can start unmuted for manual push-to-talk mode
     const audioTracks = stream.getAudioTracks();
     if (audioTracks.length > 0) {
-      // Disable audio track initially to match store's default muted state
-      audioTracks[0].enabled = false;
-      optimizedAudioLogger.info('webrtc', 'initial_mute_applied', {
+      // Check if config specifies to start unmuted (V18 manual mode)
+      const shouldStartUnmuted = this.config.startUnmuted === true;
+      audioTracks[0].enabled = shouldStartUnmuted;
+
+      optimizedAudioLogger.info('webrtc', shouldStartUnmuted ? 'initial_unmute_applied' : 'initial_mute_applied', {
         trackId: audioTracks[0].id,
         trackEnabled: audioTracks[0].enabled,
-        reason: 'matching_store_default_muted_state'
+        reason: shouldStartUnmuted ? 'v18_manual_vad_mode' : 'matching_store_default_muted_state'
       });
+
+      if (shouldStartUnmuted) {
+        console.log('[V18-MANUAL-VAD] Starting with microphone UNMUTED for push-to-talk mode');
+      }
     }
 
     // Create peer connection
@@ -1329,25 +1336,27 @@ export class ConnectionManager {
         tool_choice: this.config.tool_choice,
         transcriptionModel: sessionUpdate.session.input_audio_transcription.model,
         silenceDuration: turnDetection?.silence_duration_ms || 'manual_mode',
-        turnDetectionMode: turnDetection ? 'automatic' : 'manual',
+        turnDetectionMode: turnDetection ? (turnDetection.create_response === false ? 'vad_manual_response' : 'automatic') : 'fully_manual',
+        createResponse: turnDetection?.create_response ?? 'default',
         optimizedForStreaming: true
       });
 
-      // V18: For manual VAD mode, wait for session.updated confirmation before sending greeting
-      // For automatic VAD, use the original timeout approach
-      if (turnDetection === null) {
-        console.log('[V18-MANUAL-VAD] Waiting for session.updated before sending initial greeting...');
+      // V18: Check if using server VAD with manual response (create_response: false)
+      const isManualResponseMode = turnDetection && turnDetection.create_response === false;
+
+      if (isManualResponseMode) {
+        console.log('[V18-MANUAL-VAD] Server VAD with manual response control - waiting for session.updated...');
         this.waitForSessionUpdateConfirmation().then((confirmed) => {
           if (confirmed) {
-            console.log('[V18-MANUAL-VAD] Session updated confirmed, sending initial greeting now');
+            console.log('[V18-MANUAL-VAD] Session confirmed, sending initial greeting');
             this.sendInitialGreeting();
           } else {
-            console.warn('[V18-MANUAL-VAD] Session update not confirmed, sending greeting anyway after timeout');
+            console.warn('[V18-MANUAL-VAD] Session update timeout, sending greeting anyway');
             this.sendInitialGreeting();
           }
         });
       } else {
-        // Original behavior for automatic VAD
+        // Standard automatic VAD mode (V16) or fully manual mode
         setTimeout(() => {
           this.sendInitialGreeting();
         }, 500); // Small delay to ensure session update is processed

@@ -116,7 +116,16 @@ export interface ConnectionConfig {
   // V18: Optional turn_detection override for manual push-to-talk mode
   // When null, disables automatic Voice Activity Detection (VAD)
   // When undefined, uses AI_DEFAULTS.turnDetection (automatic VAD)
-  turnDetection?: { type: string; silence_duration_ms?: number } | null;
+  // V18: Use { type: "server_vad", create_response: false } for manual response control with transcription
+  turnDetection?: {
+    type: string;
+    threshold?: number;
+    prefix_padding_ms?: number;
+    silence_duration_ms?: number;
+    create_response?: boolean;
+  } | null;
+  // V18: Start with microphone unmuted for manual push-to-talk mode
+  startUnmuted?: boolean;
   conversationHistory?: Array<{
     id: string;
     role: 'user' | 'assistant';

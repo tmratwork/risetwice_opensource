@@ -1908,16 +1908,15 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 {/* Send button */}
                 <button
                   onClick={() => {
-                    console.log('[V18-MANUAL-VAD] Send button clicked, committing audio buffer');
-                    // Commit audio buffer and trigger AI response
-                    const commitSuccess = useWebRTCStore.getState().commitAudioBuffer();
-                    if (commitSuccess) {
-                      console.log('[V18-MANUAL-VAD] Audio buffer committed, creating response');
-                      useWebRTCStore.getState().createResponse();
+                    console.log('[V18-MANUAL-VAD] Send button clicked, triggering AI response');
+                    // V18: Server VAD already committed buffer, just trigger response
+                    const responseSuccess = useWebRTCStore.getState().createResponse();
+                    if (responseSuccess) {
+                      console.log('[V18-MANUAL-VAD] Response triggered successfully');
                       // Clear user message after sending
                       clearUserMessage();
                     } else {
-                      console.error('[V18-MANUAL-VAD] Failed to commit audio buffer');
+                      console.error('[V18-MANUAL-VAD] Failed to trigger response');
                     }
                   }}
                   className="control-button primary large-button"
@@ -3213,8 +3212,19 @@ Time: ${new Date().toLocaleString()}`);
         voice: (triagePrompt.voice_settings as Record<string, unknown>)?.voice as string || DEFAULT_VOICE,
         tool_choice: DEFAULT_TOOL_CHOICE,
         greetingInstructions: finalGreeting,
-        // V18: Disable automatic VAD - use manual push-to-talk mode
-        turnDetection: null
+        // V18: Server VAD with manual response control
+        // - VAD provides real-time transcription by auto-committing buffer
+        // - create_response: false prevents automatic AI response
+        // - User clicks "Send" to manually trigger response
+        turnDetection: {
+          type: "server_vad",
+          threshold: 0.5,
+          prefix_padding_ms: 300,
+          silence_duration_ms: 1000,
+          create_response: false
+        },
+        // V18: Start with microphone unmuted for immediate audio capture
+        startUnmuted: true
       };
     } else {
       logResourceGreeting('⚙️ STEP 18: ⏳ WebRTC configuration not ready', {

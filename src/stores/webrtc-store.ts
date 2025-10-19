@@ -693,10 +693,17 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
         throw new Error(`V15 INITIALIZATION FAILED: ${errorMessage}. Please add global AI instructions in the admin interface at /chatbotV11/admin`);
       }
 
+      // V18: Set initial mute state based on config
+      if (config.startUnmuted === true) {
+        console.log('[V18-MANUAL-VAD] Setting store isMuted to FALSE for manual mode');
+        set({ isMuted: false });
+      }
+
       console.log('[V15-OPTIMIZATION] ✅ Pre-initialization complete - config stored');
       optimizedAudioLogger.info('webrtc', 'zustand_store_pre_initialized', {
         version: 'v15-zustand-optimized',
-        configStored: true
+        configStored: true,
+        startUnmuted: config.startUnmuted || false
       });
     },
 
