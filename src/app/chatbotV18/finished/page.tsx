@@ -190,7 +190,7 @@ export default function FinishedPage() {
                   Preferences Saved!
                 </h2>
                 <p className="text-gray-700 dark:text-gray-300 mb-8">
-                  We'll notify you when therapists send you messages.
+                  We&apos;ll notify you when therapists send you messages.
                 </p>
                 <button
                   onClick={handleReturnToMatches}
