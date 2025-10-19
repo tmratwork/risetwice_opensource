@@ -113,6 +113,10 @@ export interface ConnectionConfig {
     parameters: Record<string, unknown>;
   }>;
   tool_choice?: 'auto' | 'required' | string | null;
+  // V18: Optional turn_detection override for manual push-to-talk mode
+  // When null, disables automatic Voice Activity Detection (VAD)
+  // When undefined, uses AI_DEFAULTS.turnDetection (automatic VAD)
+  turnDetection?: { type: string; silence_duration_ms?: number } | null;
   conversationHistory?: Array<{
     id: string;
     role: 'user' | 'assistant';

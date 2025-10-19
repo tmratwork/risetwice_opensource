@@ -500,6 +500,11 @@ export class ConnectionManager {
     }
 
     try {
+      // V18: Use config.turnDetection if provided (preserves manual push-to-talk mode during handoffs)
+      const turnDetection = this.config.turnDetection !== undefined
+        ? this.config.turnDetection
+        : AI_DEFAULTS.turnDetection;
+
       // Create session update with complete AI replacement
       const sessionUpdate = {
         type: "session.update",
@@ -510,7 +515,7 @@ export class ConnectionManager {
           input_audio_format: AI_DEFAULTS.inputAudioFormat,
           output_audio_format: AI_DEFAULTS.outputAudioFormat,
           input_audio_transcription: AI_DEFAULTS.inputAudioTranscription,
-          turn_detection: AI_DEFAULTS.turnDetection,
+          turn_detection: turnDetection,
           tools: newConfig.tools,
           tool_choice: AI_DEFAULTS.toolChoice
         }
@@ -560,6 +565,64 @@ export class ConnectionManager {
         console.error(`${logPrefix} [CONNECTION_MANAGER] ❌ Error during AI configuration replacement:`, error);
       }
       optimizedAudioLogger.error('webrtc', 'replace_config_error', error as Error);
+      return false;
+    }
+  }
+
+  /**
+   * V18: Manually commit the input audio buffer
+   * Used for push-to-talk mode when turn_detection is disabled
+   */
+  public commitInputAudioBuffer(): boolean {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      optimizedAudioLogger.error('webrtc', 'commit_audio_buffer_failed', new Error('Data channel not available'), {
+        dataChannelState: this.dataChannel?.readyState || 'null',
+        connectionState: this.state
+      });
+      return false;
+    }
+
+    try {
+      const commitMessage = {
+        type: "input_audio_buffer.commit"
+      };
+
+      this.dataChannel.send(JSON.stringify(commitMessage));
+      optimizedAudioLogger.info('webrtc', 'audio_buffer_committed', {
+        manualCommit: true
+      });
+      return true;
+    } catch (error) {
+      optimizedAudioLogger.error('webrtc', 'commit_audio_buffer_error', error as Error);
+      return false;
+    }
+  }
+
+  /**
+   * V18: Manually trigger AI response creation
+   * Used for push-to-talk mode after committing audio buffer
+   */
+  public createResponse(): boolean {
+    if (!this.dataChannel || this.dataChannel.readyState !== 'open') {
+      optimizedAudioLogger.error('webrtc', 'create_response_failed', new Error('Data channel not available'), {
+        dataChannelState: this.dataChannel?.readyState || 'null',
+        connectionState: this.state
+      });
+      return false;
+    }
+
+    try {
+      const responseMessage = {
+        type: "response.create"
+      };
+
+      this.dataChannel.send(JSON.stringify(responseMessage));
+      optimizedAudioLogger.info('webrtc', 'response_creation_triggered', {
+        manualTrigger: true
+      });
+      return true;
+    } catch (error) {
+      optimizedAudioLogger.error('webrtc', 'create_response_error', error as Error);
       return false;
     }
   }
@@ -1205,6 +1268,13 @@ export class ConnectionManager {
     });
 
     // TODO: if in future user base are people other than at-risk youth, change gpt-4o-transcribe so it is the mental health prompt for r2, but a more general prompt for living books
+    // V18: Use config.turnDetection if provided (allows manual push-to-talk mode)
+    // When config.turnDetection === null, disables automatic VAD
+    // When config.turnDetection === undefined, uses AI_DEFAULTS.turnDetection (automatic VAD)
+    const turnDetection = this.config.turnDetection !== undefined
+      ? this.config.turnDetection
+      : AI_DEFAULTS.turnDetection;
+
     const sessionUpdate = {
       type: "session.update",
       session: {
@@ -1214,7 +1284,7 @@ export class ConnectionManager {
         input_audio_format: AI_DEFAULTS.inputAudioFormat,
         output_audio_format: AI_DEFAULTS.outputAudioFormat,
         input_audio_transcription: AI_DEFAULTS.inputAudioTranscription,
-        turn_detection: AI_DEFAULTS.turnDetection,
+        turn_detection: turnDetection,
         tools: this.config.tools || [],
         tool_choice: this.config.tool_choice || AI_DEFAULTS.toolChoice
       },
@@ -1247,7 +1317,8 @@ export class ConnectionManager {
         console.log('[V15-TRANSCRIPT-DEBUG] Session configured with optimized transcription settings:', {
           transcriptionModel: sessionUpdate.session.input_audio_transcription.model,
           language: sessionUpdate.session.input_audio_transcription.language,
-          silenceDuration: sessionUpdate.session.turn_detection.silence_duration_ms
+          silenceDuration: turnDetection?.silence_duration_ms || 'manual_mode',
+          turnDetectionMode: turnDetection ? 'automatic' : 'manual'
         });
       }
 
@@ -1257,14 +1328,30 @@ export class ConnectionManager {
         voice: this.config.voice,
         tool_choice: this.config.tool_choice,
         transcriptionModel: sessionUpdate.session.input_audio_transcription.model,
-        silenceDuration: sessionUpdate.session.turn_detection.silence_duration_ms,
+        silenceDuration: turnDetection?.silence_duration_ms || 'manual_mode',
+        turnDetectionMode: turnDetection ? 'automatic' : 'manual',
         optimizedForStreaming: true
       });
 
-      // Send initial greeting like V11 does
-      setTimeout(() => {
-        this.sendInitialGreeting();
-      }, 500); // Small delay to ensure session update is processed
+      // V18: For manual VAD mode, wait for session.updated confirmation before sending greeting
+      // For automatic VAD, use the original timeout approach
+      if (turnDetection === null) {
+        console.log('[V18-MANUAL-VAD] Waiting for session.updated before sending initial greeting...');
+        this.waitForSessionUpdateConfirmation().then((confirmed) => {
+          if (confirmed) {
+            console.log('[V18-MANUAL-VAD] Session updated confirmed, sending initial greeting now');
+            this.sendInitialGreeting();
+          } else {
+            console.warn('[V18-MANUAL-VAD] Session update not confirmed, sending greeting anyway after timeout');
+            this.sendInitialGreeting();
+          }
+        });
+      } else {
+        // Original behavior for automatic VAD
+        setTimeout(() => {
+          this.sendInitialGreeting();
+        }, 500); // Small delay to ensure session update is processed
+      }
 
     } catch (error) {
       optimizedAudioLogger.error('webrtc', 'session_config_send_failed', error as Error);

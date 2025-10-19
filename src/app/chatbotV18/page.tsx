@@ -1888,12 +1888,51 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       {/* Enhanced Audio visualizer with real-time volume data */}
       {
         isConnected && (
-          <div className="visualization-container" role="button" aria-label="Microphone control - click to mute or unmute your microphone" aria-describedby="mic-description">
-            <AudioOrbV15 isFunctionExecuting={isFunctionExecuting} />
-            <div id="mic-description" className="sr-only">
-              Microphone control button located in the center of the screen. Click to toggle your microphone on or off. Visual indicator shows blue animation when AI is speaking.
+          <>
+            <div className="visualization-container" role="button" aria-label="Microphone control - click to mute or unmute your microphone" aria-describedby="mic-description">
+              <AudioOrbV15 isFunctionExecuting={isFunctionExecuting} />
+              <div id="mic-description" className="sr-only">
+                Microphone control button located in the center of the screen. Click to toggle your microphone on or off. Visual indicator shows blue animation when AI is speaking.
+              </div>
             </div>
-          </div>
+
+            {/* V18: Manual send button for push-to-talk mode - shown when user has spoken */}
+            {userMessage && userMessage.trim().length > 0 && (
+              <div className="flex flex-col items-center mt-8 gap-4">
+                {/* Show transcribed text preview */}
+                <div className="bg-white bg-opacity-90 rounded-lg px-6 py-4 max-w-2xl shadow-lg">
+                  <p className="text-sm text-gray-600 mb-1 font-medium">You said:</p>
+                  <p className="text-gray-900 font-medium">{userMessage}</p>
+                </div>
+
+                {/* Send button */}
+                <button
+                  onClick={() => {
+                    console.log('[V18-MANUAL-VAD] Send button clicked, committing audio buffer');
+                    // Commit audio buffer and trigger AI response
+                    const commitSuccess = useWebRTCStore.getState().commitAudioBuffer();
+                    if (commitSuccess) {
+                      console.log('[V18-MANUAL-VAD] Audio buffer committed, creating response');
+                      useWebRTCStore.getState().createResponse();
+                      // Clear user message after sending
+                      clearUserMessage();
+                    } else {
+                      console.error('[V18-MANUAL-VAD] Failed to commit audio buffer');
+                    }
+                  }}
+                  className="control-button primary large-button"
+                  style={{
+                    borderRadius: "9999px",
+                    padding: "16px 48px",
+                    fontSize: "18px",
+                    fontWeight: "600"
+                  }}
+                >
+                  Send
+                </button>
+              </div>
+            )}
+          </>
         )
       }
 
@@ -3173,7 +3212,9 @@ Time: ${new Date().toLocaleString()}`);
         tools: triageFunctions,
         voice: (triagePrompt.voice_settings as Record<string, unknown>)?.voice as string || DEFAULT_VOICE,
         tool_choice: DEFAULT_TOOL_CHOICE,
-        greetingInstructions: finalGreeting
+        greetingInstructions: finalGreeting,
+        // V18: Disable automatic VAD - use manual push-to-talk mode
+        turnDetection: null
       };
     } else {
       logResourceGreeting('⚙️ STEP 18: ⏳ WebRTC configuration not ready', {

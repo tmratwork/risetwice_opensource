@@ -158,6 +158,9 @@ export interface WebRTCStoreState {
   connect: () => Promise<void>;
   disconnect: () => Promise<void>;
   sendMessage: (message: string) => boolean;
+  // V18: Manual push-to-talk control methods
+  commitAudioBuffer: () => boolean;
+  createResponse: () => boolean;
   toggleMute: () => boolean;
   toggleAudioOutputMute: () => boolean;
   addConversationMessage: (message: ConversationMessage) => void;
@@ -994,6 +997,13 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
               console.log('[function] New state:', { isThinking: newState.isThinking });
               return newState;
             });
+          } else if (role === 'user') {
+            // V18: In manual VAD mode, accumulate user transcription to show what they're saying
+            console.log('[V18-MANUAL-VAD] Accumulating user speech delta:', delta);
+            set(state => ({
+              ...state,
+              userMessage: state.userMessage + delta
+            }));
           } else {
             console.log('[function] Keeping thinking state - transcript is from user role');
           }
@@ -2118,6 +2128,13 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
                 console.log('[function] New state:', { isThinking: newState.isThinking });
                 return newState;
               });
+            } else if (role === 'user') {
+              // V18: In manual VAD mode, accumulate user transcription to show what they're saying
+              console.log('[V18-MANUAL-VAD] (RECONNECT) Accumulating user speech delta:', delta);
+              set(state => ({
+                ...state,
+                userMessage: state.userMessage + delta
+              }));
             } else {
               console.log('[function] Keeping thinking state - transcript is from user role (RECONNECT)');
             }
@@ -2694,6 +2711,28 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
       }
 
       return success;
+    },
+
+    // V18: Manually commit audio buffer for push-to-talk mode
+    commitAudioBuffer: (): boolean => {
+      const { connectionManager } = get();
+      if (!connectionManager) {
+        optimizedAudioLogger.error('webrtc', 'commit_audio_buffer_failed', new Error('Connection manager not initialized'));
+        return false;
+      }
+
+      return connectionManager.commitInputAudioBuffer();
+    },
+
+    // V18: Manually trigger AI response for push-to-talk mode
+    createResponse: (): boolean => {
+      const { connectionManager } = get();
+      if (!connectionManager) {
+        optimizedAudioLogger.error('webrtc', 'create_response_failed', new Error('Connection manager not initialized'));
+        return false;
+      }
+
+      return connectionManager.createResponse();
     },
 
     // Toggle mute action - implements V11-style mute functionality
