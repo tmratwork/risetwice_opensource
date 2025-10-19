@@ -2,9 +2,11 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
 
 export default function PatientIntakeLanding() {
   const router = useRouter();
+  const { user } = useAuth();
 
   const handleNextSteps = () => {
     // TODO: Navigate to new patient intake flow
@@ -12,8 +14,14 @@ export default function PatientIntakeLanding() {
   };
 
   const handleViewMessages = () => {
-    // TODO: Navigate to therapist messages page
-    console.log('View Therapist Messages clicked');
+    // Check if user is logged in
+    if (!user) {
+      alert('Please sign in to check your therapist messages.');
+      return;
+    }
+
+    // User is logged in - show empty message box
+    alert('Your message box is empty. Therapists will reach out once they review your intake.');
   };
 
   return (
