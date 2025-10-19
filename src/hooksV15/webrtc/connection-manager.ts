@@ -1336,13 +1336,13 @@ export class ConnectionManager {
         tool_choice: this.config.tool_choice,
         transcriptionModel: sessionUpdate.session.input_audio_transcription.model,
         silenceDuration: turnDetection?.silence_duration_ms || 'manual_mode',
-        turnDetectionMode: turnDetection ? (turnDetection.create_response === false ? 'vad_manual_response' : 'automatic') : 'fully_manual',
-        createResponse: turnDetection?.create_response ?? 'default',
+        turnDetectionMode: turnDetection ? ((turnDetection as { create_response?: boolean }).create_response === false ? 'vad_manual_response' : 'automatic') : 'fully_manual',
+        createResponse: (turnDetection as { create_response?: boolean } | null)?.create_response ?? 'default',
         optimizedForStreaming: true
       });
 
       // V18: Check if using server VAD with manual response (create_response: false)
-      const isManualResponseMode = turnDetection && turnDetection.create_response === false;
+      const isManualResponseMode = turnDetection && (turnDetection as { create_response?: boolean }).create_response === false;
 
       if (isManualResponseMode) {
         console.log('[V18-MANUAL-VAD] Server VAD with manual response control - waiting for session.updated...');
