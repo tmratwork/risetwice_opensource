@@ -277,7 +277,7 @@ export default function V16AdminPage() {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto p-6 pt-24">
+    <div className="max-w-6xl mx-auto p-6 pt-24 overflow-y-auto h-full">
       <h1 className="text-3xl font-bold mb-8">V16 Admin Dashboard</h1>
 
       <div className="grid gap-8">

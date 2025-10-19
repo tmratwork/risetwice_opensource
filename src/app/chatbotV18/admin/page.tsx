@@ -276,11 +276,64 @@ export default function V16AdminPage() {
     }
   ];
 
+  const v18Prompts = [
+    {
+      id: 'v18_patient_intake',
+      name: 'V18 Patient Intake AI Prompt',
+      description: 'Initial patient intake assessment AI for V18 mental health support system',
+      category: 'V18 Patient Intake'
+    }
+  ];
+
   return (
-    <div className="max-w-6xl mx-auto p-6 pt-24">
+    <div className="max-w-6xl mx-auto p-6 pt-24 overflow-y-auto h-full">
       <h1 className="text-3xl font-bold mb-8">V16 Admin Dashboard</h1>
 
       <div className="grid gap-8">
+        {/* V18 Patient Intake System Prompts */}
+        <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 shadow-lg rounded-lg p-6 border-2 border-orange-300 dark:border-orange-700">
+          <div className="flex items-center space-x-3 mb-4">
+            <h2 className="text-xl font-semibold text-orange-900 dark:text-orange-100">V18 Patient Intake System Prompts</h2>
+            <span className="px-3 py-1 text-sm bg-orange-500 text-white rounded-full font-medium">
+              New V18
+            </span>
+          </div>
+          <p className="text-sm text-orange-800 dark:text-orange-200 mb-6">
+            Configure V18 patient intake AI instructions. This is a separate system from V16 with its own dedicated prompt and API endpoints.
+          </p>
+
+          <div className="grid gap-4">
+            {v18Prompts.map((prompt) => (
+              <div key={prompt.id} className="border border-orange-300 dark:border-orange-600 rounded-lg p-4 bg-white dark:bg-gray-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                        {prompt.name}
+                      </h3>
+                      <span className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded">
+                        {prompt.category}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {prompt.description}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/chatbotV18/admin/v18-prompt/${prompt.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors ml-4"
+                  >
+                    <span>Edit</span>
+                    <ExternalLink size={16} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* V16 Memory System Prompts */}
         <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg p-6">
           <h2 className="text-xl font-semibold mb-4">V16 Memory System Prompts</h2>

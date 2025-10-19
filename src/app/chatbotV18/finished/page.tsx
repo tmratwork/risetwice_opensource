@@ -1,7 +1,7 @@
 // src/app/chatbotV18/finished/page.tsx
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
 
@@ -17,6 +17,36 @@ export default function FinishedPage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Fetch existing phone number on mount
+  useEffect(() => {
+    const fetchExistingPreferences = async () => {
+      if (!user?.uid) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/api/patient-intake/notification-preferences?userId=${user.uid}`);
+
+        if (response.ok) {
+          const data = await response.json();
+          setPreferences({
+            emailNotifications: data.emailNotifications ?? true,
+            smsNotifications: data.smsNotifications ?? true,
+            phone: data.phone || '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch existing preferences:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchExistingPreferences();
+  }, [user?.uid]);
 
   const handleCheckboxChange = (field: 'emailNotifications' | 'smsNotifications') => {
     setPreferences(prev => ({ ...prev, [field]: !prev[field] }));
@@ -72,7 +102,12 @@ export default function FinishedPage() {
 
         {/* Main Card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg">
-          {!isSubmitted ? (
+          {isLoading ? (
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500"></div>
+              <p className="mt-4 text-gray-600 dark:text-gray-400">Loading...</p>
+            </div>
+          ) : !isSubmitted ? (
             <>
               {/* Thank you message */}
               <div className="mb-8">

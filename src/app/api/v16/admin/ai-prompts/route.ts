@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
-// V16 AI Prompt types based on V16.md
+// V16 AI Prompt types based on V16.md + V18 patient intake
 const V16_PROMPT_TYPES = [
   'triage',
   'crisis_specialist',
-  'anxiety_specialist', 
+  'anxiety_specialist',
   'depression_specialist',
   'trauma_specialist',
   'substance_use_specialist',
@@ -13,7 +13,8 @@ const V16_PROMPT_TYPES = [
   'cbt_specialist',
   'dbt_specialist',
   'universal',
-  'universal_functions'
+  'universal_functions',
+  'v18_patient_intake' // V18 Patient Intake System
 ] as const;
 
 export async function GET(request: NextRequest) {

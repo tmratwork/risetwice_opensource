@@ -1715,7 +1715,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             <div className="mt-8 mb-8">
               <div className="w-full h-px bg-gray-300 mb-6"></div>
               <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                Our AI companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges as part of the patient intake process. It cannot replace the healing power of real human connection.<br />
+                Our AI intake companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges as part of the patient intake process. It cannot replace the healing power of real human connection.<br />
                 <br />
                 Note: This AI is trained solely by our in-house medical team. It does not take data from AI Previews and is a completely separate model.
               </div>
@@ -3355,7 +3355,7 @@ Time: ${new Date().toLocaleString()}`);
       try {
         // Get user's language preference for the API call
         const languagePreference = getStoredLanguagePreference(!!user);
-        const promptApiUrl = `/api/v16/load-prompt?type=triage&userId=${user?.uid || 'anonymous'}&language=${languagePreference}`;
+        const promptApiUrl = `/api/v18/load-prompt?type=v18_patient_intake&userId=${user?.uid || 'anonymous'}&language=${languagePreference}`;
         const greetingApiUrl = `/api/v16/greeting-prompt?type=triage&language=${languagePreference}${user?.uid ? `&userId=${user.uid}` : ''}`;
 
         // Add comprehensive multilingual support logging
@@ -3686,10 +3686,10 @@ Time: ${new Date().toLocaleString()}`);
         source: 'language-change-listener'
       });
 
-      // Reload the triage prompt with new language preference
+      // Reload the patient intake prompt with new language preference
       const fetchTriagePrompt = async () => {
         try {
-          const apiUrl = `/api/v16/load-prompt?type=triage&userId=${user?.uid || 'anonymous'}&language=${newLanguageCode}`;
+          const apiUrl = `/api/v18/load-prompt?type=v18_patient_intake&userId=${user?.uid || 'anonymous'}&language=${newLanguageCode}`;
 
           logMultilingualSupport('🔄 STEP 1: Reloading triage prompt with new language', {
             newLanguage: newLanguageCode,
