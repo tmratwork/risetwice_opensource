@@ -9,8 +9,8 @@ export default function PatientIntakeLanding() {
   const { user } = useAuth();
 
   const handleNextSteps = () => {
-    // TODO: Navigate to new patient intake flow
-    console.log('Next Steps clicked - navigate to intake');
+    // Navigate to how-it-works page
+    router.push('/chatbotV18/p1/how-it-works');
   };
 
   const handleViewMessages = () => {
