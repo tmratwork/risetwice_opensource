@@ -1098,6 +1098,27 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       return;
     }
 
+    // V18: Check if this message already exists in conversation (voice transcription)
+    // Voice messages are added by transcription callback, typed messages are not
+    const messageAlreadyExists = conversation.some(msg =>
+      msg.role === 'user' &&
+      msg.text === userMessage.trim() &&
+      msg.isFinal
+    );
+
+    if (messageAlreadyExists) {
+      // Voice message - already in conversation from transcription, just trigger AI response
+      console.log('[V18-MANUAL-VAD] Voice message detected (already in conversation), triggering AI response');
+      const responseSuccess = useWebRTCStore.getState().createResponse();
+      if (responseSuccess) {
+        console.log('[V18-MANUAL-VAD] Response triggered successfully');
+        clearUserMessage();
+      } else {
+        console.error('[V18-MANUAL-VAD] Failed to trigger response');
+      }
+      return;
+    }
+
     if (smartSendEnabled) {
       logSmartSend('🧠 Smart Send ENABLED - accumulating message', {
         userMessage: userMessage.trim(),
@@ -1896,41 +1917,6 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               </div>
             </div>
 
-            {/* V18: Manual send button for push-to-talk mode - shown when user has spoken */}
-            {userMessage && userMessage.trim().length > 0 && (
-              <div className="flex flex-col items-center mt-8 gap-4">
-                {/* Show transcribed text preview */}
-                <div className="bg-white bg-opacity-90 rounded-lg px-6 py-4 max-w-2xl shadow-lg">
-                  <p className="text-sm text-gray-600 mb-1 font-medium">You said:</p>
-                  <p className="text-gray-900 font-medium">{userMessage}</p>
-                </div>
-
-                {/* Send button */}
-                <button
-                  onClick={() => {
-                    console.log('[V18-MANUAL-VAD] Send button clicked, triggering AI response');
-                    // V18: Server VAD already committed buffer, just trigger response
-                    const responseSuccess = useWebRTCStore.getState().createResponse();
-                    if (responseSuccess) {
-                      console.log('[V18-MANUAL-VAD] Response triggered successfully');
-                      // Clear user message after sending
-                      clearUserMessage();
-                    } else {
-                      console.error('[V18-MANUAL-VAD] Failed to trigger response');
-                    }
-                  }}
-                  className="control-button primary large-button"
-                  style={{
-                    borderRadius: "9999px",
-                    padding: "16px 48px",
-                    fontSize: "18px",
-                    fontWeight: "600"
-                  }}
-                >
-                  Send
-                </button>
-              </div>
-            )}
           </>
         )
       }
