@@ -7,8 +7,8 @@ export default function HowItWorksPage() {
   const router = useRouter();
 
   const handleGetStarted = () => {
-    // TODO: Navigate to next step in intake process
-    console.log('Get Started clicked - navigate to intake');
+    // Navigate to patient intake form
+    router.push('/chatbotV18/p1/intake');
   };
 
   return (

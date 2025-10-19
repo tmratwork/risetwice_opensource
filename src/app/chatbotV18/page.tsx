@@ -912,6 +912,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       if (isConnected) {
         await disconnect();
         console.log('[V16] ✅ Session ended successfully');
+        // Navigate to finished page
+        window.location.href = '/chatbotV18/finished';
       }
     } catch (error) {
       console.error('[V16] ❌ Error ending session:', error);
@@ -1586,6 +1588,19 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               }
             }}
           >
+            {/* Intake Session Header */}
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 mb-4">
+                Intake Session
+              </h2>
+              <p className="text-base text-gray-700 dark:text-gray-300 leading-relaxed max-w-2xl mx-auto mb-2">
+                This brief session will capture your needs and goals, in your own voice.
+              </p>
+              <p className="text-sm text-red-600 dark:text-red-400 font-medium max-w-2xl mx-auto">
+                *Before we start, please be aware our service is not for emergencies. If you are in an immediate crisis please call 988 or 911.*
+              </p>
+            </div>
+
             {/* Always show Let's Talk button - WITH DEBUGGING */}
             < button
               className={`control-button primary large-button ${connectionState === 'connecting' ? 'connecting' : ''} ${isPreparing ? 'preparing' : ''}`}
@@ -1700,7 +1715,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             <div className="mt-8 mb-8">
               <div className="w-full h-px bg-gray-300 mb-6"></div>
               <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                Our AI companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges. It cannot replace the healing power of real human connection. We built it for anyone who needs support — especially those who lack access to traditional therapy or just aren&apos;t ready to start yet.<br />
+                Our AI companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges as part of the patient intake process. It cannot replace the healing power of real human connection.<br />
                 <br />
                 Note: This AI is trained solely by our in-house medical team. It does not take data from AI Previews and is a completely separate model.
               </div>
