@@ -1,5 +1,5 @@
 // src/hooks/use-s2-profile-data.ts
-// Custom hook for loading and managing S2 profile data
+// Custom hook for loading and managing S2 profile data 
 
 import { useState, useEffect, useCallback } from 'react';
 import { StepCompletionStatus } from '@/utils/s2-validation';
