@@ -1692,57 +1692,6 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             {/* Show Resume checkbox if user has resumable conversation */}
             {resumeCheckboxJSX}
 
-            {/* Spacing between Let's Talk and View conversation history */}
-            <div className="mt-8"></div>
-
-            {/* Show View conversation history button for authenticated users */}
-            {
-              user && (
-                <button
-                  onClick={() => window.location.href = '/chatbotV16/history'}
-                  className="text-sm underline mt-2 cursor-pointer pointer-events-auto"
-                  aria-label="View your conversation history - opens in new page"
-                  style={{ color: '#3b503c', pointerEvents: 'auto' }}
-                  onMouseEnter={(e) => (e.target as HTMLElement).style.color = '#9dbbac'}
-                  onMouseLeave={(e) => (e.target as HTMLElement).style.color = '#3b503c'}
-                  onClickCapture={() => console.log('[history] ⬇️ History button - click captured')}
-                  onMouseDown={() => console.log('[history] 🖱️ History button mousedown')}
-                  onMouseUp={() => console.log('[history] 🖱️ History button mouseup')}
-                  ref={(el) => {
-                    if (el) {
-                      // const computed = window.getComputedStyle(el);
-                      // console.log('[history] 🔍 History button DOM/CSS:', {
-                      //   element: el,
-                      //     className: el.className,
-                      //       hasOnClick: !!el.onclick,
-                      //         pointerEvents: computed.pointerEvents,
-                      //           position: computed.position,
-                      //             zIndex: computed.zIndex,
-                      //               display: computed.display,
-                      //                 visibility: computed.visibility,
-                      //                   opacity: computed.opacity,
-                      //                     cursor: computed.cursor,
-                      //                       clientRect: el.getBoundingClientRect(),
-                      //                         style: el.getAttribute('style')
-                      // });
-                    }
-                  }}
-                >
-                  View conversation history
-                </button >
-              )}
-
-            {/* Disclaimer text */}
-            <div className="mt-8 mb-8">
-              <div className="w-full h-px bg-gray-300 mb-6"></div>
-              <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                Our AI intake companion is a subclinical support tool to help you reflect, grow, and work through everyday emotional challenges as part of the patient intake process. It cannot replace the healing power of real human connection.<br />
-                <br />
-                Note: This AI is trained solely by our in-house medical team. It does not take data from AI Previews and is a completely separate model.
-              </div>
-              <div className="w-full h-px bg-gray-300 mt-6"></div>
-            </div>
-
             {/* Terms of Service link for all users */}
             <button
               onClick={handleTermsOfServiceClick}
