@@ -125,7 +125,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
   // V18 Voice Mode: Recording state
   const [isRecording, setIsRecording] = useState(false);
-  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [, setRecordingDuration] = useState(0);
 
   // Button press feedback state
   const [cancelButtonPressed, setCancelButtonPressed] = useState(false);
@@ -182,23 +182,17 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const isMuted = useWebRTCStore(state => state.isMuted);
   const isPreparing = useWebRTCStore(state => state.isPreparing);
   const conversation = useWebRTCStore(state => state.conversation);
-  const userMessage = useWebRTCStore(state => state.userMessage);
   const isAudioOutputMuted = useWebRTCStore(state => state.isAudioOutputMuted);
-  const conversationId = useWebRTCStore(state => state.conversationId);
 
   // Get stable function references - these are action functions that don't change
   const sendMessage = useWebRTCStore(state => state.sendMessage);
   const addConversationMessage = useWebRTCStore(state => state.addConversationMessage);
-  const updateUserMessage = useWebRTCStore(state => state.updateUserMessage);
-  const clearUserMessage = useWebRTCStore(state => state.clearUserMessage);
   const toggleAudioOutputMute = useWebRTCStore(state => state.toggleAudioOutputMute);
   const disconnect = useWebRTCStore(state => state.disconnect);
 
   // Smart Send state and actions
-  const smartSendEnabled = useWebRTCStore(state => state.smartSendEnabled);
   const setSmartSendEnabled = useWebRTCStore(state => state.setSmartSendEnabled);
   const messageBuffer = useWebRTCStore(state => state.messageBuffer);
-  const appendToMessageBuffer = useWebRTCStore(state => state.appendToMessageBuffer);
   const clearMessageBuffer = useWebRTCStore(state => state.clearMessageBuffer);
 
   // Smart Send timer ref (doesn't serialize well in Zustand)
@@ -977,93 +971,6 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   };
 
   // Smart Send timer functions
-  const startSmartSendTimer = useCallback(() => {
-    logSmartSend('🔄 Timer start/restart requested', {
-      currentBuffer: messageBuffer,
-      isConnected,
-      hasExistingTimer: !!smartSendTimerRef.current
-    });
-
-    if (smartSendTimerRef.current) {
-      clearTimeout(smartSendTimerRef.current);
-      logSmartSend('⏹️ Cleared existing timer');
-    }
-
-    // Get delay from localStorage, default to 2 seconds
-    const delaySeconds = Number(localStorage.getItem('smartSendDelay') || '2');
-    const delayMs = delaySeconds * 1000;
-
-    logSmartSend('⏳ Starting timer', {
-      delaySeconds,
-      delayMs,
-      messageBuffer: messageBuffer.trim()
-    });
-
-    smartSendTimerRef.current = setTimeout(() => {
-      // Get current buffer state from store (not stale closure)
-      const bufferedMessage = useWebRTCStore.getState().messageBuffer.trim();
-      // Get current text input state to check if user is still typing
-      const currentUserMessage = useWebRTCStore.getState().userMessage.trim();
-
-      logSmartSend('⏰ Timer completed - evaluating send conditions', {
-        bufferedMessage,
-        messageLength: bufferedMessage.length,
-        currentUserMessage,
-        isTextInputEmpty: !currentUserMessage,
-        isConnected,
-        connectionState
-      });
-
-      if (bufferedMessage && isConnected && !currentUserMessage) {
-        logSmartSend('✅ Send conditions met - sending buffered message to AI', {
-          finalMessage: bufferedMessage,
-          messageLength: bufferedMessage.length
-        });
-
-        // V18 UX: Add message to conversation NOW (when actually sending to AI)
-        // This matches Claude.ai voice mode where message appears only after send
-        const userMessageObj: Conversation = {
-          id: `user-sent-${Date.now()}`,
-          role: "user",
-          text: bufferedMessage,
-          timestamp: new Date().toISOString(),
-          isFinal: true,
-          status: "final"
-        };
-        logSmartSend('📝 Adding message to conversation (NOW that we are sending to AI)', userMessageObj);
-        addConversationMessage(userMessageObj);
-
-        logSmartSend('📤 Attempting to send buffered message to AI via WebRTC');
-        const success = sendMessage(bufferedMessage);
-
-        if (success) {
-          logSmartSend('✅ Message sent successfully - setting thinking state');
-          useWebRTCStore.setState({ isThinking: true });
-          clearMessageBuffer();
-          logSmartSend('🧹 Buffer cleared after successful send');
-        } else {
-          logSmartSend('❌ Message send FAILED - keeping buffer', {
-            bufferedMessage,
-            connectionState,
-            isConnected
-          });
-        }
-      } else {
-        logSmartSend('❌ Send conditions NOT met - skipping send', {
-          hasMessage: !!bufferedMessage,
-          messageLength: bufferedMessage.length,
-          isConnected,
-          connectionState,
-          currentUserMessage,
-          isTextInputEmpty: !currentUserMessage,
-          reason: !bufferedMessage ? 'no_buffered_message' : !isConnected ? 'not_connected' : 'text_input_not_empty'
-        });
-      }
-      smartSendTimerRef.current = null;
-      logSmartSend('🏁 Timer reference cleared');
-    }, delayMs);
-  }, [messageBuffer, isConnected, connectionState, addConversationMessage, sendMessage, clearMessageBuffer, logSmartSend]);
-
   const cancelSmartSendTimer = useCallback(() => {
     // Add call stack tracking to identify what's canceling the timer
     const stack = new Error().stack;
@@ -1085,25 +992,6 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     }
   }, [logSmartSend]);
 
-  // Handle input change with Smart Send timer restart
-  const handleInputChange = useCallback((value: string) => {
-    logSmartSend('⌨️ Input change detected', {
-      oldValue: userMessage,
-      newValue: value,
-      smartSendEnabled,
-      currentBuffer: messageBuffer
-    });
-
-    updateUserMessage(value);
-
-    if (smartSendEnabled) {
-      logSmartSend('🔄 Smart Send enabled - restarting timer on input change');
-      // Restart timer on typing (debounce effect)
-      startSmartSendTimer();
-    } else {
-      logSmartSend('⚠️ Smart Send disabled - no timer action on input change');
-    }
-  }, [updateUserMessage, smartSendEnabled, startSmartSendTimer, userMessage, messageBuffer, logSmartSend]);
 
   // V18 Voice Mode: Handle cancel recording
   const handleCancelRecording = useCallback(() => {
@@ -1169,115 +1057,6 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       console.error('[V18] Failed to send message');
     }
   }, [pendingTranscript, isConnected, addConversationMessage, sendMessage]);
-
-  // Handle send message - memoized to prevent recreation on every render
-  const handleSendMessage = useCallback(() => {
-    logSmartSend('📨 handleSendMessage called', {
-      userMessage: userMessage.trim(),
-      messageLength: userMessage.trim().length,
-      isConnected,
-      connectionState,
-      smartSendEnabled,
-      currentBuffer: messageBuffer
-    });
-
-    if (!userMessage.trim() || !isConnected) {
-      logSmartSend('❌ Send aborted - missing message or not connected', {
-        hasMessage: !!userMessage.trim(),
-        messageLength: userMessage.trim().length,
-        isConnected,
-        connectionState
-      });
-      return;
-    }
-
-    // V18: Check if this message already exists in conversation (voice transcription)
-    // Voice messages are added by transcription callback, typed messages are not
-    const messageAlreadyExists = conversation.some(msg =>
-      msg.role === 'user' &&
-      msg.text === userMessage.trim() &&
-      msg.isFinal
-    );
-
-    if (messageAlreadyExists) {
-      // Voice message - already in conversation from transcription, just trigger AI response
-      console.log('[V18-MANUAL-VAD] Voice message detected (already in conversation), triggering AI response');
-      const responseSuccess = useWebRTCStore.getState().createResponse();
-      if (responseSuccess) {
-        console.log('[V18-MANUAL-VAD] Response triggered successfully');
-        clearUserMessage();
-      } else {
-        console.error('[V18-MANUAL-VAD] Failed to trigger response');
-      }
-      return;
-    }
-
-    if (smartSendEnabled) {
-      logSmartSend('🧠 Smart Send ENABLED - accumulating message', {
-        userMessage: userMessage.trim(),
-        currentBuffer: messageBuffer,
-        willAppend: userMessage.trim()
-      });
-
-      // V18 UX: Do NOT add message to conversation immediately
-      // Message will be added when actually sent to AI (in timer callback)
-      // This matches Claude.ai voice mode UX
-
-      // SMART SEND LOGIC: Accumulate message for AI processing delay
-      appendToMessageBuffer(userMessage);
-      logSmartSend('📝 Message appended to buffer for AI processing');
-
-      clearUserMessage();
-      logSmartSend('🧹 Input field cleared');
-
-      startSmartSendTimer();
-      logSmartSend('⏰ Smart Send timer started/restarted');
-      return;
-    }
-
-    logSmartSend('⚡ Smart Send DISABLED - immediate send mode', {
-      userMessage: userMessage.trim()
-    });
-
-    // Original immediate send behavior (when Smart Send disabled)
-    optimizedAudioLogger.logUserAction('message_sent', {
-      messageLength: userMessage.length,
-      connectionState
-    });
-
-    // Add user message to conversation immediately when typed
-    const userMessageObj: Conversation = {
-      id: `user-typed-${Date.now()}`,
-      role: "user",
-      text: userMessage,
-      timestamp: new Date().toISOString(),
-      isFinal: true,
-      status: "final"
-    };
-
-    logSmartSend('📝 Adding message to conversation (immediate mode)', userMessageObj);
-    addConversationMessage(userMessageObj);
-
-    logSmartSend('📤 Sending message via WebRTC (immediate mode)');
-    const success = sendMessage(userMessage);
-
-    if (success) {
-      logSmartSend('✅ Immediate send successful');
-      // Set thinking state when text message is sent
-      useWebRTCStore.setState({ isThinking: true });
-      clearUserMessage();
-    } else {
-      logSmartSend('❌ Immediate send FAILED', {
-        userMessage,
-        connectionState,
-        isConnected
-      });
-      optimizedAudioLogger.error('webrtc', 'send_message_failed', new Error('Message send failed'), {
-        messageLength: userMessage.length
-      });
-      // Don't clear the message if sending failed, allow user to retry
-    }
-  }, [userMessage, isConnected, connectionState, smartSendEnabled, messageBuffer, appendToMessageBuffer, clearUserMessage, startSmartSendTimer, addConversationMessage, sendMessage, logSmartSend]);
 
   // Smart Send edge case handling - FIXED: Split into separate effects to avoid cleanup race condition
 

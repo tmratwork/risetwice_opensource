@@ -7,8 +7,6 @@ const AudioWaveAnimation = () => {
   const [bars, setBars] = useState<number[]>([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]);
 
   useEffect(() => {
-    let animationInterval: NodeJS.Timeout;
-
     const animate = () => {
       const { isUserSpeaking, userAudioLevel } = useWebRTCStore.getState();
 
@@ -26,7 +24,7 @@ const AudioWaveAnimation = () => {
     };
 
     // Animate at 10fps (every 100ms)
-    animationInterval = setInterval(animate, 100);
+    const animationInterval = setInterval(animate, 100);
 
     return () => clearInterval(animationInterval);
   }, []);
