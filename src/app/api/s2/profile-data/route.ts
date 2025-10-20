@@ -5,7 +5,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import {
   validateProfileStep,
-  validatePatientDescriptionStep,
   validateLicenseStep,
   validateCompleteProfileStep
 } from '@/utils/s2-validation';
@@ -115,7 +114,6 @@ export async function POST(request: NextRequest) {
     // Calculate step completion status
     const stepCompletionStatus = {
       profile: validateProfileStep(therapistProfile),
-      patientDescription: validatePatientDescriptionStep(patientDescription),
       licenseVerification: validateLicenseStep(licenseVerification),
       completeProfile: validateCompleteProfileStep(completeProfile)
     };

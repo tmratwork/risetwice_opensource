@@ -3,12 +3,11 @@
 
 export interface StepCompletionStatus {
   profile: boolean;
-  patientDescription: boolean;
   licenseVerification: boolean;
   completeProfile: boolean;
 }
 
-export type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
+export type FlowStep = 'welcome' | 'profile' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
 
 // Validation functions for each step
 export function validateProfileStep(profile: unknown): boolean {

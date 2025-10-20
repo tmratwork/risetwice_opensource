@@ -14,6 +14,7 @@ import PatientDescriptionForm from './components/PatientDescriptionForm';
 import LicenseVerification from './components/LicenseVerification';
 import CompleteProfile from './components/CompleteProfile';
 import OnboardingComplete from './components/OnboardingComplete';
+import { MobileFooterNavV18 } from '@/app/chatbotV18/components/MobileFooterNavV18';
 
 // Flow steps (imported from validation utils)
 // type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
@@ -295,9 +296,6 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('profile');
         break;
       case 'profile':
-        setCurrentStep('patient-description');
-        break;
-      case 'patient-description':
         setCurrentStep('license-verification');
         break;
       case 'license-verification':
@@ -314,11 +312,8 @@ const S2CaseSimulation: React.FC = () => {
       case 'profile':
         setCurrentStep('welcome');
         break;
-      case 'patient-description':
-        setCurrentStep('profile');
-        break;
       case 'license-verification':
-        setCurrentStep('patient-description');
+        setCurrentStep('profile');
         break;
       case 'complete-profile':
         setCurrentStep('license-verification');
@@ -331,7 +326,7 @@ const S2CaseSimulation: React.FC = () => {
 
   const handleStepNavigation = (targetStep: FlowStep) => {
     const stepOrder: FlowStep[] = [
-      'welcome', 'profile', 'patient-description', 'license-verification', 'complete-profile', 'onboarding-complete'
+      'welcome', 'profile', 'license-verification', 'complete-profile', 'onboarding-complete'
     ];
 
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -393,74 +388,74 @@ const S2CaseSimulation: React.FC = () => {
     setSessionData(prev => ({ ...prev, ...data }));
   };
 
-  // Render current step
-  switch (currentStep) {
-    case 'welcome':
-      return <WelcomeScreen onNext={handleNext} />;
+  // Render current step with footer
+  const renderStep = () => {
+    switch (currentStep) {
+      case 'welcome':
+        return <WelcomeScreen onNext={handleNext} />;
 
-    case 'profile':
-      return (
-        <TherapistProfileForm
-          profile={sessionData.therapistProfile}
-          onUpdate={updateTherapistProfile}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      );
+      case 'profile':
+        return (
+          <TherapistProfileForm
+            profile={sessionData.therapistProfile}
+            onUpdate={updateTherapistProfile}
+            onNext={handleNext}
+            onBack={handleBack}
+            onStepNavigation={handleStepNavigation}
+            canSkipToStep={canSkipToStep}
+            stepCompletionStatus={stepCompletionStatus}
+          />
+        );
 
-    case 'patient-description':
-      return (
-        <PatientDescriptionForm
-          description={sessionData.patientDescription.description}
-          onUpdate={updatePatientDescription}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      );
+      case 'license-verification':
+        return (
+          <LicenseVerification
+            licenseData={sessionData.licenseVerification}
+            onUpdate={updateLicenseVerification}
+            onNext={handleNext}
+            onSkip={handleNext}
+            onBack={handleBack}
+            onStepNavigation={handleStepNavigation}
+            canSkipToStep={canSkipToStep}
+            stepCompletionStatus={stepCompletionStatus}
+          />
+        );
 
-    case 'license-verification':
-      return (
-        <LicenseVerification
-          licenseData={sessionData.licenseVerification}
-          onUpdate={updateLicenseVerification}
-          onNext={handleNext}
-          onSkip={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      );
+      case 'complete-profile':
+        return (
+          <CompleteProfile
+            profileData={sessionData.completeProfile}
+            onUpdate={updateCompleteProfile}
+            onNext={handleNext}
+            onBack={handleBack}
+            onStepNavigation={handleStepNavigation}
+            canSkipToStep={canSkipToStep}
+            stepCompletionStatus={stepCompletionStatus}
+          />
+        );
 
-    case 'complete-profile':
-      return (
-        <CompleteProfile
-          profileData={sessionData.completeProfile}
-          onUpdate={updateCompleteProfile}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      );
+      case 'onboarding-complete':
+        return (
+          <OnboardingComplete
+            onBack={handleBack}
+          />
+        );
 
-    case 'onboarding-complete':
-      return (
-        <OnboardingComplete
-          onBack={handleBack}
-        />
-      );
+      default:
+        return <WelcomeScreen onNext={handleNext} />;
+    }
+  };
 
-    default:
-      return <WelcomeScreen onNext={handleNext} />;
-  }
+  return (
+    <div className="fixed inset-0 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+        {renderStep()}
+      </div>
+      <div className="flex-shrink-0">
+        <MobileFooterNavV18 />
+      </div>
+    </div>
+  );
 };
 
 export default S2CaseSimulation;

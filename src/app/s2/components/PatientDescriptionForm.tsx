@@ -116,7 +116,7 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
   // Show loading while fetching existing description
   if (loadingDescription) {
     return (
-      <div className="flex-1 flex items-center justify-center pt-20" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="flex items-center justify-center min-h-full pt-20" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p style={{ color: 'var(--text-secondary)' }}>Loading your patient description...</p>
@@ -126,7 +126,7 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="flex flex-col min-h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
         <StepNavigator
@@ -138,7 +138,7 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
       )}
 
       {/* Main Content */}
-      <main className="max-w-4xl mx-auto px-4 py-16">
+      <main className="max-w-4xl mx-auto px-4 pt-24 pb-16">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
             Build Your Personalized Clinical Scenario

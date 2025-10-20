@@ -346,7 +346,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   // Show loading while fetching existing profile
   if (loadingProfile) {
     return (
-      <div className="flex-1 flex items-center justify-center pt-20" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="flex items-center justify-center min-h-full pt-20" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p style={{ color: 'var(--text-secondary)' }}>Loading your profile...</p>
@@ -356,7 +356,7 @@ const TherapistProfileForm: React.FC<TherapistProfileFormProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="flex flex-col min-h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
         <StepNavigator

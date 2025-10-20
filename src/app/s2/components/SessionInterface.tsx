@@ -768,11 +768,10 @@ Stay in character as the patient throughout the session. Respond naturally to th
   return (
     <>
       <div className="chatbot-v16-wrapper" style={{ backgroundColor: 'var(--bg-primary)' }}>
-        <div className="main-container" style={{ paddingTop: '40px' }}>
+        <div className="main-container" style={{ paddingTop: '80px' }}>
           {/* Session status bar - minimal design integrated with layout */}
           <div className="flex items-center justify-between py-3 px-4 mb-4 text-sm text-gray-600 bg-white/50 rounded-lg">
             <div className="flex items-center space-x-4">
-              <span>Step 7 of 8 - AI Patient Session</span>
               <div className={`px-2 py-1 text-xs rounded-full ${isConnected ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                 }`}>
                 {isConnected ? 'Connected' : 'Disconnected'}

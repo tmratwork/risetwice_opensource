@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter } from 'next/navigation';
+import PatientDescriptionForm from '../components/PatientDescriptionForm';
 import SessionPreparation from '../components/SessionPreparation';
 import SessionInterface from '../components/SessionInterface';
 import AIStyleCustomization from '../components/AIStyleCustomization';
@@ -13,7 +14,7 @@ import CustomizeAIPrompt from '../components/CustomizeAIPrompt';
 import OnboardingComplete from '../components/OnboardingComplete';
 import { MobileFooterNavV18 } from '@/app/chatbotV18/components/MobileFooterNavV18';
 
-type AIPreviewStep = 'preparation' | 'session' | 'ai-style' | 'customize-ai-prompt' | 'complete';
+type AIPreviewStep = 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'customize-ai-prompt' | 'complete';
 
 interface AIStyle {
   therapeuticModalities: {
@@ -49,7 +50,7 @@ interface SessionData {
 const AIPreviewFlow: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [currentStep, setCurrentStep] = useState<AIPreviewStep>('preparation');
+  const [currentStep, setCurrentStep] = useState<AIPreviewStep>('patient-description');
   const [loading, setLoading] = useState(true);
   const [sessionData, setSessionData] = useState<SessionData>({
     therapistProfile: {
@@ -156,6 +157,9 @@ const AIPreviewFlow: React.FC = () => {
 
   const handleNext = () => {
     switch (currentStep) {
+      case 'patient-description':
+        setCurrentStep('preparation');
+        break;
       case 'preparation':
         setCurrentStep('session');
         break;
@@ -173,6 +177,9 @@ const AIPreviewFlow: React.FC = () => {
 
   const handleBack = () => {
     switch (currentStep) {
+      case 'preparation':
+        setCurrentStep('patient-description');
+        break;
       case 'session':
         setCurrentStep('preparation');
         break;
@@ -199,15 +206,32 @@ const AIPreviewFlow: React.FC = () => {
     setSessionData(prev => ({ ...prev, ...data }));
   };
 
+  const updatePatientDescription = (description: string) => {
+    setSessionData(prev => ({
+      ...prev,
+      patientDescription: { description }
+    }));
+  };
+
   // Render current step with footer
   const renderStep = () => {
     switch (currentStep) {
+      case 'patient-description':
+        return (
+          <PatientDescriptionForm
+            description={sessionData.patientDescription.description}
+            onUpdate={updatePatientDescription}
+            onNext={handleNext}
+            onBack={() => router.push('/dashboard/provider')}
+          />
+        );
+
       case 'preparation':
         return (
           <SessionPreparation
             sessionData={sessionData}
             onNext={handleNext}
-            onBack={() => router.push('/dashboard/provider')}
+            onBack={handleBack}
             onUpdateSessionData={updateSessionData}
           />
         );
