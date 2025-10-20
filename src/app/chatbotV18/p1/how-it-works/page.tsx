@@ -2,6 +2,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
+import { MicVocal, PhoneCall, AudioLines, Pointer, HeartHandshake } from 'lucide-react';
 
 export default function HowItWorksPage() {
   const router = useRouter();
@@ -27,6 +28,7 @@ export default function HowItWorksPage() {
               <div className="flex-shrink-0 w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center">
                 <span className="text-white dark:text-black text-xl font-bold">1</span>
               </div>
+              <MicVocal className="w-8 h-8 text-gray-800 flex-shrink-0" />
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2 text-gray-800">
                   Tell us your story
@@ -44,6 +46,7 @@ export default function HowItWorksPage() {
               <div className="flex-shrink-0 w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center">
                 <span className="text-white dark:text-black text-xl font-bold">2</span>
               </div>
+              <PhoneCall className="w-8 h-8 text-gray-800 flex-shrink-0" />
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2 text-gray-800">
                   We reach out to therapists
@@ -61,6 +64,7 @@ export default function HowItWorksPage() {
               <div className="flex-shrink-0 w-12 h-12 bg-red-500 rounded-full flex items-center justify-center">
                 <span className="text-white text-xl font-bold">3</span>
               </div>
+              <AudioLines className="w-8 h-8 text-gray-800 flex-shrink-0" />
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2 text-gray-800">
                   Interested therapists record a private voice message just for you
@@ -78,6 +82,7 @@ export default function HowItWorksPage() {
               <div className="flex-shrink-0 w-12 h-12 bg-black dark:bg-white rounded-full flex items-center justify-center">
                 <span className="text-white dark:text-black text-xl font-bold">4</span>
               </div>
+              <Pointer className="w-8 h-8 text-gray-800 flex-shrink-0" />
               <div className="flex-1">
                 <h2 className="text-xl font-bold mb-2 text-gray-800">
                   Choose the best fit & start healing
@@ -104,17 +109,7 @@ export default function HowItWorksPage() {
         <div className="bg-white rounded-2xl p-6 shadow-lg">
           <div className="flex items-start gap-4">
             <div className="flex-shrink-0">
-              <svg
-                width="48"
-                height="48"
-                viewBox="0 0 48 48"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-                className="text-blue-500"
-              >
-                <circle cx="24" cy="24" r="20" stroke="currentColor" strokeWidth="2" />
-                <path d="M24 16v16M16 24h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-              </svg>
+              <HeartHandshake className="w-12 h-12 text-blue-500" />
             </div>
             <div className="flex-1">
               <p className="text-base text-gray-700 leading-relaxed">
