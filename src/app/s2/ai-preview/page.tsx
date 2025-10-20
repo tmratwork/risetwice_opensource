@@ -11,6 +11,7 @@ import SessionInterface from '../components/SessionInterface';
 import AIStyleCustomization from '../components/AIStyleCustomization';
 import CustomizeAIPrompt from '../components/CustomizeAIPrompt';
 import OnboardingComplete from '../components/OnboardingComplete';
+import { MobileFooterNavV18 } from '@/app/chatbotV18/components/MobileFooterNavV18';
 
 type AIPreviewStep = 'preparation' | 'session' | 'ai-style' | 'customize-ai-prompt' | 'complete';
 
@@ -198,55 +199,68 @@ const AIPreviewFlow: React.FC = () => {
     setSessionData(prev => ({ ...prev, ...data }));
   };
 
-  // Render current step
-  switch (currentStep) {
-    case 'preparation':
-      return (
-        <SessionPreparation
-          sessionData={sessionData}
-          onNext={handleNext}
-          onBack={() => router.push('/dashboard/provider')}
-          onUpdateSessionData={updateSessionData}
-        />
-      );
+  // Render current step with footer
+  const renderStep = () => {
+    switch (currentStep) {
+      case 'preparation':
+        return (
+          <SessionPreparation
+            sessionData={sessionData}
+            onNext={handleNext}
+            onBack={() => router.push('/dashboard/provider')}
+            onUpdateSessionData={updateSessionData}
+          />
+        );
 
-    case 'session':
-      return (
-        <SessionInterface
-          sessionData={sessionData}
-          onEndSession={handleNext}
-        />
-      );
+      case 'session':
+        return (
+          <SessionInterface
+            sessionData={sessionData}
+            onEndSession={handleNext}
+          />
+        );
 
-    case 'ai-style':
-      return (
-        <AIStyleCustomization
-          style={sessionData.aiStyle}
-          onUpdate={updateAIStyle}
-          onNext={handleNext}
-          onBack={handleBack}
-        />
-      );
+      case 'ai-style':
+        return (
+          <AIStyleCustomization
+            style={sessionData.aiStyle}
+            onUpdate={updateAIStyle}
+            onNext={handleNext}
+            onBack={handleBack}
+          />
+        );
 
-    case 'customize-ai-prompt':
-      return (
-        <CustomizeAIPrompt
-          onNext={handleNext}
-          onBack={handleBack}
-          isAIPreviewFlow={true}
-        />
-      );
+      case 'customize-ai-prompt':
+        return (
+          <CustomizeAIPrompt
+            onNext={handleNext}
+            onBack={handleBack}
+            isAIPreviewFlow={true}
+          />
+        );
 
-    case 'complete':
-      return (
-        <OnboardingComplete
-          onBack={handleBack}
-        />
-      );
+      case 'complete':
+        return (
+          <OnboardingComplete
+            onBack={handleBack}
+          />
+        );
 
-    default:
-      return null;
-  }
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+        {renderStep()}
+      </div>
+      <div className="flex-shrink-0">
+        <MobileFooterNavV18 />
+      </div>
+    </div>
+  );
 };
 
 export default AIPreviewFlow;

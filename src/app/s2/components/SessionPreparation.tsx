@@ -204,7 +204,7 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="flex flex-col min-h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
       {/* Step Navigator */}
       {onStepNavigation && (
         <StepNavigator
@@ -216,7 +216,7 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
       )}
 
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-16">
+      <main className="flex-1 flex items-center justify-center px-4 py-16" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center max-w-2xl">
           <h1 className="text-4xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
             Preparing for your clinical session
