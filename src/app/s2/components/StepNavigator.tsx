@@ -19,18 +19,14 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
   canSkipToStep,
   stepCompletionStatus
 }) => {
-  // Define the step order and their display information (Byron's new flow)
+  // Define the step order and their display information
   const stepOrder: { step: FlowStep; number: number; label: string; width: string }[] = [
     { step: 'welcome', number: 0, label: 'Welcome', width: '0%' },
-    { step: 'profile', number: 1, label: 'Profile', width: '11%' },
-    { step: 'patient-description', number: 2, label: 'Patient Description', width: '22%' },
-    { step: 'preparation', number: 3, label: 'Preparation', width: '33%' },
-    { step: 'session', number: 4, label: 'Session', width: '44%' },
-    { step: 'ai-style', number: 5, label: 'AI Style', width: '55%' },
-    { step: 'license-verification', number: 6, label: 'License', width: '66%' },
-    { step: 'customize-ai-prompt', number: 7, label: 'Customize Prompt', width: '77%' },
-    { step: 'complete-profile', number: 8, label: 'Complete Profile', width: '88%' },
-    { step: 'onboarding-complete', number: 9, label: 'Complete', width: '100%' }
+    { step: 'profile', number: 1, label: 'Profile', width: '20%' },
+    { step: 'patient-description', number: 2, label: 'Patient Description', width: '40%' },
+    { step: 'license-verification', number: 3, label: 'License', width: '60%' },
+    { step: 'complete-profile', number: 4, label: 'Complete Profile', width: '80%' },
+    { step: 'onboarding-complete', number: 5, label: 'Complete', width: '100%' }
   ];
 
   // Find current step info
@@ -50,7 +46,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
               ? getStepDisplayStatus(stepInfo.step, currentStep, stepCompletionStatus)
               : (stepNumber === currentStepNumber ? 'current' : 'locked');
 
-            const isClickable = displayStatus !== 'locked' ||
+            const isClickable = displayStatus === 'completed' || displayStatus === 'available' ||
               (canSkipToStep ? canSkipToStep(stepInfo.step, currentStep) : false);
 
             // Enhanced styling based on step completion status
@@ -98,7 +94,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
                   {displayStatus === 'completed' ? '✓' : stepNumber}
                 </button>
                 {/* Enhanced connector line (except for last step) */}
-                {stepNumber < 8 && (
+                {stepNumber < 4 && (
                   <div className={`w-8 h-0.5 transition-all duration-200 ${getConnectorStyling()}`} />
                 )}
               </div>
@@ -109,7 +105,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
         {/* Current step text */}
         <div className="text-center mb-4">
           <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Step {currentStepNumber} of 9
+            Step {currentStepNumber} of 4
           </span>
         </div>
 

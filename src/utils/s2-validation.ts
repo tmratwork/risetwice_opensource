@@ -4,14 +4,11 @@
 export interface StepCompletionStatus {
   profile: boolean;
   patientDescription: boolean;
-  preparation: boolean;
-  session: boolean;
-  aiStyle: boolean;
   licenseVerification: boolean;
   completeProfile: boolean;
 }
 
-export type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'customize-ai-prompt' | 'complete-profile' | 'onboarding-complete';
+export type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
 
 // Validation functions for each step
 export function validateProfileStep(profile: unknown): boolean {
@@ -37,41 +34,6 @@ export function validatePatientDescriptionStep(description: unknown): boolean {
   );
 }
 
-export function validatePreparationStep(scenario: unknown): boolean {
-  if (!scenario || typeof scenario !== 'object') return false;
-
-  const s = scenario as Record<string, unknown>;
-  return !!(
-    s.description &&
-    typeof s.description === 'string' &&
-    s.description.length > 0
-  );
-}
-
-export function validateSessionStep(session: unknown): boolean {
-  if (!session || typeof session !== 'object') return false;
-
-  const s = session as Record<string, unknown>;
-  return !!(
-    s.id &&
-    (s.status === 'completed' || s.status === 'in_progress')
-  );
-}
-
-export function validateAIStyleStep(config: unknown): boolean {
-  if (!config || typeof config !== 'object') return false;
-
-  const c = config as Record<string, unknown>;
-  return !!(
-    typeof c.cognitive_behavioral === 'number' &&
-    typeof c.person_centered === 'number' &&
-    typeof c.psychodynamic === 'number' &&
-    typeof c.solution_focused === 'number' &&
-    typeof c.friction === 'number' &&
-    typeof c.tone === 'number' &&
-    typeof c.energy_level === 'number'
-  );
-}
 
 export function validateLicenseStep(license: unknown): boolean {
   if (!license || typeof license !== 'object') return false;
@@ -103,62 +65,9 @@ export function canSkipToStepWithData(
   currentStep: FlowStep,
   stepCompletionStatus: StepCompletionStatus
 ): boolean {
-  const stepOrder: FlowStep[] = [
-    'welcome', 'profile', 'patient-description', 'preparation', 'session',
-    'ai-style', 'license-verification', 'customize-ai-prompt', 'complete-profile', 'onboarding-complete'
-  ];
-
-  const currentIndex = stepOrder.indexOf(currentStep);
-  const targetIndex = stepOrder.indexOf(targetStep);
-
-  // Always allow backward navigation
-  if (targetIndex < currentIndex) {
-    return true;
-  }
-
-  // Step-specific availability rules based on completion status and dependencies
-  switch (targetStep) {
-    case 'profile':
-      // Profile is always accessible (no dependencies)
-      return true;
-
-    case 'patient-description':
-      // Requires profile to be completed
-      return stepCompletionStatus.profile;
-
-    case 'preparation':
-      // Requires profile and patient description to be completed
-      return stepCompletionStatus.profile && stepCompletionStatus.patientDescription;
-
-    case 'session':
-      // Requires profile, patient description, and preparation to be completed
-      return stepCompletionStatus.profile &&
-             stepCompletionStatus.patientDescription &&
-             stepCompletionStatus.preparation;
-
-    case 'ai-style':
-      // Independent step - accessible if profile is completed OR already completed
-      return stepCompletionStatus.profile || stepCompletionStatus.aiStyle;
-
-    case 'license-verification':
-      // Independent step - accessible if profile is completed OR already completed
-      return stepCompletionStatus.profile || stepCompletionStatus.licenseVerification;
-
-    case 'complete-profile':
-      // Independent step - accessible if profile is completed OR already completed
-      return stepCompletionStatus.profile || stepCompletionStatus.completeProfile;
-
-    case 'customize-ai-prompt':
-      // Optional step - always accessible if license verification is done OR if profile is completed
-      return stepCompletionStatus.profile || stepCompletionStatus.licenseVerification;
-
-    case 'onboarding-complete':
-      // Can access if at least profile is completed
-      return stepCompletionStatus.profile;
-
-    default:
-      return false;
-  }
+  // Allow navigation to any step (both forward and backward)
+  // This gives users freedom to move between steps as needed
+  return true;
 }
 
 // Determine the completion percentage for progress display
@@ -172,9 +81,6 @@ export function calculateCompletionPercentage(stepCompletionStatus: StepCompleti
 export function getNextRecommendedStep(stepCompletionStatus: StepCompletionStatus): FlowStep {
   if (!stepCompletionStatus.profile) return 'profile';
   if (!stepCompletionStatus.patientDescription) return 'patient-description';
-  if (!stepCompletionStatus.preparation) return 'preparation';
-  if (!stepCompletionStatus.session) return 'session';
-  if (!stepCompletionStatus.aiStyle) return 'ai-style';
   if (!stepCompletionStatus.licenseVerification) return 'license-verification';
   if (!stepCompletionStatus.completeProfile) return 'complete-profile';
   return 'onboarding-complete';
@@ -184,8 +90,7 @@ export function getNextRecommendedStep(stepCompletionStatus: StepCompletionStatu
 export function isOnboardingComplete(stepCompletionStatus: StepCompletionStatus): boolean {
   return stepCompletionStatus.profile &&
          stepCompletionStatus.patientDescription &&
-         stepCompletionStatus.preparation &&
-         stepCompletionStatus.session &&
+         stepCompletionStatus.licenseVerification &&
          stepCompletionStatus.completeProfile;
 }
 
@@ -202,11 +107,7 @@ export function getStepDisplayStatus(
     'welcome': null,
     'profile': 'profile',
     'patient-description': 'patientDescription',
-    'preparation': 'preparation',
-    'session': 'session',
-    'ai-style': 'aiStyle',
     'license-verification': 'licenseVerification',
-    'customize-ai-prompt': null, // Optional step - no completion tracking
     'complete-profile': 'completeProfile',
     'onboarding-complete': null
   };

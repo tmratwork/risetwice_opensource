@@ -6,9 +6,6 @@ import { createClient } from '@supabase/supabase-js';
 import {
   validateProfileStep,
   validatePatientDescriptionStep,
-  validatePreparationStep,
-  validateSessionStep,
-  validateAIStyleStep,
   validateLicenseStep,
   validateCompleteProfileStep
 } from '@/utils/s2-validation';
@@ -119,9 +116,6 @@ export async function POST(request: NextRequest) {
     const stepCompletionStatus = {
       profile: validateProfileStep(therapistProfile),
       patientDescription: validatePatientDescriptionStep(patientDescription),
-      preparation: validatePreparationStep(generatedScenario),
-      session: validateSessionStep(session),
-      aiStyle: validateAIStyleStep(aiStyleConfig),
       licenseVerification: validateLicenseStep(licenseVerification),
       completeProfile: validateCompleteProfileStep(completeProfile)
     };

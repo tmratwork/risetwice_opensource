@@ -11,16 +11,12 @@ import { canSkipToStepWithData, FlowStep } from '@/utils/s2-validation';
 import WelcomeScreen from './components/WelcomeScreen';
 import TherapistProfileForm from './components/TherapistProfileForm';
 import PatientDescriptionForm from './components/PatientDescriptionForm';
-import SessionPreparation from './components/SessionPreparation';
-import SessionInterface from './components/SessionInterface';
-import AIStyleCustomization from './components/AIStyleCustomization';
 import LicenseVerification from './components/LicenseVerification';
 import CompleteProfile from './components/CompleteProfile';
-import CustomizeAIPrompt from './components/CustomizeAIPrompt';
 import OnboardingComplete from './components/OnboardingComplete';
 
 // Flow steps (imported from validation utils)
-// type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'preparation' | 'session' | 'ai-style' | 'license-verification' | 'customize-ai-prompt' | 'complete-profile' | 'onboarding-complete';
+// type FlowStep = 'welcome' | 'profile' | 'patient-description' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
 
 // Types
 interface TherapistProfile {
@@ -302,21 +298,9 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('patient-description');
         break;
       case 'patient-description':
-        setCurrentStep('preparation');
-        break;
-      case 'preparation':
-        setCurrentStep('session');
-        break;
-      case 'session':
-        setCurrentStep('ai-style');
-        break;
-      case 'ai-style':
         setCurrentStep('license-verification');
         break;
       case 'license-verification':
-        setCurrentStep('customize-ai-prompt');
-        break;
-      case 'customize-ai-prompt':
         setCurrentStep('complete-profile');
         break;
       case 'complete-profile':
@@ -333,23 +317,11 @@ const S2CaseSimulation: React.FC = () => {
       case 'patient-description':
         setCurrentStep('profile');
         break;
-      case 'preparation':
+      case 'license-verification':
         setCurrentStep('patient-description');
         break;
-      case 'session':
-        setCurrentStep('preparation');
-        break;
-      case 'ai-style':
-        setCurrentStep('session');
-        break;
-      case 'license-verification':
-        setCurrentStep('ai-style');
-        break;
-      case 'customize-ai-prompt':
-        setCurrentStep('license-verification');
-        break;
       case 'complete-profile':
-        setCurrentStep('customize-ai-prompt');
+        setCurrentStep('license-verification');
         break;
       case 'onboarding-complete':
         setCurrentStep('complete-profile');
@@ -359,8 +331,7 @@ const S2CaseSimulation: React.FC = () => {
 
   const handleStepNavigation = (targetStep: FlowStep) => {
     const stepOrder: FlowStep[] = [
-      'welcome', 'profile', 'patient-description', 'preparation', 'session',
-      'ai-style', 'license-verification', 'customize-ai-prompt', 'complete-profile', 'onboarding-complete'
+      'welcome', 'profile', 'patient-description', 'license-verification', 'complete-profile', 'onboarding-complete'
     ];
 
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -453,19 +424,6 @@ const S2CaseSimulation: React.FC = () => {
         />
       );
 
-    case 'ai-style':
-      return (
-        <AIStyleCustomization
-          style={sessionData.aiStyle}
-          onUpdate={updateAIStyle}
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      );
-
     case 'license-verification':
       return (
         <LicenseVerification
@@ -490,38 +448,6 @@ const S2CaseSimulation: React.FC = () => {
           onStepNavigation={handleStepNavigation}
           canSkipToStep={canSkipToStep}
           stepCompletionStatus={stepCompletionStatus}
-        />
-      );
-
-    case 'customize-ai-prompt':
-      return (
-        <CustomizeAIPrompt
-          onNext={handleNext}
-          onBack={handleBack}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      );
-
-    case 'preparation':
-      return (
-        <SessionPreparation
-          sessionData={sessionData}
-          onNext={handleNext}
-          onBack={handleBack}
-          onUpdateSessionData={updateSessionData}
-          onStepNavigation={handleStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      );
-
-    case 'session':
-      return (
-        <SessionInterface
-          sessionData={sessionData}
-          onEndSession={handleNext}
         />
       );
 
