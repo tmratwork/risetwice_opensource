@@ -1804,6 +1804,19 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               type="button"
               onClick={toggleAudioOutputMute}
               className={`mute-button ${isAudioOutputMuted ? 'muted' : ''}`}
+              style={{
+                backgroundColor: '#e5e7eb',
+                border: '2px solid #9ca3af',
+                borderRadius: '50%',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
+                color: '#374151'
+              }}
               aria-label={isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
             >
               {isAudioOutputMuted ? (
@@ -1826,7 +1839,20 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               type="button"
               onClick={handleCancelRecording}
               className="cancel-button"
-              style={{ marginLeft: '16px' }}
+              style={{
+                marginLeft: '16px',
+                backgroundColor: '#e5e7eb',
+                border: '2px solid #9ca3af',
+                borderRadius: '50%',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
+                color: '#374151'
+              }}
               aria-label="Cancel voice transcript"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
@@ -1844,6 +1870,19 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               type="button"
               onClick={handleSendRecording}
               className="upload-button-new"
+              style={{
+                backgroundColor: '#e5e7eb',
+                border: '2px solid #9ca3af',
+                borderRadius: '50%',
+                width: '48px',
+                height: '48px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
+                color: '#374151'
+              }}
               aria-label="Send message"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">

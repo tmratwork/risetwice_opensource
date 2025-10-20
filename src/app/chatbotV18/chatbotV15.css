@@ -538,24 +538,25 @@ html.dark body {
 
 /* Mute button styles */
 .mute-button {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #e5e7eb !important;
+  color: #374151 !important;
+  border: 2px solid #9ca3af !important;
+  border-radius: 50% !important;
+  width: 48px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
 .mute-button:hover {
-  background-color: var(--bg-primary);
-  border-color: var(--button-primary);
-  transform: scale(1.05);
+  background-color: #d1d5db !important;
+  border-color: #6366f1 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
 .mute-button.muted {
@@ -603,50 +604,52 @@ html.dark body {
 
 /* Cancel button styles (similar to mute button) */
 .cancel-button {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  background-color: #e5e7eb !important;
+  color: #374151 !important;
+  border: 2px solid #9ca3af !important;
+  border-radius: 50% !important;
+  width: 48px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
 }
 
 .cancel-button:hover {
-  background-color: var(--bg-primary);
-  border-color: var(--button-primary);
-  transform: scale(1.05);
+  background-color: #d1d5db !important;
+  border-color: #6366f1 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
 /* Upload button styles (same as send-button-new) */
 .upload-button-new {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  padding: 0;
-  overflow: hidden;
-  font-size: 0;
-  line-height: 0;
+  background-color: #e5e7eb !important;
+  color: #374151 !important;
+  border: 2px solid #9ca3af !important;
+  border-radius: 50% !important;
+  width: 48px !important;
+  height: 48px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2) !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  font-size: 0 !important;
+  line-height: 0 !important;
 }
 
 .upload-button-new:hover:not(:disabled) {
-  background-color: var(--bg-primary);
-  border-color: var(--button-primary);
-  transform: scale(1.05);
+  background-color: #d1d5db !important;
+  border-color: #6366f1 !important;
+  transform: scale(1.05) !important;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.3) !important;
 }
 
 .upload-button-new:disabled {
