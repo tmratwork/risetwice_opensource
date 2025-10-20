@@ -10,7 +10,6 @@ import { useS2ProfileData } from '@/hooks/use-s2-profile-data';
 import { canSkipToStepWithData, FlowStep } from '@/utils/s2-validation';
 import WelcomeScreen from './components/WelcomeScreen';
 import TherapistProfileForm from './components/TherapistProfileForm';
-import PatientDescriptionForm from './components/PatientDescriptionForm';
 import LicenseVerification from './components/LicenseVerification';
 import CompleteProfile from './components/CompleteProfile';
 import OnboardingComplete from './components/OnboardingComplete';
@@ -356,20 +355,6 @@ const S2CaseSimulation: React.FC = () => {
     }));
   };
 
-  const updatePatientDescription = (description: string) => {
-    setSessionData(prev => ({
-      ...prev,
-      patientDescription: { description }
-    }));
-  };
-
-  const updateAIStyle = (style: Partial<AIStyle>) => {
-    setSessionData(prev => ({
-      ...prev,
-      aiStyle: { ...prev.aiStyle, ...style }
-    }));
-  };
-
   const updateLicenseVerification = (license: Partial<LicenseVerificationData>) => {
     setSessionData(prev => ({
       ...prev,
@@ -382,10 +367,6 @@ const S2CaseSimulation: React.FC = () => {
       ...prev,
       completeProfile: { ...prev.completeProfile, ...profile }
     }));
-  };
-
-  const updateSessionData = (data: Partial<SessionData>) => {
-    setSessionData(prev => ({ ...prev, ...data }));
   };
 
   // Render current step with footer

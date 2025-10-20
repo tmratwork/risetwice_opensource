@@ -5,9 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import StepNavigator from './StepNavigator';
 import InfoTooltip from './InfoTooltip';
-import { StepCompletionStatus, FlowStep } from '@/utils/s2-validation';
 
 interface AIStyle {
   therapeuticModalities: {
@@ -29,19 +27,13 @@ interface AIStyleCustomizationProps {
   onUpdate: (style: Partial<AIStyle>) => void;
   onNext: () => void;
   onBack: () => void;
-  onStepNavigation?: (step: FlowStep) => void;
-  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
-  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
   style,
   onUpdate,
   onNext,
-  onBack,
-  onStepNavigation,
-  canSkipToStep,
-  stepCompletionStatus
+  onBack
 }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -140,18 +132,8 @@ const AIStyleCustomization: React.FC<AIStyleCustomizationProps> = ({
 
   return (
     <div className="flex flex-col min-h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Step Navigator */}
-      {onStepNavigation && (
-        <StepNavigator
-          currentStep="ai-style"
-          onStepClick={onStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      )}
-
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-4 pt-24 pb-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
             Customize Your AI&apos;s Style

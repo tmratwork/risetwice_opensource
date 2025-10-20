@@ -60,8 +60,11 @@ export function validateCompleteProfileStep(profile: unknown): boolean {
 
 // Enhanced navigation logic with data-driven step availability
 export function canSkipToStepWithData(
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   targetStep: FlowStep,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   currentStep: FlowStep,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   stepCompletionStatus: StepCompletionStatus
 ): boolean {
   // Allow navigation to any step (both forward and backward)
@@ -79,7 +82,6 @@ export function calculateCompletionPercentage(stepCompletionStatus: StepCompleti
 // Get the next recommended step for the user
 export function getNextRecommendedStep(stepCompletionStatus: StepCompletionStatus): FlowStep {
   if (!stepCompletionStatus.profile) return 'profile';
-  if (!stepCompletionStatus.patientDescription) return 'patient-description';
   if (!stepCompletionStatus.licenseVerification) return 'license-verification';
   if (!stepCompletionStatus.completeProfile) return 'complete-profile';
   return 'onboarding-complete';
@@ -88,7 +90,6 @@ export function getNextRecommendedStep(stepCompletionStatus: StepCompletionStatu
 // Check if all required steps are completed
 export function isOnboardingComplete(stepCompletionStatus: StepCompletionStatus): boolean {
   return stepCompletionStatus.profile &&
-         stepCompletionStatus.patientDescription &&
          stepCompletionStatus.licenseVerification &&
          stepCompletionStatus.completeProfile;
 }
@@ -105,7 +106,6 @@ export function getStepDisplayStatus(
   const stepKeyMap: Record<FlowStep, keyof StepCompletionStatus | null> = {
     'welcome': null,
     'profile': 'profile',
-    'patient-description': 'patientDescription',
     'license-verification': 'licenseVerification',
     'complete-profile': 'completeProfile',
     'onboarding-complete': null

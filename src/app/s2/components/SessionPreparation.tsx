@@ -5,8 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import StepNavigator from './StepNavigator';
-import { StepCompletionStatus, FlowStep } from '@/utils/s2-validation';
 
 interface SessionData {
   therapistProfile: {
@@ -43,25 +41,16 @@ interface SessionPreparationProps {
   onNext: () => void;
   onBack: () => void;
   onUpdateSessionData: (data: Partial<SessionData>) => void;
-  onStepNavigation?: (step: FlowStep) => void;
-  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
-  stepCompletionStatus?: StepCompletionStatus;
-  isAIPreviewFlow?: boolean; // True when used in AI Preview generation flow
 }
 
 const SessionPreparation: React.FC<SessionPreparationProps> = ({
   sessionData,
   onNext,
   onBack,
-  onUpdateSessionData,
-  onStepNavigation,
-  canSkipToStep,
-  stepCompletionStatus,
-  isAIPreviewFlow = false
+  onUpdateSessionData
 }) => {
   const { user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
-  const [isGeneratingAIPreview, setIsGeneratingAIPreview] = useState(false);
   const [scenario, setScenario] = useState<string>('');
   const [error, setError] = useState<string>('');
 
@@ -130,93 +119,10 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
     generateScenario();
   };
 
-  const handleGenerateAIPreview = async () => {
-    if (!user?.uid) {
-      setError('Authentication required. Please sign in.');
-      return;
-    }
-
-    setIsGeneratingAIPreview(true);
-    setError('');
-
-    try {
-      console.log('[S2] 🤖 Triggering AI Preview generation');
-
-      // Fetch therapist profile ID using therapist-profile endpoint
-      const profileResponse = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
-
-      const profileData = await profileResponse.json();
-      console.log('[S2] Profile data response:', profileData);
-
-      if (!profileData.success || !profileData.profile?.id) {
-        console.error('[S2] Profile data:', profileData);
-        throw new Error('Could not find therapist profile. Please complete your profile first.');
-      }
-
-      const therapistProfileId = profileData.profile.id;
-
-      // Generate AI prompt (creates job, returns immediately)
-      const promptResponse = await fetch('/api/admin/s2/generate-therapist-prompt', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          therapistId: therapistProfileId
-        })
-      });
-
-      const promptResult = await promptResponse.json();
-
-      if (!promptResult.success) {
-        throw new Error(promptResult.error || 'Failed to create AI preview job');
-      }
-
-      console.log('[S2] ✅ AI preview job created:', promptResult.jobId);
-
-      // Clone voice (parallel to AI prompt generation)
-      console.log('[S2] 🎤 Triggering background voice cloning');
-      fetch('/api/admin/s2/clone-voice', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          therapistProfileId: therapistProfileId
-        })
-      }).then(async (response) => {
-        const result = await response.json();
-        if (result.success) {
-          console.log('[S2] ✅ Voice cloning initiated');
-        }
-      }).catch((error) => {
-        console.error('[S2] ❌ Voice cloning failed (non-blocking):', error);
-      });
-
-      // Navigate to completion page
-      onNext();
-
-    } catch (error) {
-      console.error('[S2] Error generating AI preview:', error);
-      setError(error instanceof Error ? error.message : 'Failed to generate AI preview. Please try again.');
-      setIsGeneratingAIPreview(false);
-    }
-  };
-
   return (
     <div className="flex flex-col min-h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Step Navigator */}
-      {onStepNavigation && (
-        <StepNavigator
-          currentStep="preparation"
-          onStepClick={onStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      )}
-
       {/* Main Content */}
-      <main className="flex-1 flex items-center justify-center px-4 py-16" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <main className="flex-1 flex items-center justify-center px-4 pt-24 pb-16" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center max-w-2xl">
           <h1 className="text-4xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
             Preparing for your clinical session
@@ -289,27 +195,16 @@ const SessionPreparation: React.FC<SessionPreparationProps> = ({
               </p>
 
               <button
-                onClick={isAIPreviewFlow ? handleGenerateAIPreview : onNext}
+                onClick={onNext}
                 className="control-button primary large-button"
-                disabled={isGenerating || isGeneratingAIPreview}
+                disabled={isGenerating}
               >
-                {isGeneratingAIPreview ? (
-                  <>
-                    <div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Generating AI Preview...
-                  </>
-                ) : isAIPreviewFlow ? (
-                  'Generate my AI Preview'
-                ) : (
-                  'Begin Session'
-                )}
+                Begin Session
               </button>
 
-              {!isAIPreviewFlow && (
-                <p className="text-sm text-gray-500 mt-4">
-                  The session will begin shortly...
-                </p>
-              )}
+              <p className="text-sm text-gray-500 mt-4">
+                The session will begin shortly...
+              </p>
             </div>
           )}
 

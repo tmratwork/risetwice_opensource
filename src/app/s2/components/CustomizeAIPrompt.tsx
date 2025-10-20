@@ -5,24 +5,16 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import StepNavigator from './StepNavigator';
-import { StepCompletionStatus, FlowStep } from '@/utils/s2-validation';
 
 interface CustomizeAIPromptProps {
   onNext: () => void;
   onBack: () => void;
-  onStepNavigation?: (step: FlowStep) => void;
-  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
-  stepCompletionStatus?: StepCompletionStatus;
   isAIPreviewFlow?: boolean; // True when used in AI Preview generation flow
 }
 
 const CustomizeAIPrompt: React.FC<CustomizeAIPromptProps> = ({
   onNext,
   onBack,
-  onStepNavigation,
-  canSkipToStep,
-  stepCompletionStatus,
   isAIPreviewFlow = false
 }) => {
   const { user } = useAuth();
@@ -257,17 +249,7 @@ const CustomizeAIPrompt: React.FC<CustomizeAIPromptProps> = ({
 
   return (
     <div className="flex flex-col min-h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Step Navigator */}
-      {onStepNavigation && canSkipToStep && stepCompletionStatus && (
-        <StepNavigator
-          currentStep="customize-ai-prompt"
-          onStepClick={onStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      )}
-
-      <main className="flex-1 flex items-center justify-center p-8">
+      <main className="flex-1 flex items-center justify-center p-8 pt-24">
         <div className="max-w-4xl w-full space-y-8">
           {/* Header */}
           <div className="text-center">

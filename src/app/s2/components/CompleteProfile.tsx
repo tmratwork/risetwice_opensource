@@ -55,7 +55,6 @@ interface CompleteProfileProps {
 const CompleteProfile: React.FC<CompleteProfileProps> = ({
   profileData,
   onUpdate,
-  onNext,
   onBack,
   onStepNavigation,
   canSkipToStep,

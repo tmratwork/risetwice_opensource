@@ -26,10 +26,6 @@ interface UseS2ProfileDataReturn {
 
 const initialStepCompletionStatus: StepCompletionStatus = {
   profile: false,
-  patientDescription: false,
-  preparation: false,
-  session: false,
-  aiStyle: false,
   licenseVerification: false,
   completeProfile: false
 };

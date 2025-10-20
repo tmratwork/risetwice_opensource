@@ -5,27 +5,19 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import StepNavigator from './StepNavigator';
-import { StepCompletionStatus, FlowStep } from '@/utils/s2-validation';
 
 interface PatientDescriptionFormProps {
   description: string;
   onUpdate: (description: string) => void;
   onNext: () => void;
   onBack: () => void;
-  onStepNavigation?: (step: FlowStep) => void;
-  canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
-  stepCompletionStatus?: StepCompletionStatus;
 }
 
 const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
   description,
   onUpdate,
   onNext,
-  onBack,
-  onStepNavigation,
-  canSkipToStep,
-  stepCompletionStatus
+  onBack
 }) => {
   const { user } = useAuth();
   const [error, setError] = useState<string>('');
@@ -127,16 +119,6 @@ const PatientDescriptionForm: React.FC<PatientDescriptionFormProps> = ({
 
   return (
     <div className="flex flex-col min-h-full" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      {/* Step Navigator */}
-      {onStepNavigation && (
-        <StepNavigator
-          currentStep="patient-description"
-          onStepClick={onStepNavigation}
-          canSkipToStep={canSkipToStep}
-          stepCompletionStatus={stepCompletionStatus}
-        />
-      )}
-
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-4 pt-24 pb-16">
         <div className="text-center mb-12">
