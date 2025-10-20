@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useWebRTCStore } from '@/stores/webrtc-store';
 
 const AudioWaveAnimation = () => {
-  const [bars, setBars] = useState<number[]>([0.3, 0.5, 0.7, 0.9, 1.0, 0.8, 0.6, 0.9, 0.7, 0.5, 0.8, 0.6, 0.4, 0.7, 0.9, 0.5]);
+  const [bars, setBars] = useState<number[]>([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]);
 
   useEffect(() => {
     let animationInterval: NodeJS.Timeout;
@@ -20,8 +20,8 @@ const AudioWaveAnimation = () => {
           return random * Math.max(intensity, 0.6); // minimum 0.6 for visibility
         }));
       } else {
-        // Static pattern when not speaking
-        setBars([0.3, 0.5, 0.7, 0.9, 1.0, 0.8, 0.6, 0.9, 0.7, 0.5, 0.8, 0.6, 0.4, 0.7, 0.9, 0.5]);
+        // Flat/low bars when not speaking - shows no audio activity
+        setBars([0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2, 0.2]);
       }
     };
 

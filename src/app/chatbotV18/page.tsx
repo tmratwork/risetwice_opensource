@@ -127,6 +127,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
 
+  // Button press feedback state
+  const [cancelButtonPressed, setCancelButtonPressed] = useState(false);
+  const [uploadButtonPressed, setUploadButtonPressed] = useState(false);
+
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(null);
@@ -1094,6 +1098,11 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   // V18 Voice Mode: Handle cancel recording
   const handleCancelRecording = useCallback(() => {
     console.log('[V18] Cancel recording clicked');
+
+    // Flash red feedback
+    setCancelButtonPressed(true);
+    setTimeout(() => setCancelButtonPressed(false), 150);
+
     setIsRecording(false);
     setPendingTranscript(null);
     setRecordingDuration(0);
@@ -1112,6 +1121,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       console.log('[V18] Send aborted - no transcript or not connected');
       return;
     }
+
+    // Flash green feedback
+    setUploadButtonPressed(true);
+    setTimeout(() => setUploadButtonPressed(false), 150);
 
     // Add message to conversation (shows in UI bubble)
     const userMessageObj: Conversation = {
@@ -1841,8 +1854,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               className="cancel-button"
               style={{
                 marginLeft: '16px',
-                backgroundColor: '#e5e7eb',
-                border: '2px solid #9ca3af',
+                backgroundColor: cancelButtonPressed ? '#ef4444' : '#e5e7eb',
+                border: cancelButtonPressed ? '2px solid #dc2626' : '2px solid #9ca3af',
                 borderRadius: '50%',
                 width: '48px',
                 height: '48px',
@@ -1851,7 +1864,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
-                color: '#374151'
+                color: cancelButtonPressed ? '#ffffff' : '#374151',
+                transition: 'all 0.15s ease'
               }}
               aria-label="Cancel voice transcript"
             >
@@ -1871,8 +1885,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               onClick={handleSendRecording}
               className="upload-button-new"
               style={{
-                backgroundColor: '#e5e7eb',
-                border: '2px solid #9ca3af',
+                backgroundColor: uploadButtonPressed ? '#7ca995' : '#ffffff',
+                border: uploadButtonPressed ? '2px solid #6b9985' : '2px solid #9dbbac',
                 borderRadius: '50%',
                 width: '48px',
                 height: '48px',
@@ -1881,12 +1895,13 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
-                color: '#374151'
+                color: uploadButtonPressed ? '#ffffff' : '#9dbbac',
+                transition: 'all 0.15s ease'
               }}
               aria-label="Send message"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
 
