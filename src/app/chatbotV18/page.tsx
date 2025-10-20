@@ -1861,7 +1861,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             </button>
 
             {/* Audio Wave Animation */}
-            <div className="audio-wave-container" style={{ marginLeft: '16px', marginRight: '16px' }}>
+            <div className="audio-wave-container" style={{ marginLeft: '16px', marginRight: '16px', width: '200px' }}>
               <AudioWaveAnimation />
             </div>
 
