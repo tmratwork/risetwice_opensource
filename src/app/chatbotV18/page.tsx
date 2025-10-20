@@ -123,6 +123,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   // Stores voice transcription until user clicks upload button
   const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
 
+  // V18 Voice Mode: Recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
+
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(null);
@@ -322,6 +326,20 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     // If no saved preference, use default (now true from store)
   }, [setSmartSendEnabled]); // Only run once on mount
 
+  // V18 Voice Mode: Recording duration timer
+  useEffect(() => {
+    if (!isRecording) {
+      setRecordingDuration(0);
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setRecordingDuration(prev => prev + 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isRecording]);
+
   // Subscribe to transcript events to update conversation
   useEffect(() => {
     // console.log('[V16] 📝 MESSAGE: Setting up transcript subscription for triage/specialist AI');
@@ -359,6 +377,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           // User must explicitly click upload button to send message
           console.log('[V18] Voice transcript complete - storing in pendingTranscript:', data);
           setPendingTranscript(data);
+          setIsRecording(true); // Show voice recording modal
 
           // Clean up any existing user bubbles from UI (in case there were any)
           const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
@@ -1072,17 +1091,25 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     }
   }, [updateUserMessage, smartSendEnabled, startSmartSendTimer, userMessage, messageBuffer, logSmartSend]);
 
-  // V18 Voice Mode: Handle upload button click
+  // V18 Voice Mode: Handle cancel recording
+  const handleCancelRecording = useCallback(() => {
+    console.log('[V18] Cancel recording clicked');
+    setIsRecording(false);
+    setPendingTranscript(null);
+    setRecordingDuration(0);
+  }, []);
+
+  // V18 Voice Mode: Handle send recording (upload button)
   // Uses pendingTranscript (from voice) instead of userMessage (from text input)
-  const handleUploadClick = useCallback(() => {
-    console.log('[V18] Upload button clicked', {
+  const handleSendRecording = useCallback(() => {
+    console.log('[V18] Send recording clicked', {
       hasPendingTranscript: !!pendingTranscript,
       pendingTranscriptLength: pendingTranscript?.length || 0,
       isConnected
     });
 
     if (!pendingTranscript || !isConnected) {
-      console.log('[V18] Upload aborted - no transcript or not connected');
+      console.log('[V18] Send aborted - no transcript or not connected');
       return;
     }
 
@@ -1104,8 +1131,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
     if (success) {
       console.log('[V18] Message sent successfully');
-      // Clear pending transcript
+      // Clear pending transcript and hide modal
       setPendingTranscript(null);
+      setIsRecording(false);
+      setRecordingDuration(0);
     } else {
       console.error('[V18] Failed to send message');
     }
@@ -1764,12 +1793,13 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           ))}
         </div>
 
-        {/* V18 Voice Mode Controls - only show when connected */}
+        {/* Bottom control bar - always visible when connected */}
         {isConnected && (
-          <form onSubmit={(e) => {
-            e.preventDefault();
-            handleUploadClick();
-          }} className="input-container">
+          <div className="input-container">
+            {/* Left spacer for centering */}
+            <div style={{ flex: 1 }} />
+
+            {/* Speaker/Audio Output Mute Button */}
             <button
               type="button"
               onClick={toggleAudioOutputMute}
@@ -1784,39 +1814,46 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 </svg>
               ) : (
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="2"
-                    fill="none" />
+                  <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="2" fill="none" />
                   <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
                   <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" strokeWidth="2" />
                 </svg>
               )}
             </button>
+
+            {/* Cancel Button */}
             <button
               type="button"
-              onClick={() => {
-                console.log('[V18] Cancel button clicked - clearing pending transcript');
-                setPendingTranscript(null);
-              }}
-              className="cancel-button ml-3"
-              aria-label="Cancel current voice transcript"
+              onClick={handleCancelRecording}
+              className="cancel-button"
+              style={{ marginLeft: '16px' }}
+              aria-label="Cancel voice transcript"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
                 <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <div className="audio-wave-container">
-              <AudioWaveAnimation isConnected={isConnected} />
+
+            {/* Audio Wave Animation */}
+            <div className="audio-wave-container" style={{ marginLeft: '16px', marginRight: '16px' }}>
+              <AudioWaveAnimation />
             </div>
+
+            {/* Upload/Send Button */}
             <button
-              type="submit"
+              type="button"
+              onClick={handleSendRecording}
               className="upload-button-new"
-              aria-label="Upload or send"
+              aria-label="Send message"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-          </form>
+
+            {/* Right spacer for centering */}
+            <div style={{ flex: 1 }} />
+          </div>
         )}
       </div>
 

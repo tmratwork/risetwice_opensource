@@ -93,6 +93,11 @@ export interface WebRTCStoreState {
   isAudioPlaying: boolean;
   isThinking: boolean;
 
+  // User microphone input monitoring (V18)
+  userAudioLevel: number;
+  isUserSpeaking: boolean;
+  micMonitoringActive: boolean;
+
   // Mute state
   isMuted: boolean;
   isAudioOutputMuted: boolean;
@@ -163,6 +168,7 @@ export interface WebRTCStoreState {
   createResponse: () => boolean;
   toggleMute: () => boolean;
   toggleAudioOutputMute: () => boolean;
+  startMicrophoneMonitoring: (stream: MediaStream) => void;
   addConversationMessage: (message: ConversationMessage) => void;
   saveMessageToSupabase: (message: ConversationMessage) => Promise<void>;
   createConversation: () => Promise<string | null>;
@@ -402,6 +408,11 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
     audioLevel: 0,
     isAudioPlaying: false,
     isThinking: false,
+
+    // User microphone input monitoring (V18)
+    userAudioLevel: 0,
+    isUserSpeaking: false,
+    micMonitoringActive: false,
 
     // Mute state - V15: Start in muted state by default
     isMuted: true,
@@ -2537,7 +2548,7 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
         });
 
         await connectionManager.connect();
-        
+
         logResourceReset('🔌 STORE CONNECT: connectionManager.connect() completed successfully', {
           newConnectionManagerState: connectionManager.getState(),
           newStoreState: {
@@ -2546,6 +2557,12 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
             isPreparing: get().isPreparing
           }
         });
+
+        // V18: Start monitoring user's microphone input for audio wave animation
+        const micStream = connectionManager.getAudioInputStream();
+        if (micStream) {
+          get().startMicrophoneMonitoring(micStream);
+        }
 
         optimizedAudioLogger.logUserAction('connect_succeeded');
       } catch (error) {
@@ -2779,7 +2796,7 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
         audioElement.muted = newMutedState; // ✅ Works on iOS Safari
         audioElement.volume = newMutedState ? 0 : 1; // ✅ Fallback for other browsers
       }
-      
+
       // ROLLBACK: To revert to original approach, replace above with:
       // audioElement.volume = newMutedState ? 0 : 1;
 
@@ -2787,6 +2804,72 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
       set({ isAudioOutputMuted: newMutedState });
 
       return newMutedState;
+    },
+
+    // V18: Monitor user's microphone input for audio wave animation
+    startMicrophoneMonitoring: (stream: MediaStream) => {
+      const state = get();
+      if (state.micMonitoringActive) {
+        return;
+      }
+
+      if (!stream) {
+        return;
+      }
+
+      try {
+        const audioContext = new AudioContext();
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        let animationFrameId: number;
+
+        const analyze = () => {
+          if (!get().isConnected) {
+            cancelAnimationFrame(animationFrameId);
+            audioContext.close();
+            set({ micMonitoringActive: false, userAudioLevel: 0, isUserSpeaking: false });
+            return;
+          }
+
+          analyser.getByteFrequencyData(dataArray);
+
+          // Calculate RMS (Root Mean Square) for volume
+          let sum = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i] * dataArray[i];
+          }
+          const rms = Math.sqrt(sum / bufferLength);
+          const normalizedLevel = rms / 255; // 0-1 normalized
+          const isSpeaking = rms > 15; // Threshold for detecting speech
+
+          // Only update if changed significantly
+          const currentState = get();
+          const levelChanged = Math.abs(currentState.userAudioLevel - normalizedLevel) > 0.01;
+          const speakingChanged = currentState.isUserSpeaking !== isSpeaking;
+
+          if (levelChanged || speakingChanged) {
+            set({
+              userAudioLevel: normalizedLevel,
+              isUserSpeaking: isSpeaking
+            });
+          }
+
+          animationFrameId = requestAnimationFrame(analyze);
+        };
+
+        set({ micMonitoringActive: true });
+        analyze();
+      } catch (error) {
+        console.error('[V18-MIC-MONITOR] Failed to setup monitoring:', error);
+        set({ micMonitoringActive: false });
+      }
     },
 
     // Add conversation message
