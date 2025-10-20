@@ -634,7 +634,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
             Complete Your Profile
           </h1>
           <p className="text-lg max-w-3xl mx-auto" style={{ color: 'var(--text-secondary)' }}>
-            Complete your therapist profile with additional details that will help patients find and connect with you.
+            Additional details will help patients find and connect with you.
           </p>
         </div>
 
