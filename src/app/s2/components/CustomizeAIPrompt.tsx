@@ -14,6 +14,7 @@ interface CustomizeAIPromptProps {
   onStepNavigation?: (step: FlowStep) => void;
   canSkipToStep?: (targetStep: FlowStep, currentStep: FlowStep) => boolean;
   stepCompletionStatus?: StepCompletionStatus;
+  isAIPreviewFlow?: boolean; // True when used in AI Preview generation flow
 }
 
 const CustomizeAIPrompt: React.FC<CustomizeAIPromptProps> = ({
@@ -21,11 +22,13 @@ const CustomizeAIPrompt: React.FC<CustomizeAIPromptProps> = ({
   onBack,
   onStepNavigation,
   canSkipToStep,
-  stepCompletionStatus
+  stepCompletionStatus,
+  isAIPreviewFlow = false
 }) => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isGeneratingAIPreview, setIsGeneratingAIPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [hasCustomPrompt, setHasCustomPrompt] = useState(false);
@@ -117,6 +120,79 @@ const CustomizeAIPrompt: React.FC<CustomizeAIPromptProps> = ({
     setPromptContent(originalContent);
     setError(null);
     setSuccess(null);
+  };
+
+  const handleGenerateAIPreview = async () => {
+    if (!user?.uid) {
+      setError('Authentication required. Please sign in.');
+      return;
+    }
+
+    setIsGeneratingAIPreview(true);
+    setError(null);
+
+    try {
+      console.log('[S2] 🤖 Triggering AI Preview generation');
+
+      // Fetch therapist profile ID using therapist-profile endpoint
+      const profileResponse = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
+
+      const profileData = await profileResponse.json();
+      console.log('[S2] Profile data response:', profileData);
+
+      if (!profileData.success || !profileData.profile?.id) {
+        console.error('[S2] Profile data:', profileData);
+        throw new Error('Could not find therapist profile. Please complete your profile first.');
+      }
+
+      const therapistProfileId = profileData.profile.id;
+
+      // Generate AI prompt (creates job, returns immediately)
+      const promptResponse = await fetch('/api/admin/s2/generate-therapist-prompt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          therapistId: therapistProfileId
+        })
+      });
+
+      const promptResult = await promptResponse.json();
+
+      if (!promptResult.success) {
+        throw new Error(promptResult.error || 'Failed to create AI preview job');
+      }
+
+      console.log('[S2] ✅ AI preview job created:', promptResult.jobId);
+
+      // Clone voice (parallel to AI prompt generation)
+      console.log('[S2] 🎤 Triggering background voice cloning');
+      fetch('/api/admin/s2/clone-voice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          therapistProfileId: therapistProfileId
+        })
+      }).then(async (response) => {
+        const result = await response.json();
+        if (result.success) {
+          console.log('[S2] ✅ Voice cloning initiated');
+        }
+      }).catch((error) => {
+        console.error('[S2] ❌ Voice cloning failed (non-blocking):', error);
+      });
+
+      // Navigate to completion page
+      onNext();
+
+    } catch (error) {
+      console.error('[S2] Error generating AI preview:', error);
+      setError(error instanceof Error ? error.message : 'Failed to generate AI preview. Please try again.');
+      setIsGeneratingAIPreview(false);
+    }
   };
 
   const handleResetToDefault = async () => {
@@ -327,10 +403,23 @@ const CustomizeAIPrompt: React.FC<CustomizeAIPromptProps> = ({
               ← Back
             </button>
             <button
-              onClick={onNext}
+              onClick={isAIPreviewFlow ? handleGenerateAIPreview : onNext}
               className="control-button primary"
+              disabled={isGeneratingAIPreview}
             >
-              {hasChanges && !saving ? 'Skip & Continue Without Saving' : 'Continue →'}
+              {isGeneratingAIPreview ? (
+                <span className="flex items-center">
+                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Generating AI Preview...
+                </span>
+              ) : isAIPreviewFlow ? (
+                'Generate my AI Preview'
+              ) : (
+                hasChanges && !saving ? 'Skip & Continue Without Saving' : 'Continue →'
+              )}
             </button>
           </div>
         </div>

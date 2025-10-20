@@ -103,7 +103,7 @@ const ProviderDashboard: React.FC = () => {
               </Link>
             </div>
 
-            {/* AI Preview Testing */}
+            {/* AI Preview Building/Testing */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border p-6">
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
@@ -112,7 +112,7 @@ const ProviderDashboard: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold ml-3" style={{ color: 'var(--text-primary)' }}>
-                  Test AI Preview
+                  AI Preview
                 </h3>
               </div>
 
@@ -150,25 +150,30 @@ const ProviderDashboard: React.FC = () => {
                 </div>
               )}
 
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Experience your AI Preview as patients would.
-              </p>
-
               {aiPreviewStatus === 'completed' ? (
-                <Link
-                  href="/chatbotV17?provider=true"
-                  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                >
-                  Test My AI Preview
-                </Link>
+                <>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Experience your AI Preview as patients would.
+                  </p>
+                  <Link
+                    href="/chatbotV17?provider=true"
+                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    Test My AI Preview
+                  </Link>
+                </>
               ) : (
-                <button
-                  disabled
-                  className="inline-flex items-center px-4 py-2 bg-gray-300 text-gray-500 text-sm font-medium rounded-lg cursor-not-allowed"
-                  title="AI Preview is not ready yet"
-                >
-                  Test My AI Preview
-                </button>
+                <>
+                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                    Create an AI-powered preview that helps patients understand your therapeutic approach.
+                  </p>
+                  <Link
+                    href="/s2/ai-preview"
+                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Build Your AI Preview
+                  </Link>
+                </>
               )}
             </div>
 

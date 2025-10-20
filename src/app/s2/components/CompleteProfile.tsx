@@ -5,6 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 import CustomMultiSelect from './CustomMultiSelect';
@@ -60,6 +61,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   canSkipToStep,
   stepCompletionStatus
 }) => {
+  const router = useRouter();
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -285,63 +287,9 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       console.log('[S2] ✅ Complete profile saved successfully:', data.completeProfile.id);
       console.log('[S2] 📋 Full response data:', data);
 
-      // Trigger AI prompt generation and voice cloning in the background (fire and forget)
-      // Creates a job in s2_ai_preview_jobs table that will be processed by Vercel Cron worker
-      // Processing takes ~30 minutes and runs asynchronously
-      if (data.therapistProfileId) {
-        console.log('[S2] 🤖 Creating background AI preview job for therapist:', data.therapistProfileId);
-
-        // Generate AI prompt (creates job, returns immediately)
-        fetch('/api/admin/s2/generate-therapist-prompt', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            therapistId: data.therapistProfileId
-          })
-        }).then(async (response) => {
-          const result = await response.json();
-          if (result.success) {
-            console.log('[S2] ✅ AI preview job created:', result.jobId);
-            console.log('[S2] ⏳ Job will be processed in background (~30 minutes)');
-          } else {
-            console.error('[S2] ❌ Failed to create AI preview job:', result.error);
-          }
-        }).catch((error) => {
-          // Silent failure - user doesn't need to know about this
-          console.error('[S2] ❌ Background AI preview job creation failed (non-blocking):', error);
-        });
-
-        // Clone voice (silent, parallel to AI prompt generation)
-        console.log('[S2] 🎤 Triggering background voice cloning for therapist:', data.therapistProfileId);
-        fetch('/api/admin/s2/clone-voice', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            therapistProfileId: data.therapistProfileId
-          })
-        }).then(async (response) => {
-          const result = await response.json();
-          if (result.success && result.skipped) {
-            console.log('[S2] ⏭️ Voice cloning skipped: no new audio material');
-          } else if (result.success) {
-            console.log('[S2] ✅ Voice cloning completed successfully:', result.voice_id);
-          } else {
-            console.log('[S2] ⚠️ Voice cloning failed (non-blocking):', result.message);
-          }
-        }).catch((error) => {
-          // Silent failure - user doesn't need to know about this
-          console.error('[S2] ❌ Background voice cloning failed (non-blocking):', error);
-        });
-      } else {
-        console.warn('[S2] ⚠️ No therapistProfileId in response, skipping AI prompt generation and voice cloning');
-        console.log('[S2] 📋 Response keys:', Object.keys(data));
-      }
-
-      onNext();
+      // AI Preview generation removed - now part of separate upsell flow
+      // Redirect to provider dashboard
+      router.push('/dashboard/provider');
 
     } catch (error) {
       console.error('[S2] Error saving complete profile:', error);
@@ -1341,7 +1289,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                   Saving Profile...
                 </>
               ) : (
-                'Create your AI Preview'
+                'Finish'
               )}
             </button>
           </div>

@@ -21,12 +21,13 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-  // Complete onboarding and set provider role when component mounts
+  // Complete onboarding and trigger AI Preview generation when component mounts
   useEffect(() => {
     const completeOnboarding = async () => {
       if (!user || onboardingCompleted) return;
 
       try {
+        // Complete onboarding and set provider role
         const response = await fetch('/api/s2/complete-onboarding', {
           method: 'POST',
           headers: {
@@ -37,12 +38,74 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
 
         if (response.ok) {
           setOnboardingCompleted(true);
-          console.log('S2 onboarding completed, user role set to provider');
+          console.log('[S2] Onboarding completed, user role set to provider');
         } else {
-          console.error('Failed to complete onboarding');
+          console.error('[S2] Failed to complete onboarding');
         }
+
+        // Trigger AI Preview generation in background
+        const profileResponse = await fetch('/api/s2/profile-data', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId: user.uid })
+        });
+
+        const profileData = await profileResponse.json();
+
+        if (profileData.success && profileData.data?.therapistProfile) {
+          const therapistProfileId = profileData.data.therapistProfile.id;
+
+          console.log('[S2] 🤖 Creating background AI preview job for therapist:', therapistProfileId);
+
+          // Generate AI prompt (creates job, returns immediately)
+          fetch('/api/admin/s2/generate-therapist-prompt', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              therapistId: therapistProfileId
+            })
+          }).then(async (response) => {
+            const result = await response.json();
+            if (result.success) {
+              console.log('[S2] ✅ AI preview job created:', result.jobId);
+              console.log('[S2] ⏳ Job will be processed in background (~30 minutes)');
+            } else {
+              console.error('[S2] ❌ Failed to create AI preview job:', result.error);
+            }
+          }).catch((error) => {
+            console.error('[S2] ❌ Background AI preview job creation failed (non-blocking):', error);
+          });
+
+          // Clone voice (silent, parallel to AI prompt generation)
+          console.log('[S2] 🎤 Triggering background voice cloning for therapist:', therapistProfileId);
+          fetch('/api/admin/s2/clone-voice', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              therapistProfileId: therapistProfileId
+            })
+          }).then(async (response) => {
+            const result = await response.json();
+            if (result.success && result.skipped) {
+              console.log('[S2] ⏭️ Voice cloning skipped: no new audio material');
+            } else if (result.success) {
+              console.log('[S2] ✅ Voice cloning completed successfully:', result.voice_id);
+            } else {
+              console.log('[S2] ⚠️ Voice cloning failed (non-blocking):', result.message);
+            }
+          }).catch((error) => {
+            console.error('[S2] ❌ Background voice cloning failed (non-blocking):', error);
+          });
+        }
+
       } catch (error) {
-        console.error('Error completing onboarding:', error);
+        console.error('[S2] Error completing onboarding:', error);
       }
     };
 
@@ -51,8 +114,8 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
 
   const handleGoToDashboard = () => {
     setIsNavigating(true);
-    // Navigate to dashboard
-    router.push('/dashboard');
+    // Navigate to provider dashboard
+    router.push('/dashboard/provider');
   };
 
   const handleContactSupport = () => {
