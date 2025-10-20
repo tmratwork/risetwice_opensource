@@ -12,6 +12,7 @@ import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
 // V16-specific components (reusing V15 components)
 import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
+import AudioWaveAnimation from './components/AudioWaveAnimation';
 // Use V11's voice and tool choice defaults
 import { DEFAULT_VOICE, DEFAULT_TOOL_CHOICE } from '../chatbotV11/prompts';
 // V16 greeting logging
@@ -117,14 +118,16 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
   const [mapVisible, setMapVisible] = useState(false);
   const [currentSearchId, setCurrentSearchId] = useState<string | null>(null);
+
+  // V18 Voice Mode: Pending transcript state
+  // Stores voice transcription until user clicks upload button
+  const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
+
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(null);
   const [feedbackType, setFeedbackType] = useState<'thumbs_up' | 'thumbs_down' | null>(null);
 
-  // Bookmark state
-  const [isBookmarkModalOpen, setIsBookmarkModalOpen] = useState(false);
-  const [bookmarkText, setBookmarkText] = useState('');
 
   // Terms of Service state
   const [isTermsLoading, setIsTermsLoading] = useState(false);
@@ -352,36 +355,17 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         const updatedConversation = [...currentState.conversation];
 
         if (messageRole === "user") {
-          // For user messages, find and replace the most recent user bubble (empty, "Thinking...", or streaming)
+          // V18 Voice Mode: Store transcript temporarily instead of immediately displaying
+          // User must explicitly click upload button to send message
+          console.log('[V18] Voice transcript complete - storing in pendingTranscript:', data);
+          setPendingTranscript(data);
+
+          // Clean up any existing user bubbles from UI (in case there were any)
           const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
-
           if (lastUserMessageIndex >= 0) {
-            // console.log('[message_persistence] Replacing user bubble with final transcript and saving to database');
-
-            // Remove the existing user bubble from UI
             const filteredConversation = updatedConversation.filter((_, index) => index !== lastUserMessageIndex);
             useWebRTCStore.setState({
               conversation: filteredConversation
-            });
-
-            // Add the final complete user message (this will save to database)
-            addConversationMessage({
-              id: `user-final-${id}`,
-              role: "user",
-              text: data,
-              timestamp: new Date().toISOString(),
-              isFinal: true,
-              status: "final"
-            });
-          } else {
-            // console.log('[message_persistence] No user bubble found, adding final message directly');
-            addConversationMessage({
-              id: `user-final-${id}`,
-              role: "user",
-              text: data,
-              timestamp: new Date().toISOString(),
-              isFinal: true,
-              status: "final"
             });
           }
         } else {
@@ -1003,8 +987,19 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           messageLength: bufferedMessage.length
         });
 
-        // NOTE: Message was already added to conversation for immediate UI display
-        // Only send to AI via WebRTC here
+        // V18 UX: Add message to conversation NOW (when actually sending to AI)
+        // This matches Claude.ai voice mode where message appears only after send
+        const userMessageObj: Conversation = {
+          id: `user-sent-${Date.now()}`,
+          role: "user",
+          text: bufferedMessage,
+          timestamp: new Date().toISOString(),
+          isFinal: true,
+          status: "final"
+        };
+        logSmartSend('📝 Adding message to conversation (NOW that we are sending to AI)', userMessageObj);
+        addConversationMessage(userMessageObj);
+
         logSmartSend('📤 Attempting to send buffered message to AI via WebRTC');
         const success = sendMessage(bufferedMessage);
 
@@ -1077,6 +1072,45 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     }
   }, [updateUserMessage, smartSendEnabled, startSmartSendTimer, userMessage, messageBuffer, logSmartSend]);
 
+  // V18 Voice Mode: Handle upload button click
+  // Uses pendingTranscript (from voice) instead of userMessage (from text input)
+  const handleUploadClick = useCallback(() => {
+    console.log('[V18] Upload button clicked', {
+      hasPendingTranscript: !!pendingTranscript,
+      pendingTranscriptLength: pendingTranscript?.length || 0,
+      isConnected
+    });
+
+    if (!pendingTranscript || !isConnected) {
+      console.log('[V18] Upload aborted - no transcript or not connected');
+      return;
+    }
+
+    // Add message to conversation (shows in UI bubble)
+    const userMessageObj: Conversation = {
+      id: `user-${Date.now()}`,
+      role: "user",
+      text: pendingTranscript,
+      timestamp: new Date().toISOString(),
+      isFinal: true,
+      status: "final"
+    };
+    console.log('[V18] Adding user message to conversation:', userMessageObj);
+    addConversationMessage(userMessageObj);
+
+    // Send to AI via WebRTC
+    console.log('[V18] Sending message to AI:', pendingTranscript);
+    const success = sendMessage(pendingTranscript);
+
+    if (success) {
+      console.log('[V18] Message sent successfully');
+      // Clear pending transcript
+      setPendingTranscript(null);
+    } else {
+      console.error('[V18] Failed to send message');
+    }
+  }, [pendingTranscript, isConnected, addConversationMessage, sendMessage]);
+
   // Handle send message - memoized to prevent recreation on every render
   const handleSendMessage = useCallback(() => {
     logSmartSend('📨 handleSendMessage called', {
@@ -1126,17 +1160,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         willAppend: userMessage.trim()
       });
 
-      // IMMEDIATE UI UPDATE: Add message to conversation for instant display
-      const userMessageObj: Conversation = {
-        id: `user-typed-${Date.now()}`,
-        role: "user",
-        text: userMessage,
-        timestamp: new Date().toISOString(),
-        isFinal: true,
-        status: "final"
-      };
-      logSmartSend('📝 Adding message to conversation (IMMEDIATE for UI)', userMessageObj);
-      addConversationMessage(userMessageObj);
+      // V18 UX: Do NOT add message to conversation immediately
+      // Message will be added when actually sent to AI (in timer callback)
+      // This matches Claude.ai voice mode UX
 
       // SMART SEND LOGIC: Accumulate message for AI processing delay
       appendToMessageBuffer(userMessage);
@@ -1260,53 +1286,6 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     setFeedbackType(null);
   }, []);
 
-  // Bookmark handlers
-  const handleBookmarkClick = useCallback(() => {
-    // Get the most recent AI message
-    const lastAiMessage = conversation
-      .filter(msg => msg.role === 'assistant')
-      .slice(-1)[0];
-
-    if (lastAiMessage) {
-      setBookmarkText(lastAiMessage.text);
-      setIsBookmarkModalOpen(true);
-    }
-  }, [conversation]);
-
-  const handleCloseBookmarkModal = useCallback(() => {
-    setIsBookmarkModalOpen(false);
-    setBookmarkText('');
-  }, []);
-
-  const handleSaveBookmark = useCallback(async () => {
-    if (!user?.uid || !bookmarkText.trim()) return;
-
-    try {
-      const response = await fetch('/api/bookmarks', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: user.uid,
-          conversationId: conversationId,
-          aiMessageContent: conversation
-            .filter(msg => msg.role === 'assistant')
-            .slice(-1)[0]?.text || '',
-          userNote: bookmarkText.trim(),
-        }),
-      });
-
-      if (response.ok) {
-        handleCloseBookmarkModal();
-        // Optional: Show success message
-      } else {
-        console.error('Failed to save bookmark');
-      }
-    } catch (error) {
-      console.error('Error saving bookmark:', error);
-    }
-  }, [user?.uid, bookmarkText, conversationId, conversation, handleCloseBookmarkModal]);
 
   // Terms of Service handler
   const handleTermsOfServiceClick = useCallback(async () => {
@@ -1785,11 +1764,11 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           ))}
         </div>
 
-        {/* Text input - only show when connected */}
+        {/* V18 Voice Mode Controls - only show when connected */}
         {isConnected && (
           <form onSubmit={(e) => {
             e.preventDefault();
-            handleSendMessage();
+            handleUploadClick();
           }} className="input-container">
             <button
               type="button"
@@ -1814,41 +1793,27 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             </button>
             <button
               type="button"
-              onClick={handleBookmarkClick}
-              className="mute-button ml-3"
-              aria-label="Bookmark last AI response"
-              disabled={!conversation.some(msg => msg.role === 'assistant')}
+              onClick={() => {
+                console.log('[V18] Cancel button clicked - clearing pending transcript');
+                setPendingTranscript(null);
+              }}
+              className="cancel-button ml-3"
+              aria-label="Cancel current voice transcript"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
-            <label htmlFor="message-input" className="sr-only">
-              Type your message to RiseTwice AI
-            </label>
-            <input
-              id="message-input"
-              type="text"
-              value={userMessage}
-              onChange={(e) => handleInputChange(e.target.value)}
-              placeholder="Type your message..."
-              className="text-input"
-              aria-label="Type your message to RiseTwice AI"
-            />
+            <div className="audio-wave-container">
+              <AudioWaveAnimation isConnected={isConnected} />
+            </div>
             <button
               type="submit"
-              className="send-button-new"
-              disabled={!userMessage.trim()}
-              aria-label="Send message to RiseTwice AI"
+              className="upload-button-new"
+              aria-label="Upload or send"
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M6 12h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
           </form>
@@ -1923,42 +1888,6 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         />
       )}
 
-      {/* Bookmark Modal */}
-      {isBookmarkModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                Save Bookmark
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                Edit the text below to customize your bookmark note:
-              </p>
-              <textarea
-                value={bookmarkText}
-                onChange={(e) => setBookmarkText(e.target.value)}
-                className="w-full h-32 p-3 border border-gray-300 dark:border-gray-600 rounded-lg resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
-                placeholder="Enter your bookmark note..."
-              />
-              <div className="flex gap-3 mt-6">
-                <button
-                  onClick={handleCloseBookmarkModal}
-                  className="flex-1 px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveBookmark}
-                  disabled={!bookmarkText.trim()}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  Save Bookmark
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Terms of Service Modal */}
       {isTermsModalOpen && (

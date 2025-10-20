@@ -599,6 +599,91 @@ html.dark body {
   cursor: not-allowed;
 }
 
+/* Cancel button styles (similar to mute button) */
+.cancel-button {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.cancel-button:hover {
+  background-color: var(--bg-primary);
+  border-color: var(--button-primary);
+  transform: scale(1.05);
+}
+
+/* Upload button styles (same as send-button-new) */
+.upload-button-new {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0;
+  overflow: hidden;
+  font-size: 0;
+  line-height: 0;
+}
+
+.upload-button-new:hover:not(:disabled) {
+  background-color: var(--bg-primary);
+  border-color: var(--button-primary);
+  transform: scale(1.05);
+}
+
+.upload-button-new:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Audio wave container and display */
+.audio-wave-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  min-height: 48px;
+  min-width: 0; /* Allow flex shrinking */
+}
+
+.audio-wave-display {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 40px;
+  width: 100%;
+  max-width: 200px;
+  min-width: 80px; /* Ensure minimum width */
+}
+
+.audio-wave-bar {
+  flex: 1;
+  min-width: 3px;
+  max-width: 6px;
+  min-height: 8px;
+  background: linear-gradient(180deg, var(--button-primary) 0%, var(--button-hover) 100%);
+  border-radius: 2px;
+  transition: height 0.15s ease-in-out;
+}
+
 .debug-panel {
   margin-top: 20px;
   padding: 15px;
