@@ -5,7 +5,7 @@ import { logTriageHandoffServer, logUserMemoryServer } from '@/utils/server-logg
 import { enhancePromptWithMemory } from '../../v16/utils/memory-prompt';
 import { enhancePromptWithLanguage, getLanguagePreferenceFromRequest } from '../../v16/utils/language-prompt';
 
-// Initialize Supabase client
+// Initialize Supabase client 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
