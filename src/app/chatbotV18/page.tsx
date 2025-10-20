@@ -383,14 +383,24 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           setPendingTranscript(data);
           setIsRecording(true); // Show voice recording modal
 
-          // Clean up any existing user bubbles from UI (in case there were any)
-          const lastUserMessageIndex = updatedConversation.map(msg => msg.role).lastIndexOf("user");
-          if (lastUserMessageIndex >= 0) {
-            const filteredConversation = updatedConversation.filter((_, index) => index !== lastUserMessageIndex);
-            useWebRTCStore.setState({
-              conversation: filteredConversation
-            });
-          }
+          // Remove ALL non-final user bubbles (including "Listening...", "Thinking...", and any old "Tap ↑ to send" bubbles)
+          const filteredConversation = updatedConversation.filter(msg =>
+            !(msg.role === "user" && !msg.isFinal)
+          );
+
+          // Add a "ready to send" indicator bubble
+          const readyBubble: Conversation = {
+            id: `user-ready-${id}`,
+            role: "user",
+            text: "Tap ↑ to send",
+            timestamp: new Date().toISOString(),
+            isFinal: false,
+            status: "speaking"
+          };
+
+          useWebRTCStore.setState({
+            conversation: [...filteredConversation, readyBubble]
+          });
         } else {
           // For assistant messages, use existing logic
           const finalMessage: Conversation = {
@@ -1126,6 +1136,13 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     setUploadButtonPressed(true);
     setTimeout(() => setUploadButtonPressed(false), 150);
 
+    // Remove ALL non-final user bubbles before adding final message
+    const currentState = useWebRTCStore.getState();
+    const filteredConversation = currentState.conversation.filter(msg =>
+      !(msg.role === "user" && !msg.isFinal)
+    );
+    useWebRTCStore.setState({ conversation: filteredConversation });
+
     // Add message to conversation (shows in UI bubble)
     const userMessageObj: Conversation = {
       id: `user-${Date.now()}`,
@@ -1799,7 +1816,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 )}
               {!msg.isFinal && msg.status === 'speaking' && msg.text !== 'Thinking...' && msg.text !== 'Listening...' && (
                 <div className="text-xs opacity-50 mt-1">
-                  Listening...
+                  {pendingTranscript ? 'Tap ↑ to send' : 'Listening...'}
                 </div>
               )}
             </div>
@@ -1885,8 +1902,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               onClick={handleSendRecording}
               className="upload-button-new"
               style={{
-                backgroundColor: uploadButtonPressed ? '#7ca995' : '#ffffff',
-                border: uploadButtonPressed ? '2px solid #6b9985' : '2px solid #9dbbac',
+                backgroundColor: uploadButtonPressed ? '#7ca995' : (pendingTranscript ? '#9dbbac' : '#ffffff'),
+                border: uploadButtonPressed ? '2px solid #6b9985' : (pendingTranscript ? '2px solid #7ca995' : '2px solid #9dbbac'),
                 borderRadius: '50%',
                 width: '48px',
                 height: '48px',
@@ -1895,7 +1912,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 justifyContent: 'center',
                 cursor: 'pointer',
                 boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
-                color: uploadButtonPressed ? '#ffffff' : '#9dbbac',
+                color: uploadButtonPressed ? '#ffffff' : (pendingTranscript ? '#ffffff' : '#9dbbac'),
                 transition: 'all 0.15s ease'
               }}
               aria-label="Send message"
