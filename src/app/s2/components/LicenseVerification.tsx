@@ -198,7 +198,7 @@ const LicenseVerification: React.FC<LicenseVerificationProps> = ({
   // Show loading while fetching existing data
   if (loadingData) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="flex-1 flex items-center justify-center pt-20" style={{ backgroundColor: 'var(--bg-secondary)' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600 mx-auto mb-4"></div>
           <p style={{ color: 'var(--text-secondary)' }}>Loading license verification data...</p>

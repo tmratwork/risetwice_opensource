@@ -34,7 +34,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
   const currentStepNumber = currentStepInfo?.number || 0;
 
   return (
-    <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-8">
+    <div style={{ backgroundColor: 'var(--bg-secondary)' }} className="border-b pt-20">
       <div className="max-w-6xl mx-auto px-4 py-6">
         {/* Step indicators */}
         <div className="flex justify-center items-center mb-4 space-x-2">
@@ -44,7 +44,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
             // Enhanced display status based on completion data
             const displayStatus = stepCompletionStatus
               ? getStepDisplayStatus(stepInfo.step, currentStep, stepCompletionStatus)
-              : (stepNumber === currentStepNumber ? 'current' : 'locked');
+              : (stepNumber === currentStepNumber ? 'current' : stepNumber < currentStepNumber ? 'completed' : 'available');
 
             const isClickable = displayStatus === 'completed' || displayStatus === 'available' ||
               (canSkipToStep ? canSkipToStep(stepInfo.step, currentStep) : false);
