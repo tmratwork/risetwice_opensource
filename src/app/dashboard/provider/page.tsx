@@ -247,12 +247,20 @@ const ProviderDashboard: React.FC = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Experience your AI Preview as patients would.
                   </p>
-                  <Link
-                    href="/chatbotV17?provider=true"
-                    className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    Test My AI Preview
-                  </Link>
+                  <div className="flex items-center gap-3">
+                    <Link
+                      href="/chatbotV17?provider=true"
+                      className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                    >
+                      Test My AI Preview
+                    </Link>
+                    <Link
+                      href="/s2/ai-preview"
+                      className="inline-flex items-center px-3 py-2 text-gray-600 dark:text-gray-400 text-sm font-normal rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors border border-gray-300 dark:border-gray-600"
+                    >
+                      Rebuild
+                    </Link>
+                  </div>
                 </>
               ) : (
                 <>
