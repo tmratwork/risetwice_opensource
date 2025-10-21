@@ -53,15 +53,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate therapeutic modalities total
-    const total = Object.values(data.therapeuticModalities).reduce((sum, val) => sum + val, 0);
-    if (total <= 0 || total > 100) {
-      return NextResponse.json(
-        { error: 'Therapeutic modalities must total between 1-100%' },
-        { status: 400 }
-      );
-    }
-
     // Validate communication style ranges
     const { friction, tone, energyLevel } = data.communicationStyle;
     if ([friction, tone, energyLevel].some(val => val < 0 || val > 100)) {
