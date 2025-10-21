@@ -286,6 +286,27 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       console.log('[S2] ✅ Complete profile saved successfully:', data.completeProfile.id);
       console.log('[S2] 📋 Full response data:', data);
 
+      // Update user_profiles to set is_provider = true
+      console.log('[S2] Updating user role to provider...');
+      const roleResponse = await fetch('/api/user-role', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: user.uid,
+          role: 'provider'
+        })
+      });
+
+      const roleData = await roleResponse.json();
+      if (!roleResponse.ok || !roleData.success) {
+        console.error('[S2] Failed to update user role:', roleData.error);
+        // Don't block the flow - just log the error
+      } else {
+        console.log('[S2] ✅ User role updated to provider');
+      }
+
       // AI Preview generation removed - now part of separate upsell flow
       // Redirect to provider dashboard
       router.push('/dashboard/provider');
