@@ -218,6 +218,11 @@ async function processNextStep(job: {
         step1.therapistData.profile
       );
 
+      console.log(`[s2_worker] ✅ Received fullPrompt, length: ${fullPrompt?.length || 0}`);
+      console.log(`[s2_worker] fullPrompt type: ${typeof fullPrompt}`);
+      console.log(`[s2_worker] fullPrompt is undefined: ${fullPrompt === undefined}`);
+      console.log(`[s2_worker] fullPrompt is null: ${fullPrompt === null}`);
+
       await saveStepResult(job.id, 5, 'finalPromptGeneration', {
         fullPrompt,
         sampleConversations
