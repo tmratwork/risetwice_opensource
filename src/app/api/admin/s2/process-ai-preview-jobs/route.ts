@@ -19,47 +19,58 @@ export const maxDuration = 600; // 10 minutes (well under 800s limit, gives buff
 
 // Worker processes ONE STEP per invocation (called every minute by Vercel Cron)
 // Each step takes ~3-5 minutes, staying well under Vercel's 15-minute timeout
+// Uses atomic job claiming to prevent race conditions between concurrent cron runs
 export async function GET() {
-  console.log('[s2_worker] 🔄 Checking for jobs needing processing...');
+  const cronId = Math.random().toString(36).substring(7);
+  console.log(`[s2_worker:${cronId}] 🔄 Checking for jobs needing processing...`);
 
   try {
-    // Step 1: Clean up stale jobs (stuck for >20 minutes)
-    await cleanupStaleJobs();
-
-    // Step 2: Get one job that needs processing (pending OR processing with next step ready)
-    const { data: jobs, error: fetchError } = await supabase
-      .from('s2_ai_preview_jobs')
-      .select('*')
-      .in('status', ['pending', 'processing'])
-      .order('created_at', { ascending: true })
-      .limit(1);
+    // ATOMIC OPERATION: Claim one job with 6-minute lease
+    // Uses PostgreSQL's FOR UPDATE SKIP LOCKED to prevent race conditions
+    const { data: jobs, error: fetchError } = await supabase.rpc('claim_next_job', {
+      lease_seconds: 360 // 6 minutes (buffer for 5-min processing + overhead)
+    });
 
     if (fetchError) {
-      console.error('[s2_worker] ❌ Error fetching jobs:', fetchError);
-      return NextResponse.json({ error: 'Database error' }, { status: 500 });
+      console.error(`[s2_worker:${cronId}] ❌ Error claiming job:`, fetchError);
+      return NextResponse.json({ error: 'Database error', details: fetchError.message }, { status: 500 });
     }
 
+    // No jobs available - this is normal, not an error
     if (!jobs || jobs.length === 0) {
-      console.log('[s2_worker] ✅ No jobs need processing');
+      console.log(`[s2_worker:${cronId}] ✅ No jobs available to process`);
       return NextResponse.json({ message: 'No jobs to process' });
     }
 
     const job = jobs[0];
     const currentStep = job.current_step_number || 0;
-    console.log(`[s2_worker] 📋 Found job: ${job.id} (step ${currentStep}/${job.total_steps})`);
+    console.log(`[s2_worker:${cronId}] 📋 Successfully claimed job: ${job.id} (step ${currentStep}/${job.total_steps})`);
+    console.log(`[s2_worker:${cronId}] 🔒 Job locked until: ${job.locked_until}`);
 
     // Process the next step for this job
     await processNextStep(job);
+
+    // Release lock after successful processing
+    await supabase
+      .from('s2_ai_preview_jobs')
+      .update({
+        locked_until: null,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', job.id);
+
+    console.log(`[s2_worker:${cronId}] ✅ Job ${job.id} completed successfully, lock released`);
 
     return NextResponse.json({
       success: true,
       jobId: job.id,
       step: currentStep + 1,
+      cronId,
       message: `Step ${currentStep + 1} processed`
     });
 
   } catch (error) {
-    console.error('[s2_worker] ❌ Worker error:', error);
+    console.error(`[s2_worker:${cronId}] ❌ Worker error:`, error);
     return NextResponse.json(
       { error: 'Worker error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -67,36 +78,8 @@ export async function GET() {
   }
 }
 
-// Clean up jobs that have been stuck processing for too long
-async function cleanupStaleJobs() {
-  const { data: staleJobs } = await supabase
-    .from('s2_ai_preview_jobs')
-    .select('id, therapist_profile_id, current_step_number')
-    .eq('status', 'processing')
-    .lt('updated_at', new Date(Date.now() - 20 * 60 * 1000).toISOString());
-
-  if (staleJobs && staleJobs.length > 0) {
-    console.log(`[s2_worker] 🧹 Found ${staleJobs.length} stale jobs, marking as failed`);
-
-    for (const job of staleJobs) {
-      await supabase
-        .from('s2_ai_preview_jobs')
-        .update({
-          status: 'failed',
-          error_message: `Job timed out at step ${job.current_step_number} (no update for 20+ minutes)`,
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', job.id);
-
-      await supabase
-        .from('s2_therapist_profiles')
-        .update({ ai_preview_status: 'not_started' })
-        .eq('id', job.therapist_profile_id);
-    }
-  }
-}
-
 // Process the next step for a job (one step per cron invocation)
+// Lock expiration automatically handles stale jobs - no manual cleanup needed
 async function processNextStep(job: {
   id: string;
   therapist_profile_id: string;
@@ -347,11 +330,12 @@ async function processNextStep(job: {
   } catch (error) {
     console.error(`[s2_worker] ❌ Step ${stepNumber} failed for job ${job.id}:`, error);
 
-    // Mark job as failed
+    // Mark job as failed and release lock
     await supabase
       .from('s2_ai_preview_jobs')
       .update({
         status: 'failed',
+        locked_until: null, // Release lock so it doesn't block other jobs
         completed_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         error_message: `Step ${stepNumber} failed: ${error instanceof Error ? error.message : 'Unknown error'}`
