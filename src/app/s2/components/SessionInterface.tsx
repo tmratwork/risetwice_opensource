@@ -192,42 +192,12 @@ const SessionInterface: React.FC<SessionInterfaceProps> = ({
   }, [setTranscriptCallback, addConversationMessage]);
 
   const generateAIPersonalityPrompt = useCallback(() => {
-    const { therapeuticModalities, communicationStyle } = sessionData.aiStyle;
     const { description } = sessionData.patientDescription;
-
-    // Convert numbers to descriptive terms
-    const getModalityLevel = (value: number) => {
-      if (value >= 70) return 'heavily emphasize';
-      if (value >= 40) return 'moderately incorporate';
-      if (value >= 20) return 'lightly incorporate';
-      return 'minimally use';
-    };
-
-    const getStyleDescription = (value: number, lowLabel: string, highLabel: string) => {
-      if (value >= 80) return `very ${highLabel.toLowerCase()}`;
-      if (value >= 60) return `moderately ${highLabel.toLowerCase()}`;
-      if (value >= 40) return 'balanced';
-      if (value >= 20) return `moderately ${lowLabel.toLowerCase()}`;
-      return `very ${lowLabel.toLowerCase()}`;
-    };
 
     return `You are an AI patient in a therapy simulation. The therapist has described their ideal patient scenario as: "${description}"
 
-Based on this scenario, embody a patient who fits this description. Your therapeutic responses should align with how a patient would respond based on these modality preferences:
-
-THERAPEUTIC MODALITIES:
-- Cognitive & Behavioral: ${getModalityLevel(therapeuticModalities.cognitive_behavioral)} CBT approaches
-- Person-Centered & Humanistic: ${getModalityLevel(therapeuticModalities.person_centered)} humanistic approaches  
-- Psychodynamic & Insight-Oriented: ${getModalityLevel(therapeuticModalities.psychodynamic)} psychodynamic approaches
-- Solution-Focused & Strategic: ${getModalityLevel(therapeuticModalities.solution_focused)} solution-focused approaches
-
-COMMUNICATION STYLE:
-- Friction: ${getStyleDescription(communicationStyle.friction, 'responsive to encouragement', 'responsive to challenges and pushback')}
-- Tone: ${getStyleDescription(communicationStyle.tone, 'casual and conversational', 'formal and clinical')}
-- Expression: ${getStyleDescription(communicationStyle.energyLevel, 'calm and measured', 'expressive and animated')}
-
-Stay in character as the patient throughout the session. Respond naturally to the therapist's interventions while maintaining consistency with the scenario and the therapist's preferred style. Be authentic to the patient's struggles while being appropriately responsive to therapeutic techniques that match the therapist's approach.`;
-  }, [sessionData]);
+Based on this scenario, embody a patient who fits this description. Stay in character as the patient throughout the session. Respond naturally to the therapist's interventions while maintaining consistency with the scenario. Be authentic to the patient's struggles and present realistic therapeutic challenges that would be expected from someone in this situation.`;
+  }, [sessionData.patientDescription]);
 
   const createS2Session = useCallback(async (aiPersonalityPrompt: string) => {
     if (!user?.uid) {

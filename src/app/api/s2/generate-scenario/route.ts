@@ -19,30 +19,15 @@ interface TherapistProfile {
   emailAddress?: string;
 }
 
-interface AIStyle {
-  therapeuticModalities: {
-    cognitive_behavioral: number;
-    person_centered: number;
-    psychodynamic: number;
-    solution_focused: number;
-  };
-  communicationStyle: {
-    friction: number;
-    tone: number;
-    energyLevel: number;
-  };
-}
-
 interface GenerateScenarioRequest {
   userId: string; // Firebase UID
   therapistProfile: TherapistProfile;
   patientDescription: string;
-  aiStyle: AIStyle;
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { userId, therapistProfile, patientDescription, aiStyle }: GenerateScenarioRequest = await request.json();
+    const { userId, therapistProfile, patientDescription }: GenerateScenarioRequest = await request.json();
 
     // Validate required fields
     if (!userId || !patientDescription?.trim()) {
@@ -68,7 +53,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get latest patient description and AI style config
+    // Get latest patient description
     const { data: patientDesc, error: patientError } = await supabase
       .from('s2_patient_descriptions')
       .select('id')
@@ -78,44 +63,30 @@ export async function POST(request: NextRequest) {
       .limit(1)
       .single();
 
-    const { data: aiStyleConfig, error: styleError } = await supabase
-      .from('s2_ai_style_configs')
-      .select('id')
-      .eq('therapist_profile_id', profile.id)
-      .eq('is_active', true)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    if (patientError || !patientDesc || styleError || !aiStyleConfig) {
+    if (patientError || !patientDesc) {
       return NextResponse.json(
-        { error: 'Patient description and AI style configuration required' },
+        { error: 'Patient description required. Please complete the patient description step first.' },
         { status: 400 }
       );
     }
 
-    // TODO: Integrate with Anthropic Claude API
-    // Build prompt for Anthropic Claude (currently unused)
-    // const scenarioPrompt = buildScenarioPrompt(therapistProfile, patientDescription, aiStyle);
+    console.log('[S2] Generating scenario based on patient description only');
 
-    // For now, return a mock scenario based on the patient description
+    // Generate mock scenario based on patient description
     const scenario = await generateMockScenario(patientDescription);
-    const aiPersonalityPrompt = buildAIPersonalityPrompt(patientDescription, aiStyle);
 
-    // Save generated scenario to database
+    // Save generated scenario to database (ai_style_config_id and ai_personality_prompt are no longer required)
     const { data: generatedScenario, error: saveError } = await supabase
       .from('s2_generated_scenarios')
       .insert({
         therapist_profile_id: profile.id,
         patient_description_id: patientDesc.id,
-        ai_style_config_id: aiStyleConfig.id,
         scenario_text: scenario,
-        ai_personality_prompt: aiPersonalityPrompt,
         generation_model: 'mock-anthropic-claude',
         generation_metadata: {
           therapistName: therapistProfile.fullName,
           generatedAt: new Date().toISOString(),
-          basedOn: 'patient_description_and_style',
+          basedOn: 'patient_description_only',
           characterCount: patientDescription.length
         }
       })
@@ -136,11 +107,10 @@ export async function POST(request: NextRequest) {
       success: true,
       scenario,
       scenarioId: generatedScenario.id,
-      aiPersonalityPrompt,
       metadata: {
         therapistName: therapistProfile.fullName,
         generatedAt: generatedScenario.created_at,
-        basedOn: 'patient_description_and_style'
+        basedOn: 'patient_description_only'
       }
     });
 
@@ -202,40 +172,6 @@ async function generateMockScenario(patientDescription: string): Promise<string>
   return categoryScenarios[randomIndex];
 }
 
-function buildAIPersonalityPrompt(patientDescription: string, aiStyle: AIStyle): string {
-  // Convert numbers to descriptive terms
-  const getModalityLevel = (value: number) => {
-    if (value >= 70) return 'heavily emphasize';
-    if (value >= 40) return 'moderately incorporate';
-    if (value >= 20) return 'lightly incorporate';
-    return 'minimally use';
-  };
-  
-  const getStyleDescription = (value: number, lowLabel: string, highLabel: string) => {
-    if (value >= 80) return `very ${highLabel.toLowerCase()}`;
-    if (value >= 60) return `moderately ${highLabel.toLowerCase()}`;
-    if (value >= 40) return 'balanced';
-    if (value >= 20) return `moderately ${lowLabel.toLowerCase()}`;
-    return `very ${lowLabel.toLowerCase()}`;
-  };
-
-  return `You are an AI patient in a therapy simulation. The therapist has described their ideal patient scenario as: "${patientDescription}"
-
-Based on this scenario, embody a patient who fits this description. Your therapeutic responses should align with how a patient would respond based on these modality preferences:
-
-THERAPEUTIC MODALITIES:
-- Cognitive & Behavioral: ${getModalityLevel(aiStyle.therapeuticModalities.cognitive_behavioral)} CBT approaches
-- Person-Centered & Humanistic: ${getModalityLevel(aiStyle.therapeuticModalities.person_centered)} humanistic approaches  
-- Psychodynamic & Insight-Oriented: ${getModalityLevel(aiStyle.therapeuticModalities.psychodynamic)} psychodynamic approaches
-- Solution-Focused & Strategic: ${getModalityLevel(aiStyle.therapeuticModalities.solution_focused)} solution-focused approaches
-
-COMMUNICATION STYLE:
-- Friction: ${getStyleDescription(aiStyle.communicationStyle.friction, 'responsive to encouragement', 'responsive to challenges and pushback')}
-- Tone: ${getStyleDescription(aiStyle.communicationStyle.tone, 'casual and conversational', 'formal and clinical')}
-- Expression: ${getStyleDescription(aiStyle.communicationStyle.energyLevel, 'calm and measured', 'expressive and animated')}
-
-Stay in character as the patient throughout the session. Respond naturally to the therapist's interventions while maintaining consistency with the scenario and the therapist's preferred style. Be authentic to the patient's struggles while being appropriately responsive to therapeutic techniques that match the therapist's approach.`;
-}
 
 // GET endpoint for testing
 export async function GET() {
