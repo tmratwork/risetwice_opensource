@@ -258,10 +258,10 @@ const S2CaseSimulation: React.FC = () => {
   // Show loading while authentication or data is initializing
   if (authLoading || dataLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#c1d7ca' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p style={{ color: 'var(--text-secondary)' }}>Initializing authentication...</p>
+          <p style={{ color: '#3b503c' }}>Initializing authentication...</p>
         </div>
       </div>
     );
@@ -270,10 +270,10 @@ const S2CaseSimulation: React.FC = () => {
   // Show sign-in prompt if not authenticated
   if (!user || !firebaseAvailable) {
     return (
-      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-        <div className="text-center p-8 rounded-lg shadow-md max-w-md" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-          <h2 className="text-2xl font-bold mb-4" style={{ color: 'var(--text-primary)' }}>Authentication Required</h2>
-          <p className="mb-6" style={{ color: 'var(--text-secondary)' }}>
+      <div className="flex-1 flex items-center justify-center" style={{ backgroundColor: '#c1d7ca' }}>
+        <div className="text-center p-8 rounded-lg shadow-md max-w-md" style={{ backgroundColor: '#c1d7ca' }}>
+          <h2 className="text-2xl font-bold mb-4" style={{ color: '#3b503c' }}>Authentication Required</h2>
+          <p className="mb-6" style={{ color: '#3b503c' }}>
             You need to sign in to access S2 Case Simulation.
           </p>
           <p className="text-sm text-blue-600">
@@ -428,8 +428,8 @@ const S2CaseSimulation: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 flex flex-col" style={{ backgroundColor: 'var(--bg-secondary)' }}>
-      <div className="flex-1 overflow-y-auto" style={{ backgroundColor: 'var(--bg-secondary)' }}>
+    <div className="fixed inset-0 flex flex-col" style={{ backgroundColor: '#c1d7ca' }}>
+      <div className="flex-1 overflow-y-auto" style={{ backgroundColor: '#c1d7ca' }}>
         {renderStep()}
       </div>
       <div className="flex-shrink-0">

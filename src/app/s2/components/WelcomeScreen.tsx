@@ -26,7 +26,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNext }) => {
 
   if (showCodeInput) {
     return (
-      <div className="flex-1 flex items-center justify-center px-4 py-16" style={{ backgroundColor: '#c5cfc4' }}>
+      <div className="flex-1 flex items-center justify-center px-4" style={{ backgroundColor: '#c1d7ca', paddingTop: '100px', paddingBottom: '80px' }}>
         <div className="w-full max-w-md">
           <h1 className="text-4xl font-normal mb-8 text-center" style={{ color: '#000000' }}>
             Enter Your Code
@@ -75,7 +75,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNext }) => {
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center px-4 py-16" style={{ backgroundColor: '#c5cfc4' }}>
+    <div className="flex-1 flex items-center justify-center px-4" style={{ backgroundColor: '#c1d7ca', paddingTop: '100px', paddingBottom: '80px' }}>
       <div className="w-full max-w-6xl">
         <h1 className="text-5xl font-normal mb-16 text-left" style={{ color: '#000000' }}>
           How it works
@@ -142,7 +142,7 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNext }) => {
           <button
             onClick={() => setShowCodeInput(true)}
             className="px-8 py-4 rounded-lg font-bold text-xl"
-            style={{ backgroundColor: '#f4d86b', color: '#000000' }}
+            style={{ backgroundColor: '#fbbf24', color: '#000000' }}
           >
             Enter Code
           </button>
