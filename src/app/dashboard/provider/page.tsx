@@ -259,12 +259,21 @@ const ProviderDashboard: React.FC = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Create an AI-powered preview that helps patients understand your therapeutic approach.
                   </p>
-                  <Link
-                    href="/s2/ai-preview"
-                    className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Build Your AI Preview
-                  </Link>
+                  {aiPreviewStatus === 'generating' ? (
+                    <button
+                      disabled
+                      className="inline-flex items-center px-4 py-2 bg-gray-400 text-gray-200 text-sm font-medium rounded-lg cursor-not-allowed opacity-60"
+                    >
+                      Build Your AI Preview
+                    </button>
+                  ) : (
+                    <Link
+                      href="/s2/ai-preview"
+                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                    >
+                      Build Your AI Preview
+                    </Link>
+                  )}
                 </>
               )}
             </div>
