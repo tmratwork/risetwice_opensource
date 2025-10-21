@@ -3,7 +3,6 @@ import { useAuth } from '@/contexts/auth-context';
 
 interface ProviderProfileStatus {
   isProvider: boolean;
-  hasProfile: boolean;
   loading: boolean;
   error: string | null;
 }
@@ -12,7 +11,6 @@ export function useProviderProfile(): ProviderProfileStatus {
   const { user } = useAuth();
   const [status, setStatus] = useState<ProviderProfileStatus>({
     isProvider: false,
-    hasProfile: false,
     loading: false,
     error: null
   });
@@ -22,7 +20,6 @@ export function useProviderProfile(): ProviderProfileStatus {
       if (!user?.uid) {
         setStatus({
           isProvider: false,
-          hasProfile: false,
           loading: false,
           error: null
         });
@@ -46,26 +43,8 @@ export function useProviderProfile(): ProviderProfileStatus {
         const roleData = await roleResponse.json();
         const isProvider = roleData.roles?.is_provider || false;
 
-        let hasProfile = false;
-
-        // If user is a provider, check if they have a profile in s2_therapist_profiles
-        if (isProvider) {
-          const profileResponse = await fetch('/api/therapists/my-preview', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ userId: user.uid })
-          });
-
-          if (profileResponse.ok) {
-            const profileData = await profileResponse.json();
-            hasProfile = profileData.success && !!profileData.therapist;
-          }
-          // If the API call fails, we assume no profile exists (hasProfile remains false)
-        }
-
         setStatus({
           isProvider,
-          hasProfile,
           loading: false,
           error: null
         });
@@ -74,7 +53,6 @@ export function useProviderProfile(): ProviderProfileStatus {
         console.error('Error checking provider status:', error);
         setStatus({
           isProvider: false,
-          hasProfile: false,
           loading: false,
           error: error instanceof Error ? error.message : 'Unknown error'
         });
