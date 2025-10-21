@@ -2,14 +2,11 @@
 
 'use client';
 import { useAuth } from '@/contexts/auth-context';
-import { LogOut, Apple, Settings, User, Languages, Trophy, Send, Phone, Flag, LayoutDashboard } from 'lucide-react';
+import { LogOut, Apple, Settings, Languages, Phone, Flag, LayoutDashboard } from 'lucide-react';
 import { ErrorBoundary } from 'react-error-boundary';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import SmartSendDialog from './SmartSendDialog';
-import DisplayNameDialog from './DisplayNameDialog';
-import ContributorsModal from './ContributorsModal';
 import PhoneAuth from './PhoneAuth';
 import BugReportModalPortal from './BugReportModalPortal';
 import { createPortal } from 'react-dom';
@@ -225,9 +222,6 @@ function LanguageDropdownPortal({ isOpen, onClose, triggerRef, children }: Dropd
 function AuthButtons() {
     const { user, signInWithGoogle, signInWithApple, signOut } = useAuth();
     const [showDropdown, setShowDropdown] = useState(false);
-    const [showSmartSendDialog, setShowSmartSendDialog] = useState(false);
-    const [showDisplayNameDialog, setShowDisplayNameDialog] = useState(false);
-    const [showContributorsModal, setShowContributorsModal] = useState(false);
     const [showPhoneAuth, setShowPhoneAuth] = useState(false);
     const [portalMounted, setPortalMounted] = useState(false);
 
@@ -287,24 +281,6 @@ function AuthButtons() {
         } catch (error) {
             console.error('Error in handleSignOut:', error);
         }
-    };
-
-    // Handle Smart Send dialog
-    const handleSmartSendClick = () => {
-        setShowSmartSendDialog(true);
-        setShowDropdown(false); // Close dropdown when opening dialog
-    };
-
-    // Handle Display Name dialog
-    const handleDisplayNameClick = () => {
-        setShowDisplayNameDialog(true);
-        setShowDropdown(false); // Close dropdown when opening dialog
-    };
-
-    // Handle Contributors modal
-    const handleContributorsClick = () => {
-        setShowContributorsModal(true);
-        setShowDropdown(false); // Close dropdown when opening modal
     };
 
     // Handle Send Feedback modal
@@ -474,24 +450,6 @@ function AuthButtons() {
                         ))}
                     </div>
                 </LanguageDropdownPortal>
-
-                {/* Smart Send Dialog */}
-                <SmartSendDialog
-                    isOpen={showSmartSendDialog}
-                    onClose={() => setShowSmartSendDialog(false)}
-                />
-
-                {/* Display Name Dialog */}
-                <DisplayNameDialog
-                    isOpen={showDisplayNameDialog}
-                    onClose={() => setShowDisplayNameDialog(false)}
-                />
-
-                {/* Contributors Modal */}
-                <ContributorsModal
-                    isOpen={showContributorsModal}
-                    onClose={() => setShowContributorsModal(false)}
-                />
 
                 {/* Bug Report Modal */}
                 {showBugReportModal && (
