@@ -14,6 +14,9 @@ const anthropicApiKey = process.env.ANTHROPIC_API_KEY!;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const CLAUDE_MODEL = getClaudeModel();
 
+// Set maximum duration for this cron job (Pro plan with Fluid Compute allows up to 800s)
+export const maxDuration = 600; // 10 minutes (well under 800s limit, gives buffer)
+
 // Worker processes ONE STEP per invocation (called every minute by Vercel Cron)
 // Each step takes ~3-5 minutes, staying well under Vercel's 15-minute timeout
 export async function GET() {
