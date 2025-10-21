@@ -61,17 +61,19 @@ export async function POST(request: NextRequest) {
 
     // Get all sessions with audio for this therapist, ordered by most recent first
     console.log(`[voice_cloning] 🎧 Searching for audio sessions...`);
-    const { data: sessions, error: sessionsError } = await supabase
+    const { data: allSessions, error: sessionsError } = await supabase
       .from('s2_case_simulation_sessions')
       .select(`
         id,
         duration_seconds,
         voice_recording_url,
         created_at,
-        session_number
+        session_number,
+        total_chunks,
+        uploaded_chunks,
+        voice_recording_uploaded
       `)
       .eq('therapist_profile_id', therapistProfileId)
-      .not('voice_recording_url', 'is', null)
       .not('duration_seconds', 'is', null)
       .eq('status', 'completed')
       .order('created_at', { ascending: false });
@@ -88,15 +90,94 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`[voice_cloning] 📊 Found ${sessions?.length || 0} completed sessions with audio`);
+    console.log(`[voice_cloning] 📊 Found ${allSessions?.length || 0} completed sessions`);
 
-    if (!sessions || sessions.length === 0) {
+    // Filter sessions that have either:
+    // 1. A combined voice_recording_url (already processed)
+    // 2. All chunks uploaded (ready to be combined)
+    const sessionsWithAudio = allSessions?.filter(session => {
+      // Has combined audio file
+      if (session.voice_recording_url) {
+        console.log(`[voice_cloning] ✅ Session #${session.session_number}: has combined audio`);
+        return true;
+      }
+      // Has all chunks uploaded but not yet combined
+      if (session.total_chunks && session.uploaded_chunks &&
+          session.total_chunks === session.uploaded_chunks) {
+        console.log(`[voice_cloning] ⚠️ Session #${session.session_number}: has ${session.uploaded_chunks}/${session.total_chunks} chunks but not combined yet`);
+        return true;
+      }
+      console.log(`[voice_cloning] ❌ Session #${session.session_number}: no audio available (${session.uploaded_chunks || 0}/${session.total_chunks || 0} chunks)`);
+      return false;
+    }) || [];
+
+    console.log(`[voice_cloning] 📊 Found ${sessionsWithAudio.length} sessions with audio (combined or chunks)`);
+
+    if (sessionsWithAudio.length === 0) {
       console.log(`[voice_cloning] ❌ No audio sessions found for voice cloning`);
       return NextResponse.json(
         {
           success: false,
           error: 'NO_AUDIO_SESSIONS',
           message: `No completed audio sessions found for ${existingProfile.full_name}. Audio sessions are required for voice cloning.`
+        },
+        { status: 400 }
+      );
+    }
+
+    // Separate sessions into those with combined audio and those needing combination
+    const sessionsNeedingCombination = sessionsWithAudio.filter(s =>
+      !s.voice_recording_url && s.total_chunks === s.uploaded_chunks
+    );
+
+    if (sessionsNeedingCombination.length > 0) {
+      console.log(`[voice_cloning] 🔄 Found ${sessionsNeedingCombination.length} sessions that need chunk combining`);
+      console.log(`[voice_cloning] 🔧 Triggering automatic chunk combination...`);
+
+      // Combine chunks for sessions that need it
+      for (const session of sessionsNeedingCombination) {
+        try {
+          console.log(`[voice_cloning] 🔗 Combining chunks for session #${session.session_number} (${session.id})`);
+
+          const combineResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/s2/voice-combine`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sessionId: session.id })
+          });
+
+          if (!combineResponse.ok) {
+            const errorData = await combineResponse.json();
+            console.log(`[voice_cloning] ❌ Failed to combine chunks for session #${session.session_number}: ${errorData.error}`);
+            continue;
+          }
+
+          const combineResult = await combineResponse.json();
+          console.log(`[voice_cloning] ✅ Chunks combined for session #${session.session_number}: ${combineResult.combined_audio_url}`);
+
+          // Update session with combined audio URL
+          session.voice_recording_url = combineResult.combined_audio_url;
+          session.voice_recording_uploaded = true;
+
+        } catch (error) {
+          console.log(`[voice_cloning] ❌ Error combining chunks for session #${session.session_number}:`, error);
+          continue;
+        }
+      }
+    }
+
+    // Now get all sessions with combined audio (including newly combined ones)
+    const sessions = sessionsWithAudio.filter(s => s.voice_recording_url);
+
+    console.log(`[voice_cloning] 📊 Using ${sessions.length} sessions with combined audio`);
+
+    if (sessions.length === 0) {
+      const stillNeedingCombination = sessionsNeedingCombination.filter(s => !s.voice_recording_url);
+      console.log(`[voice_cloning] ❌ No sessions with combined audio available`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'NO_COMBINED_AUDIO',
+          message: `Found ${stillNeedingCombination.length} sessions with chunks, but audio combination failed. Please check logs and try again.`
         },
         { status: 400 }
       );
