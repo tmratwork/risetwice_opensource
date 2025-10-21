@@ -666,7 +666,7 @@ export default function ChatBotV17Page() {
     <div className="chatbot-v16-wrapper">
       {/* Back to matching button */}
       {!isConnected && selectedTherapist && (
-        <div className="absolute top-4 left-4 z-10">
+        <div className="absolute top-20 left-4 z-10">
           <button
             onClick={handleBackToMatching}
             className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -681,7 +681,7 @@ export default function ChatBotV17Page() {
 
       {/* Show selected therapist info */}
       {selectedTherapist && !isConnected && (
-        <div className="absolute top-4 right-4 z-10 bg-white border border-gray-200 rounded-lg p-4 max-w-sm">
+        <div className="absolute top-20 right-4 z-10 bg-white border border-gray-200 rounded-lg p-4 max-w-sm">
           <div className="flex items-center gap-3">
             {selectedTherapist.profilePhotoUrl && (
               <img
