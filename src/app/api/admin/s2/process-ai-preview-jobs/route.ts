@@ -121,7 +121,14 @@ async function processNextStep(job: {
       console.log(`[s2_worker] 🤖 Using Claude model: ${CLAUDE_MODEL}`);
     }
 
-    const stepResults = job.step_results || {};
+    // Reload step_results from database to get latest data
+    const { data: currentJob } = await supabase
+      .from('s2_ai_preview_jobs')
+      .select('step_results')
+      .eq('id', job.id)
+      .single();
+
+    const stepResults = (currentJob?.step_results || {}) as Record<string, unknown>;
 
     // Step 1: Aggregate therapist data and run initial analysis
     if (stepNumber === 1) {
@@ -366,22 +373,32 @@ async function saveStepResult(
   result: Record<string, unknown>
 ) {
   // Get current step_results
-  const { data: currentJob } = await supabase
+  const { data: currentJob, error: fetchError } = await supabase
     .from('s2_ai_preview_jobs')
     .select('step_results')
     .eq('id', jobId)
     .single();
 
+  if (fetchError) {
+    console.error(`[s2_worker] ❌ Failed to fetch job for step ${stepNumber}:`, fetchError);
+    throw new Error(`Failed to fetch job data: ${fetchError.message}`);
+  }
+
   const stepResults = (currentJob?.step_results || {}) as Record<string, unknown>;
   stepResults[`step_${stepNumber}`] = result;
 
-  await supabase
+  const { error: updateError } = await supabase
     .from('s2_ai_preview_jobs')
     .update({
       step_results: stepResults,
       updated_at: new Date().toISOString()
     })
     .eq('id', jobId);
+
+  if (updateError) {
+    console.error(`[s2_worker] ❌ Failed to save results for step ${stepNumber}:`, updateError);
+    throw new Error(`Failed to save step results: ${updateError.message}`);
+  }
 
   console.log(`[s2_worker] 💾 Saved results for step ${stepNumber} (${stepName})`);
 }
