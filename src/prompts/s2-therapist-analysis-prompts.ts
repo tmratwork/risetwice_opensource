@@ -1,6 +1,6 @@
 // src/prompts/s2-therapist-analysis-prompts.ts
 // Centralized Claude AI prompts for S2 Therapist Analysis System
-// Quality-first approach: Multiple specialized AI calls for comprehensive analysis
+// Optimized for Vercel CRON 10-minute execution limits
 
 // Type definitions for therapist data
 interface TherapistProfile {
@@ -79,448 +79,374 @@ interface SampleConversationSession {
 
 export const S2_ANALYSIS_PROMPTS = {
   /**
-   * STEP 1: Raw Data Analysis
-   * Analyzes therapist profile data to extract key professional characteristics
-   * Focuses on personal statement, credentials, mental health specialties, treatment approaches, and demographics
+   * STEP 1: Raw Data Analysis (OPTIMIZED)
+   * Reduced from 12k to 5k tokens - focuses on distinctive characteristics only
    */
   dataAnalysis: {
-    system: `You are an expert clinical psychologist and therapist profiling specialist. Your task is to analyze comprehensive therapist profile data and extract key professional characteristics, specializations, and practice patterns.
+    system: `You are an expert clinical psychologist and therapist profiling specialist. Analyze therapist profile data and extract the MOST DISTINCTIVE professional characteristics.
 
-Focus on:
-- Professional identity and credentials analysis
-- Personal statement insights
-- Mental health specialties and expertise levels
-- Treatment approaches and modalities
-- Practice structure and approach preferences
-- Educational background implications
-- Geographic and demographic considerations
+Focus on what makes this therapist UNIQUE:
+- Standout credentials or specializations
+- Notable personal statement insights
+- Primary treatment approaches
+- Key practice patterns
 
-CRITICAL: Do NOT hallucinate or fabricate information. Only extract and analyze data that is explicitly provided in the profile. If information is insufficient or missing for any analysis area, clearly state that insufficient data is available rather than making assumptions or inventing details.
+CRITICAL: Only analyze data explicitly provided. If information is missing, state "Insufficient data for [section]" - never fabricate.
 
-Provide detailed, structured analysis that will be used for creating AI simulations of this therapist.`,
+Be concise and insightful. Prioritize distinctive traits over generic observations.`,
 
-    user: (therapistData: TherapistData) => `Analyze this therapist's complete profile data:
+    user: (therapistData: TherapistData) => `**TOKEN LIMIT: 5,000 tokens. Be concise and focus on what's UNIQUE.**
 
-**THERAPIST PROFILE:**
+Analyze this therapist profile:
+
+**PROFILE:**
 Name: ${therapistData.profile?.full_name}
 Title: ${therapistData.profile?.title}
 Credentials: ${therapistData.profile?.degrees?.join(', ')}
 Location: ${therapistData.profile?.primary_location}
-Online Practice: ${therapistData.profile?.offers_online ? 'Yes' : 'No'}
+Online: ${therapistData.profile?.offers_online ? 'Yes' : 'No'}
 
-**COMPLETE PROFESSIONAL PROFILE:**
+**PROFESSIONAL DETAILS:**
 ${therapistData.complete_profile ? `
 Personal Statement: ${therapistData.complete_profile.personal_statement}
-Mental Health Specialties: ${therapistData.complete_profile.mental_health_specialties?.join(', ')}
-Treatment Approaches: ${therapistData.complete_profile.treatment_approaches?.join(', ')}
-Age Ranges Treated: ${therapistData.complete_profile.age_ranges_treated?.join(', ')}
+Specialties: ${therapistData.complete_profile.mental_health_specialties?.join(', ')}
+Approaches: ${therapistData.complete_profile.treatment_approaches?.join(', ')}
+Age Ranges: ${therapistData.complete_profile.age_ranges_treated?.join(', ')}
 Practice Type: ${therapistData.complete_profile.practice_type}
 Session Length: ${therapistData.complete_profile.session_length}
 Availability: ${therapistData.complete_profile.availability_hours}
 Emergency Protocol: ${therapistData.complete_profile.emergency_protocol}
 Insurance: ${therapistData.complete_profile.accepts_insurance ? 'Accepts' : 'Cash only'} - ${therapistData.complete_profile.insurance_plans?.join(', ')}
-` : 'No detailed professional profile available'}
+` : 'No detailed profile available'}
 
-**LICENSE VERIFICATION:**
+**LICENSE:**
 ${therapistData.license_verification ? `
-License Type: ${therapistData.license_verification.license_type}
-License Number: ${therapistData.license_verification.license_number}
+Type: ${therapistData.license_verification.license_type}
+Number: ${therapistData.license_verification.license_number}
 State: ${therapistData.license_verification.state_of_licensure}
-` : 'No license verification data available'}
+` : 'No license data available'}
 
 **PATIENT FOCUS:**
 ${therapistData.patient_description ? `
-Target Patient Description: ${therapistData.patient_description.description}
-Complexity Level: ${therapistData.patient_description.complexity_level || 'Not specified'}
-Extracted Themes: ${therapistData.patient_description.extracted_themes?.join(', ') || 'None specified'}
-` : 'No specific patient focus described'}
+Description: ${therapistData.patient_description.description}
+Complexity: ${therapistData.patient_description.complexity_level || 'Not specified'}
+Themes: ${therapistData.patient_description.extracted_themes?.join(', ') || 'None'}
+` : 'No patient focus described'}
 
-Provide a comprehensive analysis covering:
-1. **Professional Identity Summary** - Who they are as a clinician
-2. **Specialization Analysis** - Areas of expertise and focus
-3. **Practice Structure Assessment** - How they organize their practice
-4. **Credential Implications** - What their background suggests about their approach
-5. **Target Population Analysis** - Who they serve and why
-6. **Geographic/Cultural Context** - Location-specific considerations
+Provide HIGH-LEVEL analysis (2-3 paragraphs each):
 
-IMPORTANT: Base your analysis ONLY on the provided data. If any section lacks sufficient information, explicitly state "Insufficient data provided for [section name]" rather than making assumptions. It is acceptable and expected to acknowledge data gaps.
+1. **Professional Identity** (500 tokens max)
+   - Who they are as a clinician - their defining characteristics
 
-Be thorough and insightful. This analysis will inform therapeutic simulation AI.`,
+2. **Core Specializations** (500 tokens max)
+   - Primary areas of expertise and what makes them distinctive
 
-    maxTokens: 12000
+3. **Practice Approach** (500 tokens max)
+   - How they structure their practice and why
+
+4. **Target Population** (400 tokens max)
+   - Who they serve best and key considerations
+
+5. **Credential Implications** (300 tokens max)
+   - What their background reveals about their clinical style
+
+If data is insufficient for any section, state "Insufficient data provided for [section]" rather than speculating.`,
+
+    maxTokens: 5000
   },
 
   /**
-   * STEP 2: Conversation Pattern Analysis
-   * Analyzes actual therapy session transcripts
-   * Examines communication styles and therapeutic techniques used, recognizing only a limited amount
-   * of the provider's techniques will be on display in the short sample of a time-limited patient case scenario
+   * STEP 2: Conversation Pattern Analysis (OPTIMIZED)
+   * Reduced from 16k to 6k tokens - focuses on most distinctive patterns
    */
   conversationPatterns: {
-    system: `You are an expert conversation analyst specializing in therapeutic communication. Your expertise includes clinical linguistics, therapeutic intervention analysis, and communication pattern recognition.
+    system: `You are an expert conversation analyst specializing in therapeutic communication. Identify the MOST DISTINCTIVE communication patterns that make this therapist unique.
 
-Your task is to analyze real therapy session transcripts to identify:
-- Communication flow and rhythm patterns
-- Intervention timing and style
-- Question types and frequency
-- Reflection and validation techniques
-- Clinical language patterns
-- Therapeutic relationship building approaches
+Focus on:
+- Signature communication style markers
+- Notable intervention patterns
+- Characteristic language use
 
-CRITICAL CONTEXT: You are analyzing a LIMITED SAMPLE from a short, time-limited patient case scenario. Recognize that only a limited amount of the provider's full range of therapeutic techniques will be on display. Draw conclusions ONLY from what is demonstrated in these specific sessions.
+CRITICAL CONTEXT: This is a LIMITED SAMPLE from a short case scenario. Only analyze patterns explicitly demonstrated in the transcripts. State "Insufficient transcript data to assess [aspect]" if data is limited.
 
-CRITICAL: Do NOT hallucinate or fabricate therapeutic techniques. Only identify and analyze communication patterns that are explicitly demonstrated in the provided transcripts. If the sample is too limited to assess certain aspects, clearly state that insufficient data is available rather than making assumptions about techniques not demonstrated.
+NEVER fabricate techniques not demonstrated. Be specific and quote examples.`,
 
-Provide detailed analysis that captures the unique communication signature of this therapist based on the available sample.`,
+    user: (sessions: SessionData[], profileAnalysis: string) => `**TOKEN LIMIT: 6,000 tokens. Focus on MOST DISTINCTIVE patterns with 2-3 examples each.**
 
-    user: (sessions: SessionData[], profileAnalysis: string) => `Analyze the communication patterns from these therapy sessions:
-
-**PREVIOUS PROFILE ANALYSIS:**
+**PROFILE ANALYSIS:**
 ${profileAnalysis}
 
 **SESSION TRANSCRIPTS:**
 ${sessions.map((session) => `
 --- SESSION ${session.session_number} ---
-Status: ${session.status}
-Duration: ${session.duration_seconds ? Math.floor(session.duration_seconds / 60) + 'm' : 'Unknown'}
-Message Count: ${session.message_count}
+Status: ${session.status} | Duration: ${session.duration_seconds ? Math.floor(session.duration_seconds / 60) + 'm' : 'Unknown'} | Messages: ${session.message_count}
 
-CONVERSATION:
 ${session.messages?.slice(0, 500).map((msg: SessionMessage, msgIndex: number) =>
   `${msgIndex + 1}. ${msg.role.toUpperCase()}: ${msg.content}`
 ).join('\n') || 'No messages available'}
-${session.messages?.length > 500 ? `\n[🚨 TRUNCATED: ${session.messages.length - 500} additional messages not shown for token management]` : ''}
+${session.messages?.length > 500 ? `\n[TRUNCATED: ${session.messages.length - 500} messages not shown]` : ''}
 `).join('\n\n')}
 
-Based on these actual therapeutic conversations, provide detailed analysis of:
+Analyze the MOST DISTINCTIVE patterns (with token budgets):
 
-1. **Communication Flow Analysis**
-   - Turn-taking patterns and rhythm
-   - Response timing and pacing preferences
-   - Conversation initiation and direction techniques
+1. **Communication Signature** (1,200 tokens)
+   - What makes their conversational flow unique?
+   - Turn-taking rhythm and pacing preferences
+   - Quote 2-3 examples showing their style
 
-2. **Intervention Style Analysis**
-   - Types of therapeutic interventions used
-   - Frequency and timing of different intervention types
-   - Approach to challenging or confronting clients
+2. **Primary Intervention Pattern** (1,200 tokens)
+   - Their signature therapeutic move
+   - When and how they deploy it
+   - 2-3 specific examples from transcripts
 
-3. **Language Pattern Analysis**
-   - Vocabulary choices and clinical language use
-   - Tone indicators and emotional expression
-   - Cultural or regional communication markers
+3. **Language Markers** (1,000 tokens)
+   - Distinctive vocabulary, phrases, or expressions
+   - Tone indicators (warmth, formality, energy)
+   - Quote 3-5 characteristic phrases
 
-4. **Questioning Techniques**
-   - Types of questions asked (open-ended, clarifying, probing, etc.)
-   - Question sequencing and follow-up patterns
-   - Information gathering vs. therapeutic questioning balance
+4. **Questioning Style** (1,000 tokens)
+   - Preferred question types and sequences
+   - Information-gathering vs. therapeutic balance
+   - 2-3 example question sequences
 
-5. **Therapeutic Relationship Building**
-   - Empathy expression methods
-   - Validation and support techniques
-   - Boundary setting and professional distance
+5. **Relationship Building** (800 tokens)
+   - How they establish rapport and boundaries
+   - Empathy and validation methods
+   - Observable patterns across sessions
 
-6. **Response Patterns**
-   - How they handle different patient emotions/topics
-   - Consistency in approach across sessions
-   - Adaptability to different patient needs
+6. **Response Consistency** (800 tokens)
+   - How they handle different emotions/topics
+   - Adaptability patterns visible in these sessions
 
-IMPORTANT: Be specific and quote examples from the transcripts to support your analysis. Remember this is a LIMITED SAMPLE - only comment on patterns actually visible in these transcripts. If you cannot assess certain aspects due to limited data, explicitly state "Insufficient transcript data to assess [aspect]" rather than speculating.`,
+Remember: Only comment on patterns VISIBLE in these transcripts. If insufficient data, explicitly state it.`,
 
-    maxTokens: 16000
+    maxTokens: 6000
   },
 
   /**
-   * STEP 3: Therapeutic Style Assessment
-   * Evaluates the Communication Style sliders and adds these values to the construction of the provider's communication profile
-   * Prioritizes values from the Communication Style over analysis from the actual therapy session transcripts if conflicting
-   * Assesses treatment approaches listed and incorporates these into the provider's overall profile
+   * STEP 3: Therapeutic Style Assessment (OPTIMIZED)
+   * Reduced from 14k to 5k tokens - prioritizes style config validation
    */
   therapeuticStyle: {
-    system: `You are a senior clinical supervisor and expert in therapeutic modalities. You specialize in assessing therapist approaches, theoretical orientations, and clinical decision-making patterns.
+    system: `You are a senior clinical supervisor assessing therapeutic approaches and modalities. Integrate AI style configuration with observed patterns to create a focused therapeutic profile.
 
-Your task is to integrate AI style configuration data with conversation patterns to create a comprehensive therapeutic approach profile. Consider:
-- Theoretical orientation indicators
-- Modality preference validation
-- Clinical decision-making patterns
-- Integration of different therapeutic approaches
-- Flexibility and adaptation in approach
+CRITICAL PRIORITIZATION: Communication Style slider values (Friction, Tone, Expression) MUST override any conflicting transcript observations. These are the provider's self-assessed preferences.
 
-CRITICAL PRIORITIZATION: The Communication Style slider values (Friction, Tone, Expression) represent the provider's self-assessed preferences and MUST be prioritized over any conflicting observations from the limited therapy session transcripts. If there is a discrepancy between configured Communication Style values and transcript observations, ALWAYS defer to the configured values.
+Only assess approaches explicitly mentioned in configuration or clearly demonstrated. State "Insufficient data to assess [area]" if needed.
 
-CRITICAL: Do NOT hallucinate or invent therapeutic approaches. Only assess modalities and approaches that are explicitly mentioned in the configuration or clearly demonstrated in the transcripts. If information is insufficient to assess certain therapeutic aspects, clearly state that insufficient data is available rather than making assumptions.
+Be concise and focus on integration, not repetition of previous analyses.`,
 
-Provide expert assessment that captures the nuanced therapeutic style of this individual clinician.`,
+    user: (aiStyleConfig: AIStyleConfig | null, conversationAnalysis: string, profileAnalysis: string) => `**TOKEN LIMIT: 5,000 tokens. Focus on KEY assessments and validation.**
 
-    user: (aiStyleConfig: AIStyleConfig | null, conversationAnalysis: string, profileAnalysis: string) => `Assess the therapeutic style and approach of this therapist:
-
-**CONFIGURED AI STYLE PREFERENCES:**
+**CONFIGURED PREFERENCES:**
 ${aiStyleConfig ? `
-Therapeutic Modalities:
+Modalities:
 - Cognitive Behavioral: ${aiStyleConfig.cognitive_behavioral}%
 - Person-Centered: ${aiStyleConfig.person_centered}%
 - Psychodynamic: ${aiStyleConfig.psychodynamic}%
 - Solution-Focused: ${aiStyleConfig.solution_focused}%
 
-Communication Style Settings:
+Communication Style (PRIORITIZE THESE):
 - Friction: ${aiStyleConfig.friction}% (0=Encouraging, 100=Adversarial)
 - Tone: ${aiStyleConfig.tone}% (0=Warm & Casual, 100=Clinical & Formal)
 - Expression: ${aiStyleConfig.energy_level}% (0=Calm & Grounded, 100=Energetic & Expressive)
-` : 'No AI style configuration available'}
+` : 'No configuration available'}
 
 **PREVIOUS ANALYSES:**
-Profile Analysis: ${profileAnalysis}
+Profile: ${profileAnalysis}
+Patterns: ${conversationAnalysis}
 
-Conversation Patterns: ${conversationAnalysis}
+Provide KEY assessments (token budgets per section):
 
-Based on this comprehensive data, provide expert assessment of:
+1. **Primary Theoretical Framework** (1,000 tokens)
+   - Main approach and evidence of consistency
+   - How secondary approaches integrate
 
-1. **Theoretical Orientation Analysis**
-   - Primary theoretical framework used
-   - Secondary/integrated approaches
-   - Evidence of theoretical consistency in practice
-   - Flexibility in theoretical application
-
-2. **Modality Integration Assessment**
-   - How different therapeutic modalities are combined
-   - Situational use of different approaches
+2. **Modality Integration** (1,000 tokens)
+   - How different approaches combine in practice
    - Client-specific adaptation patterns
-   - Integration sophistication level
 
-3. **Clinical Decision-Making Style**
+3. **Clinical Decision Style** (800 tokens)
    - How they choose interventions
-   - Risk assessment and management approach
-   - Session structure and planning style
-   - Progress monitoring methods
+   - Session structure preferences
 
-4. **Therapeutic Relationship Style**
+4. **Therapeutic Relationship Dynamics** (800 tokens)
    - Authority vs. collaboration balance
-   - Professional boundary maintenance
-   - Emotional availability and expression
-   - Cultural sensitivity and adaptation
+   - Emotional availability and boundary maintenance
 
-5. **Intervention Preference Patterns**
-   - Preferred intervention types
-   - Timing of therapeutic challenges
+5. **Intervention Preferences** (700 tokens)
+   - Preferred intervention types and timing
    - Support vs. confrontation balance
-   - Homework and between-session work approach
 
-6. **Validation of Configured vs. Actual Style**
-   - Consistency between stated preferences and actual practice
-   - Areas of alignment and discrepancy
-   - Authentic style vs. aspirational preferences
+6. **Configuration Validation** (700 tokens)
+   - Alignment between stated preferences and practice
+   - Key consistencies or discrepancies
 
-IMPORTANT REMINDER: When Communication Style slider values conflict with transcript observations, ALWAYS prioritize the configured slider values. These represent the provider's self-assessment and should take precedence. Only analyze what is explicitly provided - if data is insufficient for any assessment area, state "Insufficient data to assess [area]" rather than speculating.
+CRITICAL: When Communication Style sliders conflict with observations, ALWAYS prioritize configured values.`,
 
-Provide nuanced, expert-level assessment that captures the complexity of this therapist's approach.`,
-
-    maxTokens: 14000
+    maxTokens: 5000
   },
 
   /**
-   * STEP 4: Personality & Communication Synthesis
-   * Combines all previous analyses to create a comprehensive personality profile
-   * Synthesizes communication patterns and therapeutic approach
-   * Does not draw far-reaching assumptions on the provider's character given limited data gleaned from the sample therapy session transcripts
+   * STEP 4: Personality & Communication Synthesis (OPTIMIZED)
+   * Reduced from 16k to 7k tokens - synthesis focus, avoid repetition
    */
   personalitySynthesis: {
-    system: `You are an expert personality psychologist and interpersonal communication specialist. Your expertise includes personality assessment, communication style analysis, and behavioral pattern recognition in professional contexts.
+    system: `You are an expert personality psychologist synthesizing analyses into a cohesive profile that captures this therapist's unique individual characteristics.
 
-Your task is to synthesize multiple analyses into a cohesive personality and communication profile that captures the unique individual characteristics of this therapist as both a professional and a person. Focus on:
-- Authentic personality traits that emerge in therapeutic settings
-- Individual communication quirks and patterns
-- Personal values and beliefs that influence practice
-- Interpersonal style and relationship patterns
-- Emotional expression and regulation patterns
+CRITICAL LIMITATIONS: Make only conservative, well-supported observations. This is a LIMITED SAMPLE. Do not draw far-reaching character assumptions.
 
-CRITICAL LIMITATIONS: Do NOT draw far-reaching assumptions about the provider's character, personality, or beliefs beyond what is directly supported by the data. Remember that the therapy session transcripts represent a LIMITED SAMPLE from a short case scenario. Make only conservative, well-supported observations.
+Focus on:
+- Observable personality traits in therapeutic setting
+- Authentic communication signature
+- Individual quirks and patterns
 
-CRITICAL: Do NOT hallucinate personality traits or characteristics. Only synthesize observations that are directly supported by the previous analyses. If the data is insufficient to make confident assessments about certain personality aspects, clearly state that limited data prevents assessment rather than making unsupported inferences.
+NEVER fabricate traits. State "Limited data to assess [dimension]" when appropriate.
 
-Create a rich, nuanced profile that would allow someone to truly understand and simulate this individual's unique presence and approach, while staying strictly within the bounds of available evidence.`,
+Create a focused profile grounded strictly in available evidence.`,
 
-    user: (allPreviousAnalyses: string) => `Synthesize all previous analyses into a comprehensive personality and communication profile:
+    user: (allPreviousAnalyses: string) => `**TOKEN LIMIT: 7,000 tokens. Synthesize key insights - avoid repeating previous analyses.**
 
 **ALL PREVIOUS ANALYSES:**
 ${allPreviousAnalyses}
 
-Create a comprehensive synthesis covering:
+Create focused synthesis (token budgets):
 
-1. **Core Personality Traits**
-   - Dominant personality characteristics in therapeutic setting
-   - Interpersonal style and relationship preferences
-   - Emotional expression patterns and regulation
-   - Values and beliefs that drive behavior
+1. **Core Personality Traits** (1,500 tokens)
+   - 3-4 dominant characteristics in therapeutic setting
+   - Interpersonal style and emotional expression
+   - Values driving their behavior
 
-2. **Authentic Communication Signature**
+2. **Authentic Communication Signature** (1,500 tokens)
    - Unique speech patterns and verbal habits
-   - Non-verbal communication indicators
-   - Emotional availability and expression style
-   - Personal warmth vs. professional distance balance
+   - Personal warmth vs. professional distance
+   - What makes their communication distinctive
 
-3. **Individual Quirks and Characteristics**
-   - Unique phrases or expressions used
-   - Personal touches in therapeutic style
-   - Individual strengths and blind spots
-   - Consistent behavioral patterns across contexts
+3. **Individual Quirks** (1,200 tokens)
+   - Characteristic phrases or expressions
+   - Personal touches in style
+   - Observable strengths and potential blind spots
 
-4. **Interpersonal Dynamics Style**
-   - How they build rapport and connection
-   - Conflict resolution and difficult conversation approach
-   - Authority and power dynamic management
-   - Cultural and social awareness level
+4. **Interpersonal Dynamics** (1,200 tokens)
+   - How they build rapport
+   - Conflict and difficult conversation approach
+   - Authority and power management
 
-5. **Professional Identity Integration**
-   - How personal traits enhance therapeutic effectiveness
-   - Potential areas of personal/professional tension
-   - Unique value they bring to therapeutic relationships
-   - Growth areas and development patterns
+5. **Professional Identity Integration** (1,000 tokens)
+   - How personal traits enhance effectiveness
+   - Their unique value in therapeutic relationships
+   - Observable development patterns
 
-6. **Comprehensive Individual Profile**
-   - Overall impression and presence they create
-   - What makes them unique as a therapist and person
+6. **Distinctive Presence** (600 tokens)
+   - Overall impression they create
+   - What makes them memorable
    - How clients likely experience them
-   - Memorable characteristics and lasting impact style
 
-IMPORTANT REMINDER: Ground all observations in the available data. Do NOT make far-reaching character assumptions based on limited transcript samples. If certain personality dimensions cannot be confidently assessed from the available evidence, explicitly state "Limited data available to assess [dimension]" rather than speculating.
+CRITICAL: Ground ALL observations in available data. Do not make far-reaching assumptions. Acknowledge data limitations explicitly.`,
 
-This should read like a rich, nuanced personality profile that captures the essence of who this person is as both a therapist and an individual, while remaining strictly evidence-based.`,
-
-    maxTokens: 16000
+    maxTokens: 7000
   },
 
   /**
-   * STEP 5: Final Prompt Generation
-   * Generates the complete AI simulation prompt using all previous analysis
-   * Creates a detailed roleplay prompt to simulate the specific therapist
+   * STEP 5: Final Prompt Generation (OPTIMIZED - MINOR CHANGES)
+   * Keeping at 6k tokens - already well-sized
    */
   finalPromptGeneration: {
-    system: `You are an expert AI prompt engineer specializing in roleplay and character simulation. Your expertise includes:
-- Creating detailed character profiles for AI roleplay
-- Writing comprehensive system prompts for AI personality simulation
-- Capturing nuanced human behavior patterns in AI instructions
-- Developing consistent character voices and behaviors
+    system: `You are an expert AI prompt engineer creating roleplay character simulations. Create a comprehensive prompt that allows an AI to accurately roleplay as this specific therapist.
 
-Your task is to create a comprehensive AI simulation prompt that allows another AI to accurately roleplay as this specific human therapist. The prompt should be so detailed and accurate that someone interacting with the AI would feel they are truly speaking with this individual therapist.
-
-Focus on creating instructions that capture:
+Focus on:
 - Exact speech patterns and vocabulary
 - Specific therapeutic techniques and timing
 - Personality quirks and individual characteristics
-- Professional decision-making processes
-- Emotional expression and interpersonal style
-- Session structure and flow preferences
+- Decision-making processes
 
-CRITICAL: Base ALL prompt instructions on the provided analyses. Do NOT hallucinate behaviors, speech patterns, or characteristics that are not supported by the previous analyses. If certain aspects lack sufficient data in the analyses, instruct the AI to use professional therapeutic standards for those aspects rather than inventing specific behaviors.
+CRITICAL: Base ALL instructions on provided analyses. NEVER hallucinate behaviors not supported by evidence. Instruct the simulated AI to acknowledge gaps rather than fabricate information.
 
-The generated prompt must instruct the simulated AI to NEVER hallucinate or fabricate information about the therapist's background, techniques, or approaches that were not established in this analysis.
+Create a masterful, evidence-based roleplay prompt.`,
 
-Write a masterful AI roleplay prompt that brings this therapist to life while staying strictly within the bounds of available evidence.`,
+    user: (allAnalyses: string, sampleConversations: SampleConversationSession[], therapistProfile: TherapistProfile | null) => `**TOKEN LIMIT: 6,000 tokens. Create complete, immediately usable AI roleplay prompt.**
 
-    user: (allAnalyses: string, sampleConversations: SampleConversationSession[], therapistProfile: TherapistProfile | null) => `Create a comprehensive AI therapist simulation prompt using all analyses:
-
-**THERAPIST PROFILE:**
+**THERAPIST IDENTITY:**
 Name: ${therapistProfile?.full_name}
 Title: ${therapistProfile?.title}
 Credentials: ${therapistProfile?.degrees?.join(', ') || 'Not specified'}
 Location: ${therapistProfile?.primary_location || 'Not specified'}
 
-**COMPLETE ANALYSIS COMPILATION:**
+**COMPLETE ANALYSIS:**
 ${allAnalyses}
 
-**SAMPLE CONVERSATION EXAMPLES:**
+**SAMPLE CONVERSATIONS:**
 ${sampleConversations.map((session) => `
-Example Session ${session.sessionNumber} (${session.totalMessages} total messages${session.truncated ? ` - SHOWING FIRST 500` : ''}):
+Session ${session.sessionNumber} (${session.totalMessages} messages${session.truncated ? ` - showing first 500` : ''}):
 ${session.messages.slice(0, 15).map((msg: SessionMessage) =>
   `${msg.role === 'therapist' ? 'THERAPIST' : 'PATIENT'}: ${msg.content}`
 ).join('\n')}
-${session.messages.length > 15 ? `\n[... ${session.messages.length - 15} additional messages available for full context analysis]` : ''}
+${session.messages.length > 15 ? `[... ${session.messages.length - 15} more messages]` : ''}
 `).join('\n\n')}
 
-Create a comprehensive AI roleplay prompt with the following structure:
+Create a comprehensive AI roleplay prompt with this structure:
 
-IMPORTANT: Use the exact name "${therapistProfile?.full_name}" and title "${therapistProfile?.title}" throughout the prompt. Do NOT use placeholders like [Name] or [Title].
+**CRITICAL: Use exact name "${therapistProfile?.full_name}" and title "${therapistProfile?.title}" - NO placeholders.**
 
-1. **Character Identity Section**
-   - Complete professional and personal identity (using exact name and title provided above)
-   - Core characteristics and traits
-   - Values and beliefs that guide behavior
+1. **Identity & Core Traits** (800 tokens)
+   - Complete professional/personal identity (use exact name and title above)
+   - Core characteristics and values
 
-2. **Communication Style Instructions**
-   - Exact speech patterns and vocabulary to use
-   - Tone, energy level, and emotional expression guidelines
-   - Specific phrases and expressions to incorporate
+2. **Communication Style** (1,000 tokens)
+   - Exact speech patterns, vocabulary, and phrases
+   - Tone, energy, and emotional expression guidelines
 
-3. **Therapeutic Approach Guidelines**
-   - Specific therapeutic techniques and when to use them
+3. **Therapeutic Approach** (1,200 tokens)
+   - Specific techniques and when to use them
    - Session structure and flow preferences
-   - Decision-making process for interventions
    - How to handle different client presentations
 
-4. **Behavioral Pattern Instructions**
+4. **Behavioral Patterns** (1,000 tokens)
    - Consistent personality traits to maintain
-   - Interpersonal dynamics and relationship building
-   - Emotional responses to different situations
-   - Professional boundary and ethical considerations
+   - Interpersonal dynamics
+   - Professional boundaries
 
-5. **Conversation Flow Guidelines**
-   - How to start and structure sessions
-   - Question types and sequencing preferences
-   - Response patterns for different client emotions/topics
-   - How to handle challenging or sensitive topics
+5. **Conversation Flow** (1,000 tokens)
+   - Session structure (opening, middle, closing)
+   - Question types and sequencing
+   - Handling challenging topics
 
-6. **Individual Quirks and Characteristics**
+6. **Individual Quirks** (500 tokens)
    - Unique verbal and behavioral patterns
-   - Personal touches and individual style elements
-   - Memorable characteristics that make them distinctive
-   - Authentic reactions and responses
+   - Memorable characteristics
 
-7. **Quality Assurance Instructions**
-   - How to maintain character consistency
-   - Warning signs of breaking character
-   - How to recover if character breaks
-   - Continuous improvement guidelines
+7. **Quality & Safety Instructions** (500 tokens)
+   - Character consistency guidelines
+   - Anti-hallucination rules: NEVER fabricate background, credentials, or techniques not in this profile
+   - Acknowledge limitations when asked about uncovered areas
 
-8. **Anti-Hallucination Instructions**
-   - Explicit instruction to NEVER fabricate information about the therapist's background, credentials, or experience that was not established in this profile
-   - Guidance to acknowledge limitations when asked about areas not covered in the analysis
-   - Instruction to stay within established therapeutic boundaries and not invent new specialties or techniques
+Write as a complete, professional system prompt ready for immediate use.`,
 
-The prompt should be comprehensive enough (aim for 25,000-30,000 tokens) that another AI could convincingly roleplay as this exact therapist. Include specific examples and detailed instructions for maintaining authentic character portrayal.
-
-IMPORTANT: The final prompt must explicitly instruct the simulated AI to base all responses on the established profile and to NEVER hallucinate details. It is acceptable for the simulated AI to acknowledge gaps in knowledge rather than fabricating information.
-
-Write this as a complete, professional AI system prompt ready for immediate use.`,
-
-    maxTokens: 32000
+    maxTokens: 6000
   },
 
   /**
-   * STEP 6: Realtime Compression
-   * Compresses the full prompt from Step 5 to fit within 14-15k tokens for Realtime API
-   * Uses Claude's intelligence to preserve critical information while removing redundancy
+   * STEP 6: Realtime Compression (OPTIMIZED)
+   * Reduced from 16k to 8k tokens - target 7-8k output instead of 14-15k
    */
   realtimeCompression: {
-    system: `You are an expert at compressing prompts while preserving ALL essential information.
+    system: `You are an expert at compressing prompts while preserving essential information.
 
-CRITICAL REQUIREMENT: Your compressed output MUST be between 14,000-15,000 tokens.
-This is NOT a maximum - it's a TARGET RANGE. Going below 13,000 tokens means you've
-removed too much critical information.
+CRITICAL TARGET: Output MUST be 7,000-8,000 tokens (not optional - this is required).
 
-Your task: Reduce verbosity while keeping ALL core content:
+Your task: Reduce verbosity while keeping ALL core content.
 
-KEEP (in full detail):
+KEEP (in full):
 - Complete identity and credentials
 - ALL communication patterns and examples
 - ALL therapeutic techniques
-- All safety and anti-hallucination protocols
+- Safety and anti-hallucination protocols
 - Specific phrases and speech patterns
-- Professional decision-making processes
 
 REDUCE (shorten but don't eliminate):
-- Remove redundant examples (keep 2-3 instead of 5-10 per section)
-- Convert verbose paragraphs to concise bullet points
-- Condense lengthy explanations into shorter versions
-- Simplify quality assurance details (but keep core guidelines)
+- Keep 1-2 examples instead of 3-5 per section
+- Convert paragraphs to concise bullets where appropriate
+- Simplify lengthy explanations
 
 DO NOT REMOVE:
 - Any section entirely
@@ -528,31 +454,29 @@ DO NOT REMOVE:
 - Safety protocols
 - Character identity markers
 
-CRITICAL RULES:
-1. The compressed prompt must remain coherent and complete - no mid-sentence truncation
-2. Maintain the essential structure: Identity, Communication, Therapeutic Approach, Behavior, Anti-Hallucination
-3. Preserve exact therapist name, title, and any specific phrases/vocabulary patterns
-4. Keep all anti-hallucination warnings - these are critical for safety
-5. Output a complete, immediately usable prompt that another AI can execute
-
-Your goal: Output 14,000-15,000 tokens (this is REQUIRED, not optional).`,
+RULES:
+1. Output must be coherent and complete - no mid-sentence cuts
+2. Maintain structure: Identity, Communication, Therapeutic Approach, Behavior, Anti-Hallucination
+3. Preserve exact therapist name, title, and key phrases
+4. Keep all safety warnings
+5. Output 7,000-8,000 tokens (REQUIRED)`,
 
     user: (fullPrompt: string) => {
       const estimatedTokens = Math.round(fullPrompt.length / 4);
-      return `Compress this therapist simulation prompt from ${estimatedTokens} tokens to 14,000-15,000 tokens:
+      return `Compress this prompt from ~${estimatedTokens} tokens to 7,000-8,000 tokens:
 
 ${fullPrompt}
 
-IMPORTANT:
-- Target LENGTH: 14,000-15,000 tokens (this is REQUIRED, not optional)
-- Do NOT over-compress - maintain richness and detail
-- Keep ALL sections, just make them more concise
-- If you're below 13,000 tokens, you've compressed too much - add back detail
+**CRITICAL REQUIREMENTS:**
+- Target: 7,000-8,000 tokens (this is REQUIRED)
+- Maintain ALL sections, just more concise
+- Keep richness and detail - don't over-compress
+- If you're below 6,500 tokens, you've removed too much
 
-Output a complete, detailed, usable prompt that fits within 14-15k tokens.`;
+Output a complete, detailed, immediately usable prompt within 7-8k tokens.`;
     },
 
-    maxTokens: 16000
+    maxTokens: 8000
   }
 } as const;
 
