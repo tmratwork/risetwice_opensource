@@ -77,6 +77,8 @@ export default function ChatBotV17Page() {
     isPreparing
   } = useElevenLabsConversation();
 
+  // No automatic cleanup - only manual cleanup via "End Session" button
+
   // Handle conversation start after auth
   const handleLetsTalk = useCallback(async () => {
     console.log('[V17] Authenticated user ready to talk');
@@ -225,7 +227,7 @@ export default function ChatBotV17Page() {
     } finally {
       setLoadingPrompt(false);
     }
-  }, [handleDemoStart, store, startSession, promptError]);
+  }, [store, startSession, promptError]);
 
   // Search therapists (or fetch user's own AI Preview in provider mode)
   const searchTherapists = useCallback(async () => {
