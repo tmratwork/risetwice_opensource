@@ -5,7 +5,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 // Audio combination settings
-const MIN_AUDIO_DURATION_MS = 60000; // 1 minute
+const MIN_AUDIO_DURATION_MS = 10000; // 10 seconds (ElevenLabs minimum)
 const MAX_AUDIO_DURATION_MS = 1200000; // 20 minutes
 
 interface SessionAudio {

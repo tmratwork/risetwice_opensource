@@ -92,12 +92,22 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
             })
           }).then(async (response) => {
             const result = await response.json();
+
             if (result.success && result.skipped) {
               console.log('[S2] ⏭️ Voice cloning skipped: no new audio material');
             } else if (result.success) {
               console.log('[S2] ✅ Voice cloning completed successfully:', result.voice_id);
             } else {
-              console.log('[S2] ⚠️ Voice cloning failed (non-blocking):', result.message);
+              // Handle specific error cases
+              if (result.error === 'NO_AUDIO_SESSIONS' || result.error === 'NO_COMBINED_AUDIO') {
+                console.log('[S2] ℹ️ Voice cloning not ready: No completed practice sessions with audio yet');
+                console.log('[S2] 💡 Voice will be cloned automatically after completing your first practice session');
+              } else if (result.error === 'INSUFFICIENT_AUDIO_DURATION') {
+                console.log('[S2] ℹ️ Voice cloning not ready: Need at least 10 seconds of audio');
+                console.log('[S2] 💡 Complete a longer practice session (10+ seconds) to enable voice cloning');
+              } else {
+                console.log('[S2] ⚠️ Voice cloning failed (non-blocking):', result.message || result.error);
+              }
             }
           }).catch((error) => {
             console.error('[S2] ❌ Background voice cloning failed (non-blocking):', error);
