@@ -143,6 +143,43 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Check actual job status to get accurate AI Preview status
+    let actualAiPreviewStatus = profile?.ai_preview_status || 'not_started';
+    let actualAiPreviewGeneratedAt = profile?.ai_preview_generated_at;
+
+    if (profile?.id) {
+      // Check if there's an active job in s2_ai_preview_jobs
+      const { data: jobs } = await supabase
+        .from('s2_ai_preview_jobs')
+        .select('status, updated_at')
+        .eq('therapist_profile_id', profile.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (jobs && jobs.length > 0) {
+        const latestJob = jobs[0];
+        // If job is processing or pending, override profile status
+        if (latestJob.status === 'processing' || latestJob.status === 'pending') {
+          actualAiPreviewStatus = latestJob.status;
+          actualAiPreviewGeneratedAt = null; // Not generated yet
+        }
+        // If job is completed, verify prompt actually exists
+        else if (latestJob.status === 'completed') {
+          const { data: prompts } = await supabase
+            .from('s2_ai_therapist_prompts')
+            .select('id')
+            .eq('therapist_profile_id', profile.id)
+            .limit(1);
+
+          // If no prompt exists despite job being "completed", mark as not started
+          if (!prompts || prompts.length === 0) {
+            actualAiPreviewStatus = 'not_started';
+            actualAiPreviewGeneratedAt = null;
+          }
+        }
+      }
+    }
+
     return NextResponse.json({
       success: true,
       profile: profile ? {
@@ -165,8 +202,8 @@ export async function GET(request: NextRequest) {
         culturalBackgrounds: profile.cultural_backgrounds,
         otherCulturalBackground: profile.other_cultural_background,
         completionStatus: profile.profile_completion_status,
-        ai_preview_status: profile.ai_preview_status,
-        ai_preview_generated_at: profile.ai_preview_generated_at,
+        ai_preview_status: actualAiPreviewStatus,
+        ai_preview_generated_at: actualAiPreviewGeneratedAt,
         createdAt: profile.created_at,
         updatedAt: profile.updated_at
       } : null
