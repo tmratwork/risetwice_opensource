@@ -67,7 +67,14 @@ export default function ChatBotV17Page() {
   const [promptError, setPromptError] = useState<string | null>(null);
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const [detailedTherapistData, setDetailedTherapistData] = useState<DetailedTherapist | null>(null);
+
+  // ✅ FIX: Use selectors for reactive state (bubble visibility)
+  const isUserSpeaking = useElevenLabsStore((state) => state.isUserSpeaking);
+  const isThinking = useElevenLabsStore((state) => state.isThinking);
+
+  // Keep store object for actions and non-reactive data
   const store = useElevenLabsStore();
+
   const {
     startSession,
     endSession,
@@ -775,7 +782,7 @@ export default function ChatBotV17Page() {
             ))}
 
             {/* User speaking indicator with dancing dots - ElevenLabs VAD detection */}
-            {store.isUserSpeaking && (
+            {isUserSpeaking && (
               <div className="message user" style={{
                 backgroundColor: 'rgba(34, 197, 94, 0.1)',
                 border: '1px solid #22c55e',
@@ -785,7 +792,7 @@ export default function ChatBotV17Page() {
                 padding: '10px'
               }}>
                 <div className="flex space-x-2 items-center">
-                  <span style={{ fontSize: '12px', marginRight: '10px', color: '#22c55e' }}>Speaking...</span>
+                  <span style={{ fontSize: '12px', marginRight: '10px', color: '#22c55e' }}>Listening...</span>
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDuration: '0.6s' }}></div>
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s', animationDuration: '0.6s' }}></div>
                   <div className="w-3 h-3 bg-green-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s', animationDuration: '0.6s' }}></div>
@@ -794,7 +801,7 @@ export default function ChatBotV17Page() {
             )}
 
             {/* AI thinking indicator with dancing dots - matching S2 implementation */}
-            {store.isThinking && (
+            {isThinking && (
               <div className="message assistant" style={{
                 backgroundColor: 'rgba(59, 130, 246, 0.1)',
                 border: '1px solid #3b82f6',

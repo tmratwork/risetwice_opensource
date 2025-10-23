@@ -15,6 +15,7 @@ const logV17 = (message: string, ...args: unknown[]) => {
 
 export function useElevenLabsConversation() {
   const { user } = useAuth();
+  // ✅ Keep store for initial values and non-callback usage
   const store = useElevenLabsStore();
   const [currentAgentId, setCurrentAgentId] = useState<string | null>(null);
   const [isPreparing, setIsPreparing] = useState(false);
@@ -30,13 +31,20 @@ export function useElevenLabsConversation() {
   // Message-based user speaking detection (more reliable than VAD)
   const [isCurrentlyReceivingUserTranscript, setIsCurrentlyReceivingUserTranscript] = useState(false);
 
+  // Track VAD state for user speaking detection
+  const vadDetectedSpeechRef = useRef<boolean>(false);
+  const vadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   // Initialize ElevenLabs conversation hook with agent support and VAD for thinking dots
   const conversation = useConversation({
     onConnect: () => {
+      // ✅ Use getState() for store access in callbacks
+      const state = useElevenLabsStore.getState();
+
       logV17('🔌 Connected to ElevenLabs agent', {
         agentId: currentAgentId,
         userId: user?.uid || 'anonymous',
-        specialist: store.triageSession?.currentSpecialist
+        specialist: state.triageSession?.currentSpecialist
       });
 
       // Log whether custom first message or default greeting will be used
@@ -49,8 +57,8 @@ export function useElevenLabsConversation() {
         logV17('👋 AI Preview will use DEFAULT greeting (no custom opening statement provided)');
       }
 
-      store.setIsConnected(true);
-      store.setConnectionState('connected');
+      state.setIsConnected(true);
+      state.setConnectionState('connected');
       setIsPreparing(false);
 
       // Ensure microphone starts muted like V16
@@ -62,76 +70,102 @@ export function useElevenLabsConversation() {
     },
 
     onDisconnect: () => {
+      // ✅ Use getState() for store access in callbacks
+      const state = useElevenLabsStore.getState();
+
       logV17('🔌 Disconnected from ElevenLabs agent', {
         agentId: currentAgentId,
-        specialist: store.triageSession?.currentSpecialist
+        specialist: state.triageSession?.currentSpecialist
       });
-      store.setIsConnected(false);
-      store.setConnectionState('disconnected');
+      state.setIsConnected(false);
+      state.setConnectionState('disconnected');
       setIsPreparing(false);
 
       // Reset thinking states on disconnect
-      store.setIsUserSpeaking(false);
-      store.setIsThinking(false);
+      state.setIsUserSpeaking(false);
+      state.setIsThinking(false);
+      vadDetectedSpeechRef.current = false;
 
       // Clear custom first message ref
       customFirstMessageRef.current = null;
+    },
+
+    // VAD (Voice Activity Detection) callback - detects when user starts/stops speaking
+    onVadScore: (event: { vadScore: number }) => {
+      // Threshold for detecting speech
+      const speechThreshold = 0.5;
+      const isSpeechDetected = event.vadScore > speechThreshold;
+
+      // Only update state when speech detection changes
+      if (isSpeechDetected && !vadDetectedSpeechRef.current) {
+        console.log('🎤 [VAD] User STARTED speaking');
+        vadDetectedSpeechRef.current = true;
+        useElevenLabsStore.getState().setIsUserSpeaking(true);
+        useElevenLabsStore.getState().setIsThinking(false);
+
+        // Clear any existing timeout
+        if (vadTimeoutRef.current) {
+          clearTimeout(vadTimeoutRef.current);
+        }
+
+      } else if (!isSpeechDetected && vadDetectedSpeechRef.current) {
+        console.log('🎤 [VAD] User STOPPED speaking');
+        vadDetectedSpeechRef.current = false;
+        useElevenLabsStore.getState().setIsUserSpeaking(false);
+
+        // Clear timeout
+        if (vadTimeoutRef.current) {
+          clearTimeout(vadTimeoutRef.current);
+        }
+      }
+
+      // Safety: Force clear after 5 seconds of continuous speech
+      if (isSpeechDetected) {
+        if (vadTimeoutRef.current) {
+          clearTimeout(vadTimeoutRef.current);
+        }
+        vadTimeoutRef.current = setTimeout(() => {
+          console.log('🎤 [VAD] TIMEOUT: Forcing user speech end after 5s');
+          vadDetectedSpeechRef.current = false;
+          useElevenLabsStore.getState().setIsUserSpeaking(false);
+        }, 5000);
+      }
     },
 
 
     // Audio callback - equivalent to OpenAI's onAudioDone (agent starts responding)
     onAudio: (audio: unknown) => {
       logV17('🔊 Agent audio received - clearing thinking state', { hasAudio: !!audio });
-      store.setIsThinking(false); // Clear thinking when agent starts generating audio
+
+      // ✅ Use getState() for store access in callbacks
+      useElevenLabsStore.getState().setIsThinking(false); // Clear thinking when agent starts generating audio
     },
     
     onMessage: (message: unknown) => {
-      logV17('💬 Message received from conversation', {
-        messageType: typeof message,
-        message: message, // Log full message to understand structure
-        agentId: currentAgentId,
-        specialist: store.triageSession?.currentSpecialist,
-        timestamp: new Date().toISOString()
-      });
-
       // Extract and process message content
       const messageData = extractMessageData(message);
+
       if (messageData.text) {
-        // Determine if this is user or assistant message based on message structure
         const role = messageData.isUserMessage ? 'user' : 'assistant';
 
-        logV17(`💬 ${role} message received`, {
-          text: messageData.text,
-          isFinal: messageData.isFinal,
-          source: messageData.isUserMessage ? 'typed_or_voice' : 'ai_response',
-          messageStructure: typeof message === 'object' ? Object.keys(message as object) : 'primitive'
-        });
+        console.log(`💬 [MSG] ${role}:`, messageData.text.substring(0, 50));
 
-        // Message-based thinking dots state management (more reliable than VAD)
+        // Message-based thinking dots state management
         if (messageData.isUserMessage) {
-          if (!messageData.isFinal) {
-            // User is currently speaking (tentative transcript) - equivalent to OpenAI's onSpeechStarted
-            if (!isCurrentlyReceivingUserTranscript) {
-              logV17('🎤 MSG: User started speaking (tentative transcript)');
-              store.setIsUserSpeaking(true);
-              store.setIsThinking(false);
-              setIsCurrentlyReceivingUserTranscript(true);
-            }
-          } else {
-            // User finished speaking (final transcript) - equivalent to OpenAI's onSpeechStopped
-            logV17('🎤 MSG: User finished speaking (final transcript) - starting AI thinking');
-            store.setIsUserSpeaking(false);
-            store.setIsThinking(true);
-            setIsCurrentlyReceivingUserTranscript(false);
-          }
-        } else if (!messageData.isUserMessage && messageData.isFinal) {
-          // AI response is final - stop thinking
-          logV17('🧠 AI response completed - clearing thinking state');
-          store.setIsThinking(false);
+          console.log('🧠 [MSG] User message received → Thinking...');
+          // Force clear listening state when user message arrives
+          vadDetectedSpeechRef.current = false;
+          useElevenLabsStore.getState().setIsUserSpeaking(false);
+          useElevenLabsStore.getState().setIsThinking(true);
+        } else {
+          console.log('✅ [MSG] AI response received → Clear thinking');
+          useElevenLabsStore.getState().setIsThinking(false);
         }
 
         // Prevent duplicate messages (same text within 2 seconds)
-        const recentMessages = store.conversationHistory.slice(-3); // Check last 3 messages
+        // ✅ Use getState() for store access in callbacks
+        const state = useElevenLabsStore.getState();
+        const recentMessages = state.conversationHistory.slice(-3); // Check last 3 messages
         const isDuplicate = recentMessages.some(msg =>
           msg.text === messageData.text &&
           msg.role === role &&
@@ -139,13 +173,13 @@ export function useElevenLabsConversation() {
         );
 
         if (!isDuplicate) {
-          store.addMessage({
+          state.addMessage({
             id: `v17-${role}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             role: role,
             text: messageData.text,
             timestamp: new Date().toISOString(),
             isFinal: messageData.isFinal,
-            specialist: store.triageSession?.currentSpecialist || 'triage'
+            specialist: state.triageSession?.currentSpecialist || 'triage'
           });
         } else {
           logV17('🚫 Skipping duplicate message', {
@@ -161,7 +195,9 @@ export function useElevenLabsConversation() {
         error: error instanceof Error ? error.message : String(error),
         agentId: currentAgentId
       });
-      store.setConnectionState('failed');
+
+      // ✅ Use getState() for store access in callbacks
+      useElevenLabsStore.getState().setConnectionState('failed');
       setIsPreparing(false);
     },
 
@@ -337,7 +373,8 @@ export function useElevenLabsConversation() {
         const isSpeaking = conversation.isSpeaking || false;
 
         if (isSpeaking && !lastIsSpeaking) {
-          store.setIsThinking(false);
+          // ✅ Use getState() for store access in callbacks
+          useElevenLabsStore.getState().setIsThinking(false);
           // Only log speaking transitions if V17 logs enabled
           if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
             console.log('[V17] 🔊 Agent started speaking');
@@ -350,9 +387,11 @@ export function useElevenLabsConversation() {
         }
 
         if (Math.abs(outputVolume - lastOutputVolume) > 0.01 || isSpeaking !== lastIsSpeaking) {
-          store.setCurrentVolume(outputVolume);
-          store.setAudioLevel(Math.floor(outputVolume * 100));
-          store.setIsAudioPlaying(isSpeaking);
+          // ✅ Use getState() for store access in callbacks
+          const state = useElevenLabsStore.getState();
+          state.setCurrentVolume(outputVolume);
+          state.setAudioLevel(Math.floor(outputVolume * 100));
+          state.setIsAudioPlaying(isSpeaking);
 
           lastOutputVolume = outputVolume;
           lastIsSpeaking = isSpeaking;
@@ -606,36 +645,31 @@ function extractMessageData(message: unknown): {
 
   if (typeof message === 'object' && message !== null) {
     const msgObj = message as Record<string, unknown>;
-    
-    // Extract text content
+
+    // Extract text content - ElevenLabs uses "message" field
     const text = (
+      (msgObj.message as string) ||  // ✅ ElevenLabs uses this
       (msgObj.content as string) ||
       (msgObj.text as string) ||
-      (msgObj.message as string) ||
       (msgObj.data as string) ||
       (msgObj.transcript as string) ||
       ''
     );
 
     // Determine if this is a user message based on message structure
-    // ElevenLabs typically uses 'type', 'source', or 'role' fields
+    // ✅ ElevenLabs uses source: "user" or source: "ai"
     const isUserMessage = (
+      msgObj.source === 'user' ||  // ✅ ElevenLabs format
       msgObj.type === 'user_transcript' ||
-      msgObj.source === 'user' ||
       msgObj.role === 'user' ||
       msgObj.speaker === 'user' ||
       (msgObj.type === 'transcript' && msgObj.source !== 'agent') ||
       false
     );
 
-    // Determine if message is final (completed transcription)
-    const isFinal = (
-      msgObj.is_final === true ||
-      msgObj.isFinal === true ||
-      msgObj.final === true ||
-      msgObj.type !== 'partial_transcript' ||
-      !text.endsWith('...') // Tentative transcripts often end with ...
-    );
+    // ⚠️ ElevenLabs doesn't send tentative transcripts - all messages are final
+    // We'll use VAD events for "Listening..." state instead
+    const isFinal = true; // Always true for ElevenLabs messages
 
     return {
       text,

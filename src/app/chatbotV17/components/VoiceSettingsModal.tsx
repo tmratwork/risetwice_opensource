@@ -73,7 +73,7 @@ function InfoTooltip({ content, position = 'top' }: { content: string; position?
 }
 
 export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps) {
-  console.log('[VoiceSettingsModal] Rendered with isOpen:', isOpen);
+  // Removed verbose logging
 
   const { user } = useAuth();
   const searchParams = useSearchParams();
@@ -269,11 +269,11 @@ export function VoiceSettingsModal({ isOpen, onClose }: VoiceSettingsModalProps)
 
 
   if (!isOpen) {
-    console.log('[VoiceSettingsModal] Not rendering - isOpen is false');
+    // Not rendering - modal is closed
     return null;
   }
 
-  console.log('[VoiceSettingsModal] Rendering modal UI');
+  // Rendering modal UI
 
   return (
     <div

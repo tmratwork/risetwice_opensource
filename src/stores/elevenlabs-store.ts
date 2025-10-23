@@ -193,8 +193,14 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
   setCurrentVolume: (volume) => set({ currentVolume: volume }),
   setAudioLevel: (level) => set({ audioLevel: level }),
   setIsAudioPlaying: (playing) => set({ isAudioPlaying: playing }),
-  setIsThinking: (thinking) => set({ isThinking: thinking }),
-  setIsUserSpeaking: (speaking) => set({ isUserSpeaking: speaking }),
+  setIsThinking: (thinking) => {
+    console.log('🧠 [STORE] isThinking:', thinking);
+    set({ isThinking: thinking });
+  },
+  setIsUserSpeaking: (speaking) => {
+    console.log('🎤 [STORE] isUserSpeaking:', speaking);
+    set({ isUserSpeaking: speaking });
+  },
   setIsMuted: (muted) => set({ isMuted: muted }),
   setIsAudioOutputMuted: (muted) => set({ isAudioOutputMuted: muted }),
 
