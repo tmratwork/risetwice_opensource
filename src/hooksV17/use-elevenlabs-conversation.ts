@@ -28,8 +28,7 @@ export function useElevenLabsConversation() {
   const isMicrophoneMutedRef = useRef<boolean>(store.isMuted);
   const originalGetUserMediaRef = useRef<typeof navigator.mediaDevices.getUserMedia | null>(null);
 
-  // Message-based user speaking detection (more reliable than VAD)
-  const [isCurrentlyReceivingUserTranscript, setIsCurrentlyReceivingUserTranscript] = useState(false);
+  // VAD-based user speaking detection (no longer using message-based detection for V17)
 
   // Track VAD state for user speaking detection
   const vadDetectedSpeechRef = useRef<boolean>(false);
@@ -624,10 +623,7 @@ export function useElevenLabsConversation() {
     conversation: store.conversationHistory,
     
     // Raw conversation object for advanced usage
-    conversationInstance: conversation,
-
-    // Message-based debugging info
-    isReceivingUserTranscript: isCurrentlyReceivingUserTranscript
+    conversationInstance: conversation
   };
 }
 
