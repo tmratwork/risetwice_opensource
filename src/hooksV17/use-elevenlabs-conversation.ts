@@ -374,23 +374,21 @@ export function useElevenLabsConversation() {
 
       try {
         const outputVolume = conversation.getOutputVolume?.() || 0;
-        const isSpeaking = conversation.isSpeaking || false;
+
+        // ✅ FIX: Use volume threshold instead of isSpeaking property
+        // ElevenLabs doesn't reliably set isSpeaking, so detect speech by volume
+        const isSpeaking = outputVolume > 0.01; // Speaking if volume above threshold
 
         if (isSpeaking && !lastIsSpeaking) {
+          console.log('🔊 [ORB] Agent STARTED speaking (volume detected)');
           // ✅ Use getState() for store access in callbacks
           useElevenLabsStore.getState().setIsThinking(false);
-          // Only log speaking transitions if V17 logs enabled
-          if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
-            console.log('[V17] 🔊 Agent started speaking');
-          }
         } else if (!isSpeaking && lastIsSpeaking) {
-          // Only log speaking transitions if V17 logs enabled
-          if (process.env.NEXT_PUBLIC_ENABLE_V17_LOGS === 'true') {
-            console.log('[V17] 🔇 Agent stopped speaking');
-          }
+          console.log('🔇 [ORB] Agent STOPPED speaking (volume dropped)');
         }
 
         if (Math.abs(outputVolume - lastOutputVolume) > 0.01 || isSpeaking !== lastIsSpeaking) {
+          console.log('🎵 [ORB] Volume:', outputVolume.toFixed(3), 'isSpeaking:', isSpeaking);
           // ✅ Use getState() for store access in callbacks
           const state = useElevenLabsStore.getState();
           state.setCurrentVolume(outputVolume);
