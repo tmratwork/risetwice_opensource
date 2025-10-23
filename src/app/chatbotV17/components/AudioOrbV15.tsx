@@ -25,15 +25,15 @@ export function AudioOrbV15({ isFunctionExecuting = false }: AudioOrbV15Props) {
   const currentVolume = useElevenLabsStore(state => state.currentVolume);
   const audioLevel = useElevenLabsStore(state => state.audioLevel);
   const setIsMuted = useElevenLabsStore(state => state.setIsMuted);
-  
+
   // Toggle mute function for V17
   const toggleMute = () => {
     setIsMuted(!isMuted);
   };
-  
+
   // Use audioLevel for effective volume (with fallback to currentVolume)
   const effectiveVolume = audioLevel > 0 ? audioLevel : currentVolume;
-  
+
   return (
     <BlueOrbVoiceUI
       isSpeaking={isAudioPlaying}
@@ -44,9 +44,9 @@ export function AudioOrbV15({ isFunctionExecuting = false }: AudioOrbV15Props) {
       onClick={toggleMute}
       particleSizeMin={15}
       particleSizeMax={35}
-      particleSpeedMin={0.1}
-      particleSpeedMax={0.4}
-      transitionSpeed={0.25}
+      particleSpeedMin={0.03}
+      particleSpeedMax={0.15}
+      transitionSpeed={0.1}
       size={125}
       className="blue-orb-v17"
       draggable={false}
