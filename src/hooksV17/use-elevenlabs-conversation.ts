@@ -109,9 +109,12 @@ export function useElevenLabsConversation() {
         }
 
       } else if (!isSpeechDetected && vadDetectedSpeechRef.current) {
-        console.log('🎤 [VAD] User STOPPED speaking');
+        console.log('🎤 [VAD] User STOPPED speaking → Show Thinking...');
         vadDetectedSpeechRef.current = false;
         useElevenLabsStore.getState().setIsUserSpeaking(false);
+
+        // ✅ Show "Thinking..." immediately when user stops speaking
+        useElevenLabsStore.getState().setIsThinking(true);
 
         // Clear timeout
         if (vadTimeoutRef.current) {
@@ -125,9 +128,10 @@ export function useElevenLabsConversation() {
           clearTimeout(vadTimeoutRef.current);
         }
         vadTimeoutRef.current = setTimeout(() => {
-          console.log('🎤 [VAD] TIMEOUT: Forcing user speech end after 5s');
+          console.log('🎤 [VAD] TIMEOUT: Forcing user speech end after 5s → Show Thinking...');
           vadDetectedSpeechRef.current = false;
           useElevenLabsStore.getState().setIsUserSpeaking(false);
+          useElevenLabsStore.getState().setIsThinking(true);
         }, 5000);
       }
     },
@@ -152,11 +156,11 @@ export function useElevenLabsConversation() {
 
         // Message-based thinking dots state management
         if (messageData.isUserMessage) {
-          console.log('🧠 [MSG] User message received → Thinking...');
-          // Force clear listening state when user message arrives
+          console.log('💬 [MSG] User message received (thinking already showing)');
+          // Force clear listening state when user message arrives (safety)
           vadDetectedSpeechRef.current = false;
           useElevenLabsStore.getState().setIsUserSpeaking(false);
-          useElevenLabsStore.getState().setIsThinking(true);
+          // Don't set thinking here - already set by VAD when user stopped speaking
         } else {
           console.log('✅ [MSG] AI response received → Clear thinking');
           useElevenLabsStore.getState().setIsThinking(false);
