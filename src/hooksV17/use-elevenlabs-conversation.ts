@@ -387,7 +387,6 @@ export function useElevenLabsConversation() {
         }
 
         if (Math.abs(outputVolume - lastOutputVolume) > 0.01 || isSpeaking !== lastIsSpeaking) {
-          console.log('🎵 [ORB] Volume:', outputVolume.toFixed(3), 'isSpeaking:', isSpeaking);
           // ✅ Use getState() for store access in callbacks
           const state = useElevenLabsStore.getState();
           state.setCurrentVolume(outputVolume);

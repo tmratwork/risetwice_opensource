@@ -84,7 +84,57 @@ export default function ChatBotV17Page() {
     isPreparing
   } = useElevenLabsConversation();
 
-  // No automatic cleanup - only manual cleanup via "End Session" button
+  // Track if cleanup has already been initiated to prevent double cleanup
+  const cleanupInitiatedRef = useRef(false);
+
+  // Reusable cleanup function (NOT async to use in useEffect cleanup)
+  const performCleanup = useCallback(() => {
+    if (cleanupInitiatedRef.current) {
+      return;
+    }
+
+    cleanupInitiatedRef.current = true;
+
+    try {
+      // WebRTC cleanup (fire-and-forget since we're unmounting/navigating)
+      if (isConnected) {
+        endSession().catch(err =>
+          console.error('[V17] Error during navigation cleanup:', err)
+        );
+      }
+
+      // Clear conversation history
+      store.clearConversation();
+    } catch (error) {
+      console.error('[V17] Cleanup error:', error);
+    }
+  }, [isConnected, endSession, store]);
+
+  // Handle navigation away from page (React navigation - logo click, Link components)
+  useEffect(() => {
+    return () => {
+      performCleanup();
+    };
+  }, [performCleanup]);
+
+  // Handle browser navigation (back button, refresh, close tab)
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      performCleanup();
+
+      // Optional: Show warning if session is active
+      if (isConnected) {
+        e.preventDefault();
+        e.returnValue = ''; // Some browsers require this
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [performCleanup, isConnected]);
 
   // Handle conversation start after auth
   const handleLetsTalk = useCallback(async () => {
@@ -370,14 +420,14 @@ export default function ChatBotV17Page() {
     setShowMatching(true);
   }, []);
 
-  // Handle back to matching from chat
+  // Handle back to matching from chat (explicit "End Session" button)
   const handleBackToMatching = useCallback(async () => {
-    console.log('[V17] Ending chat and returning to matching');
+    // Reset flag first since this is a deliberate user action (not auto-cleanup)
+    cleanupInitiatedRef.current = false;
 
     try {
-      // End the WebRTC session first
+      // End the WebRTC session first (await since this is explicit user action)
       if (isConnected) {
-        console.log('[V17] Ending WebRTC session...');
         await endSession();
       }
     } catch (error) {
@@ -393,8 +443,6 @@ export default function ChatBotV17Page() {
 
     // Clear conversation history
     store.clearConversation();
-
-    console.log('[V17] ✅ Chat ended, returned to matching screen');
   }, [store, isConnected, endSession, setChatStateTherapist]);
 
   // Register/unregister handler using custom events
