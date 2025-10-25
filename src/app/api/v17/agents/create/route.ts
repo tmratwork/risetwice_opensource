@@ -48,7 +48,7 @@ const supabase = createClient(
 // FETCHES existing tools from dashboard - DOES NOT create new tools
 async function getExistingV17Tools(): Promise<string[]> {
   logV17('🔍 Fetching existing ElevenLabs tools from dashboard');
-  
+
   try {
     // ✅ CORRECT: Fetch existing tools from ElevenLabs dashboard
     // ❌ WRONG: Creating new tools with POST requests
@@ -63,9 +63,9 @@ async function getExistingV17Tools(): Promise<string[]> {
 
     if (!response.ok) {
       const errorText = await response.text();
-      logV17('❌ Failed to fetch existing tools', { 
-        status: response.status, 
-        error: errorText 
+      logV17('❌ Failed to fetch existing tools', {
+        status: response.status,
+        error: errorText
       });
       return [];
     }
@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
       demoPromptAppend, // Optional demo prompt to append to base instructions
       voicePreferences // Optional voice preferences from localStorage
     } = body;
-    
+
     console.log(`[V17] 🚨 FORCE LOG: Request body parsed - voiceId: ${voiceId}, specialistType: ${specialistType}, hasDemo: ${!!demoPromptAppend}`);
 
     logV17('🤖 Creating ElevenLabs agent', {
@@ -224,7 +224,7 @@ export async function POST(request: NextRequest) {
 
     // V17: Update the existing ElevenLabs agent with Supabase instructions
     const existingAgentId = process.env.NEXT_PUBLIC_ELEVENLABS_AGENT_ID;
-    
+
     if (!existingAgentId) {
       throw new Error('NEXT_PUBLIC_ELEVENLABS_AGENT_ID not configured');
     }
@@ -251,23 +251,23 @@ export async function POST(request: NextRequest) {
     // ⚠️ DO NOT modify this to create tools dynamically!
     // Get existing tools from ElevenLabs dashboard instead of creating new ones
     const toolIds = await getExistingV17Tools();
-    
+
     // If no tools were fetched, use empty array (agent will work without tools)
     if (toolIds.length === 0) {
       logV17('⚠️ No existing tools found - agent will work without tool calling capability');
     }
-    
+
     // Update the agent with our Supabase instructions using NEW 2025 API STRUCTURE
     try {
       console.log(`[V17] 🚨 FORCE LOG: About to PATCH agent with voice_id: ${voiceConfig.voice_id} and ${toolIds.length} tool IDs`);
       console.log(`[V17] 🔧 TOOL IDS:`, toolIds);
-      
+
       const patchPayload = {
         conversation_config: {
           agent: {
             prompt: {
               prompt: finalPromptContent,
-              first_message: "Hello! I'm here to provide mental health support. How can I help you today?",
+              first_message: "Hello! What type of assistance are you looking for today?",
               tool_ids: toolIds,  // NEW: Use tool IDs instead of tools array
               tools: []  // Empty array instead of null for ElevenLabs API validation
             }
@@ -278,9 +278,9 @@ export async function POST(request: NextRequest) {
         name: `RiseTwice ${specialistType} Agent`,
         tags: ["mental-health", specialistType, "risetwice"]
       };
-      
+
       console.log(`[V17] 🔧 PATCH PAYLOAD:`, JSON.stringify(patchPayload, null, 2));
-      
+
       // Write full payload to file for debugging
       try {
         const { writeFileSync } = await import('fs');
@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
       } catch (e) {
         console.log('[V17] Could not write debug file:', e);
       }
-      
+
       const updateResponse = await fetch(`${ELEVENLABS_API_BASE}/convai/agents/${existingAgentId}`, {
         method: 'PATCH',
         headers: {
@@ -312,7 +312,7 @@ export async function POST(request: NextRequest) {
       console.log(`[V17] 🚨 FORCE LOG: PATCH SUCCESS - Voice should now be: ${voiceConfig.voice_id}`);
       console.log(`[V17] 🚨 FORCE LOG: Response voice_id: ${updatedAgent.conversation_config?.tts?.voice_id || 'NOT SET'}`);
       console.log(`[V17] 🔧 ELEVENLABS RESPONSE TOOL IDs:`, JSON.stringify(updatedAgent.conversation_config?.agent?.prompt?.tool_ids || 'NO TOOL IDS', null, 2));
-      
+
       // Write ElevenLabs response to file for debugging
       try {
         const fsModule = await import('fs');
@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
       } catch (e) {
         console.log('[V17] Could not write debug response file:', e);
       }
-      
+
       logV17('✅ ElevenLabs agent updated successfully', {
         agentId: updatedAgent.agent_id,
         hasInstructions: !!updatedAgent.conversation_config?.agent?.prompt?.prompt,
@@ -348,7 +348,7 @@ export async function POST(request: NextRequest) {
       logV17('❌ Failed to update ElevenLabs agent, using existing configuration', {
         error: updateError instanceof Error ? updateError.message : String(updateError)
       });
-      
+
       // Agent info already initialized above, just log the error
     }
 
@@ -382,7 +382,7 @@ export async function POST(request: NextRequest) {
           const elevenLabsPrompt = agentData.conversation_config?.agent?.prompt?.prompt || '';
           const supabasePrompt = aiPrompt.prompt_content || '';
           const promptsMatch = elevenLabsPrompt.includes(supabasePrompt.substring(0, 500));
-          
+
           console.log(`[V17] 🔍 PROMPT COMPARISON:`, {
             supabasePromptLength: supabasePrompt.length,
             elevenLabsPromptLength: elevenLabsPrompt.length,
@@ -413,7 +413,7 @@ export async function POST(request: NextRequest) {
       stack: error instanceof Error ? error.stack : undefined
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       error: 'Failed to create ElevenLabs agent',
       details: error instanceof Error ? error.message : String(error)
     }, { status: 500 });
@@ -448,8 +448,8 @@ export async function GET(request: NextRequest) {
 
   } catch (error) {
     logV17('❌ Error fetching ElevenLabs agents', { error });
-    return NextResponse.json({ 
-      error: 'Failed to fetch agents' 
+    return NextResponse.json({
+      error: 'Failed to fetch agents'
     }, { status: 500 });
   }
 }
