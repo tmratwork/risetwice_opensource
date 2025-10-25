@@ -23,7 +23,8 @@ interface GreetingType {
 
 const GREETING_TYPES: GreetingType[] = [
   { type: 'resources', description: 'Resource Locator Greeting' },
-  { type: 'triage', description: 'Triage AI Initial Greeting' },
+  { type: 'triage', description: 'Triage AI Initial Greeting (V16)' },
+  { type: 'v18_patient_intake', description: 'V18 Patient Intake Greeting' },
   { type: 'crisis', description: 'Crisis Support Greeting' },
   { type: 'general', description: 'General Support Greeting' }
 ];

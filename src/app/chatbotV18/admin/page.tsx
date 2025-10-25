@@ -294,9 +294,6 @@ export default function V16AdminPage() {
         <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 shadow-lg rounded-lg p-6 border-2 border-orange-300 dark:border-orange-700">
           <div className="flex items-center space-x-3 mb-4">
             <h2 className="text-xl font-semibold text-orange-900 dark:text-orange-100">V18 Patient Intake System Prompts</h2>
-            <span className="px-3 py-1 text-sm bg-orange-500 text-white rounded-full font-medium">
-              New V18
-            </span>
           </div>
           <p className="text-sm text-orange-800 dark:text-orange-200 mb-6">
             Configure V18 patient intake AI instructions. This is a separate system from V16 with its own dedicated prompt and API endpoints.
@@ -331,6 +328,34 @@ export default function V16AdminPage() {
                 </div>
               </div>
             ))}
+
+            {/* V18 Greeting Management */}
+            <div className="border border-orange-300 dark:border-orange-600 rounded-lg p-4 bg-white dark:bg-gray-800">
+              <div className="flex items-center justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                      V18 Greeting Management
+                    </h3>
+                    <span className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded">
+                      V18 Patient Intake
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Manage V18 patient intake greeting (select &quot;V18 Patient Intake Greeting&quot; type in the admin interface)
+                  </p>
+                </div>
+                <Link
+                  href="/chatbotV16/admin/greetings"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors ml-4"
+                >
+                  <span>Edit</span>
+                  <ExternalLink size={16} />
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
 

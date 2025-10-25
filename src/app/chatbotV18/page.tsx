@@ -3158,7 +3158,7 @@ Time: ${new Date().toLocaleString()}`);
         // Get user's language preference for the API call
         const languagePreference = getStoredLanguagePreference(!!user);
         const promptApiUrl = `/api/v18/load-prompt?type=v18_patient_intake&userId=${user?.uid || 'anonymous'}&language=${languagePreference}`;
-        const greetingApiUrl = `/api/v16/greeting-prompt?type=triage&language=${languagePreference}${user?.uid ? `&userId=${user.uid}` : ''}`;
+        const greetingApiUrl = `/api/v16/greeting-prompt?type=v18_patient_intake&language=${languagePreference}${user?.uid ? `&userId=${user.uid}` : ''}`;
 
         // Add comprehensive multilingual support logging
         const logMultilingualSupport = (message: string, ...args: unknown[]) => {
