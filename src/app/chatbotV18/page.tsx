@@ -150,6 +150,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   // When false, shows microphone button instead
   const [showAudioControls, setShowAudioControls] = useState(false);
 
+  // V18: Pending send ref - user clicked ↑ before transcript was ready (using ref for synchronous access)
+  const pendingSendRef = useRef(false);
+
   // Listen for function execution events to update visual indicator
   useEffect(() => {
     const handleFunctionStart = () => {
@@ -434,8 +437,59 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
           const newConversation = [...filteredConversation, userBubble];
 
-          // If transcript is complete, add a "Tap ↑ to send" hint bubble
+          // If transcript is complete, check for pending send or add hint bubble
           if (isComplete && data) {
+            console.log('[V18] Transcript complete, checking pending send. pendingSendRef:', pendingSendRef.current, 'data:', data);
+            // V18: Check if user already clicked ↑ before transcript was ready
+            if (pendingSendRef.current) {
+              console.log('[V18] Transcript complete and pending send detected - auto-sending');
+
+              // Clear pending flag
+              pendingSendRef.current = false;
+
+              // Mark the transcript bubble as final
+              const transcriptWithFinal = newConversation.map(msg => {
+                if (msg.role === "user" && !msg.isFinal && msg.text === data) {
+                  return { ...msg, isFinal: true, status: "final" as const };
+                }
+                return msg;
+              });
+
+              // Add "Thinking..." bubble for AI response
+              const thinkingBubble: Conversation = {
+                id: `assistant-thinking-${Date.now()}`,
+                role: "assistant",
+                text: "Thinking...",
+                timestamp: new Date().toISOString(),
+                isFinal: false,
+                status: "thinking"
+              };
+
+              useWebRTCStore.setState({
+                conversation: [...transcriptWithFinal, thinkingBubble]
+              });
+
+              // Send to AI via WebRTC
+              console.log('[V18] Auto-sending message to AI:', data);
+              const success = sendMessage(data);
+
+              if (success) {
+                console.log('[V18] Auto-send successful');
+
+                // V18 UI: Hide audio controls and mute microphone
+                setShowAudioControls(false);
+                // Only toggle mute if currently unmuted
+                if (!isMuted) {
+                  toggleMute();
+                }
+              } else {
+                console.error('[V18] Auto-send failed');
+              }
+
+              return;
+            }
+
+            // No pending send - add hint bubble as usual
             const hintBubble: Conversation = {
               id: `user-hint-${id}`,
               role: "user",
@@ -1114,8 +1168,11 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     );
     const lastUserMessage = userMessages[userMessages.length - 1];
 
-    if (!lastUserMessage || !lastUserMessage.text || lastUserMessage.text === "Listening...") {
-      console.log('[V18] Send aborted - no transcript to send');
+    if (!lastUserMessage || !lastUserMessage.text || lastUserMessage.text === "Listening..." || lastUserMessage.text.length < 5) {
+      console.log('[V18] Transcript not ready yet - setting pending send flag');
+      console.log('[V18] Current pendingSendRef before setting:', pendingSendRef.current);
+      console.log('[V18] Last user message:', lastUserMessage);
+      pendingSendRef.current = true;
       return;
     }
 
