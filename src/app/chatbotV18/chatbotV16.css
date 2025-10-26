@@ -50,6 +50,7 @@
   overflow-y: auto; /* Now the scroll container for all content */
   overflow-x: hidden; /* Prevent horizontal overflow */
   min-height: 0; /* Critical: allow shrinking so inheritance works */
+  background-color: var(--bg-secondary);
 }
 
 /* Light/Dark theme variables */

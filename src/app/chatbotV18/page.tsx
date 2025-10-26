@@ -145,6 +145,11 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   // Function execution state for visual indicator
   const [isFunctionExecuting, setIsFunctionExecuting] = useState(false);
 
+  // V18 Audio UI: Controls visibility state
+  // When true, shows bottom audio control bar (X, wave, ↑)
+  // When false, shows microphone button instead
+  const [showAudioControls, setShowAudioControls] = useState(false);
+
   // Listen for function execution events to update visual indicator
   useEffect(() => {
     const handleFunctionStart = () => {
@@ -188,6 +193,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const sendMessage = useWebRTCStore(state => state.sendMessage);
   const addConversationMessage = useWebRTCStore(state => state.addConversationMessage);
   const toggleAudioOutputMute = useWebRTCStore(state => state.toggleAudioOutputMute);
+  const toggleMute = useWebRTCStore(state => state.toggleMute);
   const disconnect = useWebRTCStore(state => state.disconnect);
 
   // Smart Send state and actions
@@ -324,6 +330,22 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     // If no saved preference, use default (now true from store)
   }, [setSmartSendEnabled]); // Only run once on mount
 
+  // V18: Auto-mute microphone and enable manual send mode when WebRTC connection is established
+  useEffect(() => {
+    if (isConnected) {
+      // Enable manual send mode to prevent "Thinking..." from auto-showing
+      useWebRTCStore.setState({ manualSendMode: true });
+      console.log('[V18] Enabled manual send mode');
+
+      // Auto-mute microphone on initial connection
+      const currentMuteState = useWebRTCStore.getState().isMuted;
+      if (!currentMuteState) {
+        console.log('[V18] WebRTC connected - auto-muting microphone');
+        toggleMute();
+      }
+    }
+  }, [isConnected, toggleMute]); // Only run when connection state changes, not mute state
+
   // V18 Voice Mode: Recording duration timer
   useEffect(() => {
     if (!isRecording) {
@@ -371,30 +393,35 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         const updatedConversation = [...currentState.conversation];
 
         if (messageRole === "user") {
-          // V18 Voice Mode: Store transcript temporarily instead of immediately displaying
-          // User must explicitly click upload button to send message
-          console.log('[V18] Voice transcript complete - storing in pendingTranscript:', data);
-          setPendingTranscript(data);
-          setIsRecording(true); // Show voice recording modal
+          // V18 Voice Mode: Just show the transcript as the user speaks
+          // Mic stays unmuted and listening until user presses X or ↑
+          console.log('[V18] Voice transcript received:', data);
 
-          // Remove ALL non-final user bubbles (including "Listening...", "Thinking...", and any old "Tap ↑ to send" bubbles)
+          // V18 UI: Auto-show audio controls when user speaks
+          setShowAudioControls(true);
+
+          // Remove ALL non-final user bubbles (including any "Thinking..." bubbles)
           const filteredConversation = updatedConversation.filter(msg =>
             !(msg.role === "user" && !msg.isFinal)
           );
 
-          // Add a "ready to send" indicator bubble
-          const readyBubble: Conversation = {
-            id: `user-ready-${id}`,
+          // Show the transcript text in the user bubble (or "Listening..." if empty)
+          // Never show "Thinking..." in V18 - mic stays listening
+          const userBubble: Conversation = {
+            id: `user-transcript-${id}`,
             role: "user",
-            text: "Tap ↑ to send",
+            text: data || "Listening...",
             timestamp: new Date().toISOString(),
             isFinal: false,
             status: "speaking"
           };
 
           useWebRTCStore.setState({
-            conversation: [...filteredConversation, readyBubble]
+            conversation: [...filteredConversation, userBubble]
           });
+
+          // Don't send to AI yet - user must click ↑
+          return;
         } else {
           // For assistant messages, use existing logic
           const finalMessage: Conversation = {
@@ -993,30 +1020,37 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   }, [logSmartSend]);
 
 
-  // V18 Voice Mode: Handle cancel recording
+  // V18 Voice Mode: Handle cancel recording (X button)
   const handleCancelRecording = useCallback(() => {
-    console.log('[V18] Cancel recording clicked');
+    console.log('[V18] Cancel recording clicked (X button)');
 
     // Flash red feedback
     setCancelButtonPressed(true);
     setTimeout(() => setCancelButtonPressed(false), 150);
 
-    setIsRecording(false);
-    setPendingTranscript(null);
-    setRecordingDuration(0);
-  }, []);
+    // Remove any non-final user bubbles (clear the transcript)
+    const currentState = useWebRTCStore.getState();
+    const filteredConversation = currentState.conversation.filter(msg =>
+      !(msg.role === "user" && !msg.isFinal)
+    );
+    useWebRTCStore.setState({ conversation: filteredConversation });
+
+    // V18 UI: Hide audio controls and mute microphone
+    setShowAudioControls(false);
+    // Only toggle mute if currently unmuted
+    if (!isMuted) {
+      console.log('[V18] Muting microphone after cancel');
+      toggleMute();
+    }
+  }, [isMuted, toggleMute]);
 
   // V18 Voice Mode: Handle send recording (upload button)
-  // Uses pendingTranscript (from voice) instead of userMessage (from text input)
+  // Captures the current transcript from the user bubble and sends it
   const handleSendRecording = useCallback(() => {
-    console.log('[V18] Send recording clicked', {
-      hasPendingTranscript: !!pendingTranscript,
-      pendingTranscriptLength: pendingTranscript?.length || 0,
-      isConnected
-    });
+    console.log('[V18] Send recording clicked (↑ button)');
 
-    if (!pendingTranscript || !isConnected) {
-      console.log('[V18] Send aborted - no transcript or not connected');
+    if (!isConnected) {
+      console.log('[V18] Send aborted - not connected');
       return;
     }
 
@@ -1024,39 +1058,53 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     setUploadButtonPressed(true);
     setTimeout(() => setUploadButtonPressed(false), 150);
 
-    // Remove ALL non-final user bubbles before adding final message
+    // Get the current transcript from the last non-final user message
     const currentState = useWebRTCStore.getState();
+    const lastUserMessage = currentState.conversation.filter(msg => msg.role === "user" && !msg.isFinal).pop();
+
+    if (!lastUserMessage || !lastUserMessage.text || lastUserMessage.text === "Listening...") {
+      console.log('[V18] Send aborted - no transcript to send');
+      return;
+    }
+
+    const transcriptToSend = lastUserMessage.text;
+    console.log('[V18] Transcript to send:', transcriptToSend);
+
+    // Remove ALL non-final user bubbles before adding final message
     const filteredConversation = currentState.conversation.filter(msg =>
       !(msg.role === "user" && !msg.isFinal)
     );
     useWebRTCStore.setState({ conversation: filteredConversation });
 
-    // Add message to conversation (shows in UI bubble)
+    // Add message to conversation (shows in UI bubble as final)
     const userMessageObj: Conversation = {
       id: `user-${Date.now()}`,
       role: "user",
-      text: pendingTranscript,
+      text: transcriptToSend,
       timestamp: new Date().toISOString(),
       isFinal: true,
       status: "final"
     };
-    console.log('[V18] Adding user message to conversation:', userMessageObj);
+    console.log('[V18] Adding final user message to conversation:', userMessageObj);
     addConversationMessage(userMessageObj);
 
     // Send to AI via WebRTC
-    console.log('[V18] Sending message to AI:', pendingTranscript);
-    const success = sendMessage(pendingTranscript);
+    console.log('[V18] Sending message to AI:', transcriptToSend);
+    const success = sendMessage(transcriptToSend);
 
     if (success) {
       console.log('[V18] Message sent successfully');
-      // Clear pending transcript and hide modal
-      setPendingTranscript(null);
-      setIsRecording(false);
-      setRecordingDuration(0);
+
+      // V18 UI: Hide audio controls and mute microphone
+      setShowAudioControls(false);
+      // Only toggle mute if currently unmuted
+      if (!isMuted) {
+        toggleMute();
+      }
     } else {
       console.error('[V18] Failed to send message');
     }
-  }, [pendingTranscript, isConnected, addConversationMessage, sendMessage]);
+  }, [isConnected, addConversationMessage, sendMessage, isMuted, toggleMute]);
 
   // Smart Send edge case handling - FIXED: Split into separate effects to avoid cleanup race condition
 
@@ -1568,80 +1616,78 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 </div>
               )}
               {msg.text}
-              {/* Feedback buttons for recent assistant messages */}
+              {/* Combined speaker and feedback buttons for assistant messages */}
               {msg.role === 'assistant' && msg.isFinal && (() => {
                 // Show feedback buttons only for the last 5 assistant messages
                 const assistantMessages = conversation.filter(m => m.role === 'assistant' && m.isFinal);
                 const messageIndex = assistantMessages.findIndex(m => m.id === msg.id);
                 const isRecent = messageIndex >= Math.max(0, assistantMessages.length - 5);
-                return isRecent;
-              })() && (
-                  <div className="feedback-buttons mt-2 flex gap-2 opacity-60 hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => handleFeedbackClick(msg.id, 'thumbs_up')}
-                      className="feedback-button thumbs-up p-1.5 rounded-full hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
-                      aria-label="Give positive feedback on this response"
-                    >
-                      <ThumbsUp size={14} className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" aria-hidden="true" />
-                    </button>
-                    <button
-                      onClick={() => handleFeedbackClick(msg.id, 'thumbs_down')}
-                      className="feedback-button thumbs-down p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
-                      aria-label="Give negative feedback on this response"
-                    >
-                      <ThumbsDown size={14} className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" aria-hidden="true" />
-                    </button>
+                const isLatest = assistantMessages.length > 0 && assistantMessages[assistantMessages.length - 1].id === msg.id;
+
+                // Show if recent (for feedback) or latest (for speaker)
+                return isRecent || isLatest;
+              })() && (() => {
+                const assistantMessages = conversation.filter(m => m.role === 'assistant' && m.isFinal);
+                const messageIndex = assistantMessages.findIndex(m => m.id === msg.id);
+                const isRecent = messageIndex >= Math.max(0, assistantMessages.length - 5);
+                const isLatest = assistantMessages.length > 0 && assistantMessages[assistantMessages.length - 1].id === msg.id;
+
+                return (
+                  <div className="message-controls mt-2 flex gap-2 opacity-60 hover:opacity-100 transition-opacity">
+                    {/* Speaker button - only for latest message */}
+                    {isLatest && (
+                      <button
+                        onClick={toggleAudioOutputMute}
+                        className="speaker-button p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        aria-label={isAudioOutputMuted ? "Unmute AI voice" : "Mute AI voice"}
+                      >
+                        {isAudioOutputMuted ? (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-600 dark:text-gray-400" aria-hidden="true">
+                            <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" />
+                            <path d="M11 5L6 9H2v6h4l3 3V16" stroke="currentColor" strokeWidth="2" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
+                          </svg>
+                        ) : (
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-gray-600 dark:text-gray-400" aria-hidden="true">
+                            <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="2" fill="none" />
+                            <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
+                            <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" strokeWidth="2" />
+                          </svg>
+                        )}
+                      </button>
+                    )}
+                    {/* Feedback buttons - for recent messages */}
+                    {isRecent && (
+                      <>
+                        <button
+                          onClick={() => handleFeedbackClick(msg.id, 'thumbs_up')}
+                          className="feedback-button thumbs-up p-1.5 rounded-full hover:bg-green-100 dark:hover:bg-green-900/20 transition-colors"
+                          aria-label="Give positive feedback on this response"
+                        >
+                          <ThumbsUp size={14} className="text-gray-600 dark:text-gray-400 hover:text-green-600 dark:hover:text-green-400" aria-hidden="true" />
+                        </button>
+                        <button
+                          onClick={() => handleFeedbackClick(msg.id, 'thumbs_down')}
+                          className="feedback-button thumbs-down p-1.5 rounded-full hover:bg-red-100 dark:hover:bg-red-900/20 transition-colors"
+                          aria-label="Give negative feedback on this response"
+                        >
+                          <ThumbsDown size={14} className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400" aria-hidden="true" />
+                        </button>
+                      </>
+                    )}
                   </div>
-                )}
-              {!msg.isFinal && msg.status === 'speaking' && msg.text !== 'Thinking...' && msg.text !== 'Listening...' && (
-                <div className="text-xs opacity-50 mt-1">
-                  {pendingTranscript ? 'Tap ↑ to send' : 'Listening...'}
-                </div>
-              )}
+                );
+              })()}
+              {/* No extra status text needed - the bubble shows the transcript or "Listening..." */}
             </div>
           ))}
         </div>
 
-        {/* Bottom control bar - always visible when connected */}
-        {isConnected && (
+        {/* Bottom control bar - V18: only visible when audio controls are shown */}
+        {isConnected && showAudioControls && (
           <div className="input-container">
             {/* Left spacer for centering */}
             <div style={{ flex: 1 }} />
-
-            {/* Speaker/Audio Output Mute Button */}
-            <button
-              type="button"
-              onClick={toggleAudioOutputMute}
-              className={`mute-button ${isAudioOutputMuted ? 'muted' : ''}`}
-              style={{
-                backgroundColor: '#e5e7eb',
-                border: '2px solid #9ca3af',
-                borderRadius: '50%',
-                width: '48px',
-                height: '48px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
-                color: '#374151'
-              }}
-              aria-label={isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
-            >
-              {isAudioOutputMuted ? (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <path d="M3 3l18 18" stroke="currentColor" strokeWidth="2" />
-                  <path d="M11 5L6 9H2v6h4l3 3V16" stroke="currentColor" strokeWidth="2" />
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
-                </svg>
-              ) : (
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                  <polygon points="11,5 6,9 2,9 2,15 6,15 11,19" stroke="currentColor" strokeWidth="2" fill="none" />
-                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07" stroke="currentColor" strokeWidth="2" />
-                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14" stroke="currentColor" strokeWidth="2" />
-                </svg>
-              )}
-            </button>
 
             {/* Cancel Button */}
             <button
@@ -1707,18 +1753,58 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         )}
       </div>
 
-      {/* Enhanced Audio visualizer with real-time volume data */}
+      {/* V18: Microphone button - shows when audio controls are hidden */}
       {
-        isConnected && (
-          <>
-            <div className="visualization-container" role="button" aria-label="Microphone control - click to mute or unmute your microphone" aria-describedby="mic-description">
-              <AudioOrbV15 isFunctionExecuting={isFunctionExecuting} />
-              <div id="mic-description" className="sr-only">
-                Microphone control button located in the center of the screen. Click to toggle your microphone on or off. Visual indicator shows blue animation when AI is speaking.
-              </div>
+        isConnected && !showAudioControls && (
+          <div className="visualization-container" role="button" aria-label="Tap microphone to start speaking" aria-describedby="mic-description">
+            <button
+              onClick={() => {
+                console.log('[V18] Microphone button clicked', {
+                  currentMuteState: isMuted,
+                  showAudioControls: showAudioControls
+                });
+                setShowAudioControls(true);
+                console.log('[V18] Set showAudioControls to true');
+                // Only toggle mute if currently muted
+                if (isMuted) {
+                  console.log('[V18] Calling toggleMute to unmute');
+                  toggleMute();
+                } else {
+                  console.log('[V18] Mic already unmuted, not toggling');
+                }
+              }}
+              style={{
+                backgroundColor: '#9dbbac',
+                border: '3px solid #7ca995',
+                borderRadius: '50%',
+                width: '125px',
+                height: '125px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                color: '#ffffff',
+                transition: 'all 0.2s ease',
+                pointerEvents: 'auto' // Enable clicks on button
+              }}
+              onMouseEnter={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'scale(1.05)';
+              }}
+              onMouseLeave={(e) => {
+                (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+              }}
+              aria-label="Tap to start speaking"
+            >
+              <svg width="60" height="60" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" fill="currentColor" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            <div id="mic-description" className="sr-only">
+              Microphone button located in the center of the screen. Tap to unmute your microphone and show audio controls.
             </div>
-
-          </>
+          </div>
         )
       }
 

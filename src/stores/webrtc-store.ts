@@ -102,6 +102,9 @@ export interface WebRTCStoreState {
   isMuted: boolean;
   isAudioOutputMuted: boolean;
 
+  // V18: Manual send mode - when true, don't auto-set "Thinking..." on audio buffer commit
+  manualSendMode: boolean;
+
   // Conversation state
   conversation: ConversationMessage[];
   userMessage: string;
@@ -417,6 +420,9 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
     // Mute state - V15: Start in muted state by default
     isMuted: true,
     isAudioOutputMuted: false,
+
+    // V18: Manual send mode - when true, don't auto-set "Thinking..." on audio buffer commit
+    manualSendMode: false,
 
     conversation: [],
     userMessage: '',
@@ -874,6 +880,13 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
         },
 
         onAudioBufferCommitted: () => {
+          // V18: Skip "Thinking..." update if in manual send mode
+          const currentState = get();
+          if (currentState.manualSendMode) {
+            console.log('[V18] onAudioBufferCommitted: Skipping "Thinking..." update (manual send mode)');
+            return;
+          }
+
           console.log('[V15-VISUAL-FEEDBACK] Setting "Thinking..." state');
 
           // Find the most recent user message and update it to "Thinking..."
@@ -1980,6 +1993,13 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
           },
 
           onAudioBufferCommitted: () => {
+            // V18: Skip "Thinking..." update if in manual send mode
+            const currentState = get();
+            if (currentState.manualSendMode) {
+              console.log('[V18] RECONNECT onAudioBufferCommitted: Skipping "Thinking..." update (manual send mode)');
+              return;
+            }
+
             console.log('[FUNCTION-RECONNECT] Setting "Thinking..." state');
 
             set(state => {
