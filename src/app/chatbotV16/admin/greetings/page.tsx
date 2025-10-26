@@ -339,8 +339,8 @@ export default function GreetingsAdmin() {
   const currentLanguage = SUPPORTED_LANGUAGES.find(lang => lang.code === selectedLanguage);
 
   return (
-    <div className="min-h-screen bg-sage-200 dark:bg-[#131314] p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-sage-200 dark:bg-[#131314] p-6 overflow-y-auto">
+      <div className="max-w-6xl mx-auto pt-20">
         <div className="bg-sage-100 dark:bg-gray-800 rounded-lg shadow-lg p-6">
           <div className="flex items-center justify-between mb-6">
             <h1 className="text-2xl font-bold text-sage-500 dark:text-gray-200">
