@@ -477,8 +477,11 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           if (existingStreamingMessage) {
             // console.log('[message_persistence] Replacing streaming message with final version and saving to database');
 
-            // Remove the streaming message from UI
-            const filteredConversation = currentState.conversation.filter(msg => msg.id !== existingStreamingMessage.id);
+            // Remove the streaming message from UI (and any "Thinking..." bubbles)
+            const filteredConversation = currentState.conversation.filter(msg =>
+              msg.id !== existingStreamingMessage.id &&
+              !(msg.role === "assistant" && !msg.isFinal && msg.text === "Thinking...")
+            );
             useWebRTCStore.setState({
               conversation: filteredConversation
             });
@@ -489,6 +492,12 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             incompleteMessages.delete(id);
           } else {
             // console.log('[message_persistence] No streaming message found, adding final message directly');
+            // Remove any "Thinking..." bubbles before adding the real response
+            const filteredConversation = currentState.conversation.filter(msg =>
+              !(msg.role === "assistant" && !msg.isFinal && msg.text === "Thinking...")
+            );
+            useWebRTCStore.setState({ conversation: filteredConversation });
+
             addConversationMessage(finalMessage);
           }
         }
@@ -549,6 +558,14 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             };
 
             incompleteMessages.set(id, newMessage);
+
+            // Remove "Thinking..." bubbles when first streaming message arrives
+            const currentState = useWebRTCStore.getState();
+            const filteredConversation = currentState.conversation.filter(msg =>
+              !(msg.role === "assistant" && !msg.isFinal && msg.text === "Thinking...")
+            );
+            useWebRTCStore.setState({ conversation: filteredConversation });
+
             addConversationMessage(newMessage);
           }
         }
@@ -1118,8 +1135,20 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       return msg;
     });
 
-    useWebRTCStore.setState({ conversation: updatedConversation });
-    console.log('[V18] Marked transcript as final and removed hint bubble');
+    // Add "Thinking..." bubble for AI response
+    const thinkingBubble: Conversation = {
+      id: `assistant-thinking-${Date.now()}`,
+      role: "assistant",
+      text: "Thinking...",
+      timestamp: new Date().toISOString(),
+      isFinal: false,
+      status: "thinking"
+    };
+
+    useWebRTCStore.setState({
+      conversation: [...updatedConversation, thinkingBubble]
+    });
+    console.log('[V18] Marked transcript as final, removed hint bubble, and added AI thinking bubble');
 
     // Send to AI via WebRTC
     console.log('[V18] Sending message to AI:', transcriptToSend);
