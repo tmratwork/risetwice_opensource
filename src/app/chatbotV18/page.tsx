@@ -10,7 +10,6 @@ import { useWebRTCStore, FunctionRegistryManager } from '@/stores/webrtc-store';
 import { useSupabaseFunctions } from '@/hooksV16/use-supabase-functions';
 import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
 // V16-specific components (reusing V15 components)
-import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
 import AudioWaveAnimation from './components/AudioWaveAnimation';
 // Use V11's voice and tool choice defaults
@@ -121,10 +120,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
 
   // V18 Voice Mode: Pending transcript state
   // Stores voice transcription until user clicks upload button
-  const [pendingTranscript, setPendingTranscript] = useState<string | null>(null);
+  const [pendingTranscript] = useState<string | null>(null);
 
   // V18 Voice Mode: Recording state
-  const [isRecording, setIsRecording] = useState(false);
+  const [isRecording] = useState(false);
   const [, setRecordingDuration] = useState(0);
 
   // Button press feedback state
@@ -143,7 +142,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const [termsContent, setTermsContent] = useState('');
 
   // Function execution state for visual indicator
-  const [isFunctionExecuting, setIsFunctionExecuting] = useState(false);
+  const [, setIsFunctionExecuting] = useState(false);
 
   // V18 Audio UI: Controls visibility state
   // When true, shows bottom audio control bar (X, wave, ↑)
