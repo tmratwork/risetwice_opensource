@@ -137,7 +137,7 @@ export default function PatientIntakePage() {
   // Show loading state while fetching data
   if (isLoading) {
     return (
-      <div className="w-full h-full overflow-y-auto px-6 pt-12 pb-6 bg-sage-200 dark:bg-[#131314]">
+      <div className="w-full h-full overflow-y-auto px-6 pt-12 pb-6">
         <div className="w-full max-w-3xl mx-auto">
           <h1 className="text-4xl font-bold text-center mb-2 text-gray-800 dark:text-gray-100">
             Your Details

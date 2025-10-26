@@ -393,9 +393,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         const updatedConversation = [...currentState.conversation];
 
         if (messageRole === "user") {
-          // V18 Voice Mode: Just show the transcript as the user speaks
+          // V18 Voice Mode: Show transcript as user speaks, add hint when complete
           // Mic stays unmuted and listening until user presses X or ↑
-          console.log('[V18] Voice transcript received:', data);
+          console.log('[V18] Voice transcript received:', data, 'isComplete:', isComplete);
 
           // V18 UI: Auto-show audio controls when user speaks
           setShowAudioControls(true);
@@ -416,8 +416,24 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             status: "speaking"
           };
 
+          const newConversation = [...filteredConversation, userBubble];
+
+          // If transcript is complete, add a "Tap ↑ to send" hint bubble
+          if (isComplete && data) {
+            const hintBubble: Conversation = {
+              id: `user-hint-${id}`,
+              role: "user",
+              text: "Tap ↑ to send",
+              timestamp: new Date().toISOString(),
+              isFinal: false,
+              status: "speaking"
+            };
+            newConversation.push(hintBubble);
+            console.log('[V18] Added "Tap ↑ to send" hint bubble');
+          }
+
           useWebRTCStore.setState({
-            conversation: [...filteredConversation, userBubble]
+            conversation: newConversation
           });
 
           // Don't send to AI yet - user must click ↑
@@ -1058,9 +1074,12 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     setUploadButtonPressed(true);
     setTimeout(() => setUploadButtonPressed(false), 150);
 
-    // Get the current transcript from the last non-final user message
+    // Get the current transcript from the last non-final user message (excluding hint bubbles)
     const currentState = useWebRTCStore.getState();
-    const lastUserMessage = currentState.conversation.filter(msg => msg.role === "user" && !msg.isFinal).pop();
+    const userMessages = currentState.conversation.filter(
+      msg => msg.role === "user" && !msg.isFinal && msg.text !== "Tap ↑ to send"
+    );
+    const lastUserMessage = userMessages[userMessages.length - 1];
 
     if (!lastUserMessage || !lastUserMessage.text || lastUserMessage.text === "Listening...") {
       console.log('[V18] Send aborted - no transcript to send');
@@ -1070,23 +1089,21 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     const transcriptToSend = lastUserMessage.text;
     console.log('[V18] Transcript to send:', transcriptToSend);
 
-    // Remove ALL non-final user bubbles before adding final message
+    // Remove only the "Tap ↑ to send" hint bubbles, keep the transcript
     const filteredConversation = currentState.conversation.filter(msg =>
-      !(msg.role === "user" && !msg.isFinal)
+      !(msg.role === "user" && !msg.isFinal && msg.text === "Tap ↑ to send")
     );
-    useWebRTCStore.setState({ conversation: filteredConversation });
 
-    // Add message to conversation (shows in UI bubble as final)
-    const userMessageObj: Conversation = {
-      id: `user-${Date.now()}`,
-      role: "user",
-      text: transcriptToSend,
-      timestamp: new Date().toISOString(),
-      isFinal: true,
-      status: "final"
-    };
-    console.log('[V18] Adding final user message to conversation:', userMessageObj);
-    addConversationMessage(userMessageObj);
+    // Mark the transcript bubble as final
+    const updatedConversation = filteredConversation.map(msg => {
+      if (msg.role === "user" && !msg.isFinal && msg.text === transcriptToSend) {
+        return { ...msg, isFinal: true, status: "final" as const };
+      }
+      return msg;
+    });
+
+    useWebRTCStore.setState({ conversation: updatedConversation });
+    console.log('[V18] Marked transcript as final and removed hint bubble');
 
     // Send to AI via WebRTC
     console.log('[V18] Sending message to AI:', transcriptToSend);
@@ -1104,7 +1121,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     } else {
       console.error('[V18] Failed to send message');
     }
-  }, [isConnected, addConversationMessage, sendMessage, isMuted, toggleMute]);
+  }, [isConnected, sendMessage, isMuted, toggleMute]);
 
   // Smart Send edge case handling - FIXED: Split into separate effects to avoid cleanup race condition
 

@@ -13,7 +13,7 @@ export default function HowItWorksPage() {
   };
 
   return (
-    <div className="w-full h-full overflow-y-auto px-6 pt-16 pb-6 bg-sage-200 dark:bg-[#131314]">
+    <div className="w-full h-full overflow-y-auto px-6 pt-16 pb-6">
       <div className="w-full max-w-5xl mx-auto">
         {/* Title */}
         <h1 className="text-4xl md:text-5xl font-bold text-center mb-8 text-gray-800 dark:text-gray-100">
