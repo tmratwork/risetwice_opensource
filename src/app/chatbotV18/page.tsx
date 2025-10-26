@@ -400,9 +400,10 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           // V18 UI: Auto-show audio controls when user speaks
           setShowAudioControls(true);
 
-          // Remove ALL non-final user bubbles (including any "Thinking..." bubbles)
+          // Only remove "Listening..." and "Tap ↑ to send" hint bubbles
+          // Keep previous transcripts that user hasn't sent yet
           const filteredConversation = updatedConversation.filter(msg =>
-            !(msg.role === "user" && !msg.isFinal)
+            !(msg.role === "user" && !msg.isFinal && (msg.text === "Listening..." || msg.text === "Tap ↑ to send"))
           );
 
           // Show the transcript text in the user bubble (or "Listening..." if empty)
