@@ -19,7 +19,7 @@
 - **Imports**: Import from packages first, then local modules
 - **Types**: Strongly typed with TypeScript, define interfaces for props and API responses
 - **Error Handling**: Use try/catch with specific error handling, typed error responses
-- **Naming**: 
+- **Naming**:
   - Files: Component files use PascalCase.tsx, utility files use camelCase.ts
   - Functions: camelCase starting with verb (useAiResponse, getAiResponse)
   - Components: PascalCase (AudioPlayer, Login)
@@ -28,6 +28,15 @@
   - Never use light colors (whites, light grays) for text on white/light backgrounds
   - Use at least `font-medium` and `text-gray-800` or darker for text on white backgrounds
   - Test all color combinations for readability in both light and dark modes
+- **Background Colors - CRITICAL RULE**:
+  - **NEVER hardcode background colors** in page components using Tailwind classes like `bg-sage-200`, `bg-white`, `bg-gray-100`, etc.
+  - **ALWAYS use CSS variables** for background colors to maintain single source of truth
+  - Background colors are defined in CSS: `--bg-primary: #e7ece9` and `--bg-secondary: #c1d7ca` (green)
+  - Layout components automatically apply these backgrounds: `.v16-layout-root`, `.main-content-row`, `.chatbot-v16-wrapper`, `.main-container`
+  - When creating new pages, **DO NOT** add `className="bg-*"` to the root div - let it inherit from parent layout
+  - Example of CORRECT page structure: `<div className="w-full h-full overflow-y-auto px-6 pt-16 pb-6">`
+  - Example of INCORRECT page structure: `<div className="w-full h-full overflow-y-auto px-6 pt-16 pb-6 bg-sage-200">` ❌
+  - If background color needs to change, update CSS variables in `/src/app/chatbotV18/chatbotV16.css`, not individual pages
 
 ## Architecture
 - Next.js App Router with TypeScript
