@@ -400,11 +400,26 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           // V18 UI: Auto-show audio controls when user speaks
           setShowAudioControls(true);
 
-          // Only remove "Listening..." and "Tap ↑ to send" hint bubbles
-          // Keep previous transcripts that user hasn't sent yet
-          const filteredConversation = updatedConversation.filter(msg =>
-            !(msg.role === "user" && !msg.isFinal && (msg.text === "Listening..." || msg.text === "Tap ↑ to send"))
-          );
+          // When receiving a complete transcript (isComplete: true), remove ALL non-final user bubbles
+          // except previous complete transcripts waiting to be sent
+          // When streaming (isComplete: false), only remove placeholders
+          const filteredConversation = updatedConversation.filter(msg => {
+            if (msg.role === "user" && !msg.isFinal) {
+              // Always remove these placeholder bubbles
+              if (msg.text === "Listening..." || msg.text === "Tap ↑ to send") {
+                return false;
+              }
+              // If receiving a complete transcript, remove streaming bubbles (short text, partial transcripts)
+              // But keep longer transcripts that are previous complete utterances
+              if (isComplete) {
+                // Remove short streaming bubbles (likely partial transcripts like "1", "3,", etc)
+                if (msg.text.length < 5) {
+                  return false;
+                }
+              }
+            }
+            return true;
+          });
 
           // Show the transcript text in the user bubble (or "Listening..." if empty)
           // Never show "Thinking..." in V18 - mic stays listening
