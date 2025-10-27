@@ -2,22 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { useAdminAuth } from '@/hooks/useAdminAuth';
-import { ArrowLeft, Play, Pause, Volume2, Download } from 'lucide-react';
+import { ArrowLeft, Volume2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { convertWebMToMp3, isAudioConversionSupported } from '@/utils/audio-converter';
-
-interface AudioChunk {
-  id: string;
-  conversation_id: string;
-  chunk_index: number;
-  storage_path: string;
-  file_size: number;
-  mime_type: string;
-  uploaded_at: string;
-  status: string;
-  signed_url: string | null;
-  public_url?: string | null;
-}
 
 interface ConversationSummary {
   conversation_id: string;
@@ -135,12 +122,6 @@ export default function VoiceRecordingsPage() {
       setConvertingConversationId(null);
       setConversionProgress(0);
     }
-  };
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const formatDate = (dateString: string) => {
