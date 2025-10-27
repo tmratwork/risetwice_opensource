@@ -237,6 +237,15 @@ export default function V16AdminPage() {
     }
   ];
 
+  const v18Functions = [
+    {
+      id: 'voice-recordings',
+      name: 'V18 Voice Recordings',
+      description: 'Browse and listen to voice recordings from V18 chatbot conversations',
+      href: '/chatbotV18/admin/voice-recordings'
+    }
+  ];
+
   const otherFunctions = [
     {
       id: 'circle-approval',
@@ -287,7 +296,7 @@ export default function V16AdminPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-6 pt-24 overflow-y-auto h-full">
-      <h1 className="text-3xl font-bold mb-8">V16 Admin Dashboard</h1>
+      <h1 className="text-3xl font-bold mb-8">V18 Admin Dashboard</h1>
 
       <div className="grid gap-8">
         {/* V18 Patient Intake System Prompts */}
@@ -356,6 +365,42 @@ export default function V16AdminPage() {
                 </Link>
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* V18 Admin Functions */}
+        <div className="bg-gradient-to-r from-orange-50 to-amber-50 dark:from-orange-900/20 dark:to-amber-900/20 shadow-lg rounded-lg p-6 border-2 border-orange-300 dark:border-orange-700">
+          <div className="flex items-center space-x-3 mb-4">
+            <h2 className="text-xl font-semibold text-orange-900 dark:text-orange-100">V18 Admin Functions</h2>
+          </div>
+          <p className="text-sm text-orange-800 dark:text-orange-200 mb-6">
+            Administrative tools and utilities for V18 patient intake system.
+          </p>
+
+          <div className="grid gap-4">
+            {v18Functions.map((func) => (
+              <div key={func.id} className="border border-orange-300 dark:border-orange-600 rounded-lg p-4 bg-white dark:bg-gray-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-900 dark:text-gray-100 mb-1">
+                      {func.name}
+                    </h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {func.description}
+                    </p>
+                  </div>
+                  <Link
+                    href={func.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors ml-4"
+                  >
+                    <span>View</span>
+                    <ExternalLink size={16} />
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

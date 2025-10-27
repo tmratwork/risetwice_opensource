@@ -9,6 +9,8 @@ import { useWebRTCStore, FunctionRegistryManager } from '@/stores/webrtc-store';
 // V16: Use proper Supabase functions hook for executable functions
 import { useSupabaseFunctions } from '@/hooksV16/use-supabase-functions';
 import { optimizedAudioLogger } from '@/hooksV15/audio/optimized-audio-logger';
+// V18: Background voice recording
+import { useVoiceRecording } from '@/hooksV18/use-voice-recording';
 // V16-specific components (reusing V15 components)
 import { SignInDialog } from './components/SignInDialog';
 import AudioWaveAnimation from './components/AudioWaveAnimation';
@@ -2094,6 +2096,9 @@ export default function ChatBotV16Page() {
     error: functionsError,
     loadFunctionsForAI
   } = useSupabaseFunctions();
+
+  // V18: Background voice recording (runs silently, no UI)
+  useVoiceRecording();
 
   // V16 State: AI instructions (prompts still loaded via API like before)
   const [triagePrompt, setTriagePrompt] = useState<AIPrompt | null>(null);
