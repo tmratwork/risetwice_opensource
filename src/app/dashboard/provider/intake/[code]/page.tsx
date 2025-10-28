@@ -56,6 +56,11 @@ const ProviderIntakeView: React.FC = () => {
   const [audioLoading, setAudioLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [chunkCount, setChunkCount] = useState<number>(0);
+  const [needsCombination, setNeedsCombination] = useState(false);
+  const [jobStatus, setJobStatus] = useState<string>('');
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [currentIntakeId, setCurrentIntakeId] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadIntakeData() {
@@ -124,27 +129,118 @@ const ProviderIntakeView: React.FC = () => {
 
   const fetchAudioRecording = async (intakeId: string) => {
     try {
+      console.log('[provider_intake] 🎵 Fetching audio for intake:', intakeId);
       const response = await fetch(`/api/provider/intake-audio?intake_id=${intakeId}`);
       const result = await response.json();
 
+      console.log('[provider_intake] 📋 Audio fetch result:', result);
+
       if (result.success && result.hasRecording) {
         if (result.audioUrl) {
+          console.log('[provider_intake] ✅ Audio URL ready');
           setAudioUrl(result.audioUrl);
           setHasAudio(true);
+          setNeedsCombination(false);
+
+          // Clear polling if it exists
+          if (pollingInterval) {
+            console.log('[provider_intake] 🛑 Clearing polling interval');
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+          }
         } else if (result.needsCombination) {
-          // Audio needs to be combined - show message
-          setHasAudio(false);
+          console.log('[provider_intake] ⏳ Audio needs combination, status:', result.jobStatus);
+          setHasAudio(true);
+          setNeedsCombination(true);
+          setChunkCount(result.chunkCount || 0);
+          setJobStatus(result.jobStatus || 'processing');
+          setCurrentIntakeId(intakeId);
+
+          // Start polling if status is processing and not already polling
+          if (result.jobStatus === 'processing' && !pollingInterval) {
+            console.log('[provider_intake] 🔄 Starting polling for audio combination');
+            startPolling(intakeId);
+          }
         }
       } else {
         setHasAudio(false);
       }
     } catch (error) {
-      console.error('Error fetching audio:', error);
+      console.error('[provider_intake] ❌ Error fetching audio:', error);
       setHasAudio(false);
     } finally {
       setAudioLoading(false);
     }
   };
+
+  const startPolling = (intakeId: string) => {
+    // Store interval reference locally to avoid closure issues
+    let localInterval: NodeJS.Timeout | null = null;
+
+    const pollAudio = async () => {
+      console.log('[provider_intake] 🔍 Polling audio status...');
+
+      try {
+        const response = await fetch(`/api/provider/intake-audio?intake_id=${intakeId}`);
+        const result = await response.json();
+
+        console.log('[provider_intake] 📊 Poll result:', {
+          hasRecording: result.hasRecording,
+          audioUrl: !!result.audioUrl,
+          jobStatus: result.jobStatus
+        });
+
+        if (result.success && result.hasRecording && result.audioUrl) {
+          console.log('[provider_intake] 🛑 Audio ready - stopping polling');
+
+          // Clear local interval
+          if (localInterval) {
+            clearInterval(localInterval);
+            localInterval = null;
+            console.log('[provider_intake] ✅ Local interval cleared');
+          }
+
+          // Clear state interval
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+            console.log('[provider_intake] ✅ State interval cleared');
+          }
+
+          // Update state
+          setAudioUrl(result.audioUrl);
+          setNeedsCombination(false);
+          setJobStatus('completed');
+
+          return;
+        }
+
+        // Update status if still processing
+        if (result.jobStatus) {
+          setJobStatus(result.jobStatus);
+        }
+      } catch (error) {
+        console.error('[provider_intake] ❌ Polling error:', error);
+      }
+    };
+
+    // Initial poll
+    pollAudio();
+
+    // Poll every 2 seconds
+    localInterval = setInterval(pollAudio, 2000);
+    setPollingInterval(localInterval);
+  };
+
+  // Cleanup polling on unmount
+  React.useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        console.log('[provider_intake] 🧹 Cleaning up polling on unmount');
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   const fetchSummary = async (intakeId: string) => {
     try {
@@ -227,18 +323,18 @@ const ProviderIntakeView: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-6 flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold mb-2 text-gray-800">
-                Patient Intake Details
-              </h1>
-              <p className="text-gray-600">Access Code: {code}</p>
-            </div>
             <button
               onClick={() => router.push('/dashboard/provider')}
               className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
               Back to Dashboard
             </button>
+            <div className="text-right">
+              <h1 className="text-3xl font-bold mb-2 text-gray-800">
+                Patient Intake Details
+              </h1>
+              <p className="text-gray-600">Access Code: {code}</p>
+            </div>
           </div>
 
           {/* AI Summary Section */}
@@ -320,6 +416,33 @@ const ProviderIntakeView: React.FC = () => {
                 <p className="text-sm text-gray-600 mt-2">
                   Note: Audio is in WebM format. If playback fails, please use Chrome or Firefox.
                 </p>
+              </div>
+            ) : hasAudio && needsCombination && jobStatus === 'failed' ? (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <p className="text-red-800 font-medium mb-2">Audio combination failed</p>
+                <p className="text-red-700 text-sm mb-3">
+                  The audio recording exists ({chunkCount} chunks) but failed to combine.
+                  Please contact support to resolve this issue.
+                </p>
+                <p className="text-red-600 text-xs">
+                  Conversation ID: {intakeData?.conversationId}
+                </p>
+              </div>
+            ) : hasAudio && needsCombination ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                  <p className="text-blue-800 font-medium">Preparing audio playback...</p>
+                </div>
+                <p className="text-blue-700 text-sm">
+                  Combining {chunkCount} audio chunks from the patient intake session.
+                  This will take a few moments.
+                </p>
+                {jobStatus && (
+                  <p className="text-blue-600 text-xs mt-2">
+                    Status: {jobStatus === 'processing' ? 'Processing...' : jobStatus}
+                  </p>
+                )}
               </div>
             ) : (
               <p className="text-gray-600">No voice recording available for this intake.</p>

@@ -128,7 +128,10 @@ export function useVoiceRecording() {
         ? 'audio/webm;codecs=opus'
         : 'audio/webm';
 
-      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 20000 // 20 kbps - optimal for voice (6x smaller than default 128kbps)
+      });
       mediaRecorderRef.current = mediaRecorder;
 
       // Collect ALL audio chunks - this captures the exact same audio WebRTC uses

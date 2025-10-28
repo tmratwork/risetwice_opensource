@@ -55,6 +55,11 @@ export default function PatientIntakePage() {
         if (response.ok && result.success && result.hasData) {
           const intake = result.data;
 
+          // Show existing access code if available
+          if (intake.access_code) {
+            setAccessCode(intake.access_code);
+          }
+
           // Pre-populate form with existing data
           setFormData({
             fullLegalName: intake.full_legal_name || '',

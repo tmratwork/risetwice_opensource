@@ -3,10 +3,13 @@
 
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
+import { useState, useEffect } from 'react';
 
 export default function PatientIntakeLanding() {
   const router = useRouter();
   const { user } = useAuth();
+  const [accessCode, setAccessCode] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const handleNextSteps = () => {
     // Navigate to how-it-works page
@@ -23,6 +26,38 @@ export default function PatientIntakeLanding() {
     // User is logged in - show empty message box
     alert('Your message box is empty. Therapists will reach out once they review your intake.');
   };
+
+  // Fetch most recent access code on mount
+  useEffect(() => {
+    const fetchAccessCode = async () => {
+      if (!user?.uid && !user?.email) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams();
+        if (user?.uid) {
+          params.append('userId', user.uid);
+        } else if (user?.email) {
+          params.append('email', user.email);
+        }
+
+        const response = await fetch(`/api/patient-intake/get?${params.toString()}`);
+        const result = await response.json();
+
+        if (response.ok && result.success && result.hasData && result.data.access_code) {
+          setAccessCode(result.data.access_code);
+        }
+      } catch (error) {
+        console.error('Failed to fetch access code:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAccessCode();
+  }, [user?.uid, user?.email]);
 
   return (
     <div className="w-full h-full flex items-center justify-center p-6">
@@ -70,6 +105,19 @@ export default function PatientIntakeLanding() {
             </button>
           </div>
         </div>
+
+        {/* Access Code Display */}
+        {!loading && accessCode && (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mt-8 text-center">
+            <p className="text-xs text-gray-600 mb-1">Your Provider Access Code:</p>
+            <div className="text-xl font-semibold text-gray-700 tracking-wide mb-1">
+              {accessCode}
+            </div>
+            <p className="text-xs text-gray-500">
+              Share this code with your provider if you&apos;d like them to access your intake information
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
