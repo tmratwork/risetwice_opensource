@@ -54,11 +54,40 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get voice transcript if available
+    // Get voice transcript - REQUIRED before generating summary
     let voiceTranscript = null;
     if (intake.conversation_id) {
-      // TODO: Fetch actual transcript from conversation messages
-      // For now, we'll generate summary without transcript
+      const { data: transcriptData, error: transcriptError } = await supabaseAdmin
+        .from('patient_intake_transcripts')
+        .select('transcript_text, status')
+        .eq('intake_id', intakeId)
+        .single();
+
+      if (transcriptError) {
+        console.log('[intake_summary] No transcript found yet, returning pending status');
+        return NextResponse.json({
+          success: true,
+          status: 'pending_transcript',
+          message: 'Waiting for audio transcription to complete before generating summary'
+        });
+      }
+
+      if (transcriptData.status === 'processing') {
+        console.log('[intake_summary] Transcript still processing');
+        return NextResponse.json({
+          success: true,
+          status: 'pending_transcript',
+          message: 'Audio transcription in progress. Summary will be generated once transcription completes.'
+        });
+      }
+
+      if (transcriptData.status === 'failed') {
+        console.log('[intake_summary] Transcript failed, generating summary without it');
+        voiceTranscript = null; // Continue without transcript
+      } else if (transcriptData.status === 'completed') {
+        voiceTranscript = transcriptData.transcript_text;
+        console.log('[intake_summary] Using transcript for summary generation:', voiceTranscript.length, 'characters');
+      }
     }
 
     // Generate AI summary

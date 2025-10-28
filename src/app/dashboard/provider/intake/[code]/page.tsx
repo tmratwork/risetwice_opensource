@@ -61,6 +61,9 @@ const ProviderIntakeView: React.FC = () => {
   const [jobStatus, setJobStatus] = useState<string>('');
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
   const [currentIntakeId, setCurrentIntakeId] = useState<string | null>(null);
+  const [transcript, setTranscript] = useState<string | null>(null);
+  const [transcriptStatus, setTranscriptStatus] = useState<string>('');
+  const [showFullTranscript, setShowFullTranscript] = useState(false);
 
   useEffect(() => {
     async function loadIntakeData() {
@@ -114,7 +117,10 @@ const ProviderIntakeView: React.FC = () => {
         // Fetch audio recording
         fetchAudioRecording(result.intake.id);
 
-        // Fetch AI summary
+        // Fetch transcript
+        fetchTranscript(result.intake.id);
+
+        // Fetch AI summary (will wait for transcript)
         fetchSummary(result.intake.id);
 
       } catch (error) {
@@ -249,11 +255,34 @@ const ProviderIntakeView: React.FC = () => {
 
       if (result.success && result.summary) {
         setSummary(result.summary);
+        setSummaryLoading(false);
+      } else if (result.status === 'pending_transcript') {
+        // Summary waiting for transcript - keep loading state
+        console.log('Summary pending transcript:', result.message);
+        // Poll again in 3 seconds
+        setTimeout(() => fetchSummary(intakeId), 3000);
       }
     } catch (error) {
       console.error('Error fetching summary:', error);
-    } finally {
       setSummaryLoading(false);
+    }
+  };
+
+  const fetchTranscript = async (intakeId: string) => {
+    try {
+      const response = await fetch(`/api/provider/intake-transcript?intake_id=${intakeId}`);
+      const result = await response.json();
+
+      if (result.success && result.transcript) {
+        setTranscript(result.transcript);
+        setTranscriptStatus(result.status);
+      } else if (result.status === 'processing') {
+        setTranscriptStatus('processing');
+        // Poll again in 3 seconds
+        setTimeout(() => fetchTranscript(intakeId), 3000);
+      }
+    } catch (error) {
+      console.error('Error fetching transcript:', error);
     }
   };
 
@@ -393,7 +422,50 @@ const ProviderIntakeView: React.FC = () => {
               <h2 className="text-2xl font-bold text-gray-800 mb-4">AI Summary</h2>
               <div className="flex items-center text-gray-600">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
-                Generating summary...
+                {transcriptStatus === 'processing' ? 'Waiting for audio transcription...' : 'Generating summary...'}
+              </div>
+            </div>
+          )}
+
+          {/* Voice Transcript Section */}
+          {transcript && (
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Voice Transcript</h2>
+
+              {!showFullTranscript ? (
+                <div>
+                  <p className="text-gray-700 mb-4 line-clamp-3">
+                    {transcript}
+                  </p>
+                  <button
+                    onClick={() => setShowFullTranscript(true)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    View Full Transcript
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="text-gray-700 mb-4 whitespace-pre-wrap max-h-96 overflow-y-auto border border-gray-200 rounded p-4">
+                    {transcript}
+                  </div>
+                  <button
+                    onClick={() => setShowFullTranscript(false)}
+                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+                  >
+                    Collapse Transcript
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {transcriptStatus === 'processing' && !transcript && (
+            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">Voice Transcript</h2>
+              <div className="flex items-center text-gray-600">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
+                Transcribing audio...
               </div>
             </div>
           )}

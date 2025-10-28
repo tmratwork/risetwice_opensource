@@ -101,27 +101,51 @@ export async function POST(request: NextRequest) {
 
     console.log('[audio_combination] 📦 Found chunks:', chunks.length);
 
-    // Download all chunks
-    const chunkBlobs: Blob[] = [];
-    for (const chunk of chunks) {
+    // Download all chunks in parallel with batching
+    const startTime = Date.now();
+    const batchSize = 50; // Download 50 chunks at a time
+    const allBlobs: Blob[] = new Array(chunks.length);
+
+    for (let i = 0; i < chunks.length; i += batchSize) {
+      const batch = chunks.slice(i, i + batchSize);
+      const batchNumber = Math.floor(i / batchSize) + 1;
+      const totalBatches = Math.ceil(chunks.length / batchSize);
+
+      console.log(`[audio_combination] 📥 Downloading batch ${batchNumber}/${totalBatches} (${batch.length} chunks) - ${Date.now() - startTime}ms elapsed`);
+
       try {
-        const { data, error } = await supabaseAdmin.storage
-          .from('audio-recordings')
-          .download(chunk.storage_path);
+        // Download this batch in parallel
+        const batchResults = await Promise.all(
+          batch.map(async (chunk) => {
+            const { data, error } = await supabaseAdmin.storage
+              .from('audio-recordings')
+              .download(chunk.storage_path);
 
-        if (error || !data) {
-          throw new Error(`Failed to download chunk ${chunk.chunk_index}: ${error?.message}`);
-        }
+            if (error || !data) {
+              throw new Error(`Failed to download chunk ${chunk.chunk_index}: ${error?.message || 'No data'}`);
+            }
 
-        chunkBlobs.push(data);
+            return {
+              index: chunk.chunk_index,
+              blob: data
+            };
+          })
+        );
+
+        // Store blobs in correct order
+        batchResults.forEach(result => {
+          allBlobs[result.index] = result.blob;
+        });
+
+        console.log(`[audio_combination] ✅ Batch ${batchNumber}/${totalBatches} complete - ${Date.now() - startTime}ms elapsed`);
       } catch (error) {
-        console.error(`[audio_combination] ❌ Error downloading chunk ${chunk.chunk_index}:`, error);
+        console.error(`[audio_combination] ❌ Error downloading batch ${batchNumber}:`, error);
 
         await supabaseAdmin
           .from('audio_combination_jobs')
           .update({
             status: 'failed',
-            error_message: `Failed to download chunk ${chunk.chunk_index}`,
+            error_message: `Failed to download chunks: ${error instanceof Error ? error.message : 'Unknown error'}`,
             completed_at: new Date().toISOString()
           })
           .eq('id', job.id);
@@ -133,23 +157,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log('[audio_combination] ✅ Downloaded all chunks');
+    console.log(`[audio_combination] ✅ All chunks downloaded - ${Date.now() - startTime}ms total`);
 
     // Combine chunks into single blob
-    const combinedBlob = new Blob(chunkBlobs, { type: 'audio/webm;codecs=opus' });
-    console.log('[audio_combination] 🔗 Combined blob size:', combinedBlob.size);
+    const combinedBlob = new Blob(allBlobs, { type: 'audio/webm;codecs=opus' });
+    console.log(`[audio_combination] 🔗 Combined blob size: ${combinedBlob.size} bytes (${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB) - ${Date.now() - startTime}ms elapsed`);
 
     // Upload combined file
     const combinedFileName = `combined-${Date.now()}.webm`;
     const combinedPath = `v18-voice-recordings/${conversation_id}/${combinedFileName}`;
 
-    console.log('[audio_combination] 📤 Starting upload:', {
-      path: combinedPath,
-      size: combinedBlob.size,
-      sizeMB: (combinedBlob.size / 1024 / 1024).toFixed(2)
-    });
+    console.log(`[audio_combination] 📤 Starting upload: ${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB - ${Date.now() - startTime}ms elapsed`);
 
     try {
+      const uploadStartTime = Date.now();
       const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
         .from('audio-recordings')
         .upload(combinedPath, combinedBlob, {
@@ -161,7 +182,7 @@ export async function POST(request: NextRequest) {
         throw uploadError;
       }
 
-      console.log('[audio_combination] ✅ Upload successful:', uploadData);
+      console.log(`[audio_combination] ✅ Upload successful: ${Date.now() - uploadStartTime}ms upload time - ${Date.now() - startTime}ms total elapsed`);
     } catch (uploadError) {
       const errorMsg = uploadError instanceof Error ? uploadError.message : String(uploadError);
       console.error('[audio_combination] ❌ Upload failed:', errorMsg);
@@ -202,14 +223,31 @@ export async function POST(request: NextRequest) {
       console.log('[audio_combination] ✅ Job status updated to completed');
     }
 
-    console.log('[audio_combination] ✅ Job completed successfully');
+    const totalTime = Date.now() - startTime;
+    console.log(`[audio_combination] ✅ Job completed successfully - Total time: ${totalTime}ms (${(totalTime / 1000).toFixed(1)}s)`);
+
+    // Trigger transcription in background (don't wait for completion)
+    console.log('[audio_combination] 🎤 Triggering audio transcription in background...');
+    fetch(`${request.nextUrl.origin}/api/provider/transcribe-intake-audio`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        intake_id,
+        conversation_id,
+        combined_audio_path: combinedPath
+      })
+    }).catch(err => {
+      console.error('[audio_combination] ❌ Failed to trigger transcription:', err);
+    });
 
     return NextResponse.json({
       success: true,
       status: 'completed',
       jobId: job.id,
       filePath: combinedPath,
-      chunkCount: chunks.length
+      chunkCount: chunks.length,
+      durationMs: totalTime,
+      fileSizeMB: parseFloat((combinedBlob.size / 1024 / 1024).toFixed(2))
     });
 
   } catch (error) {
