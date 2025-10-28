@@ -261,6 +261,7 @@ const ProviderIntakeView: React.FC = () => {
       formData.append('audio', recordedAudioBlob, fileName);
       formData.append('accessCode', code);
       formData.append('providerUserId', user?.uid || '');
+      // Use userId from intakeData, or leave empty - API will populate from intake_id
       formData.append('patientUserId', intakeData.userId || '');
       formData.append('intakeId', intakeData.id);
       formData.append('fileName', fileName);

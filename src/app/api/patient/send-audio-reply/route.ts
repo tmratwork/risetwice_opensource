@@ -1,5 +1,5 @@
-// src/app/api/provider/upload-audio-response/route.ts
-// API route to handle provider audio response uploads
+// src/app/api/patient/send-audio-reply/route.ts
+// API route for patient to upload audio replies to provider
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const mimeType = formData.get('mimeType') as string;
 
     // Validate required fields
-    if (!accessCode || !providerUserId || !intakeId || !fileName || !durationSeconds || !mimeType || !audioFile) {
+    if (!accessCode || !providerUserId || !patientUserId || !intakeId || !fileName || !durationSeconds || !mimeType || !audioFile) {
       return NextResponse.json(
         { success: false, error: 'Missing required fields' },
         { status: 400 }
@@ -29,26 +29,12 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // If patient_user_id is missing, fetch it from the intake
-    let finalPatientUserId = patientUserId;
-    if (!finalPatientUserId || finalPatientUserId === '') {
-      const { data: intakeData } = await supabase
-        .from('patient_intake')
-        .select('user_id')
-        .eq('id', intakeId)
-        .single();
-
-      if (intakeData?.user_id) {
-        finalPatientUserId = intakeData.user_id;
-      }
-    }
-
     // Convert File to ArrayBuffer
     const arrayBuffer = await audioFile.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Upload file to Supabase storage
-    const { error: uploadError } = await supabase.storage
+    // Upload file to Supabase storage (same bucket as provider messages)
+    const { data: uploadData, error: uploadError } = await supabase.storage
       .from('provider-patient-messages')
       .upload(fileName, buffer, {
         contentType: mimeType,
@@ -56,7 +42,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error('Error uploading audio file:', uploadError);
+      console.error('Error uploading patient audio reply:', uploadError);
       return NextResponse.json(
         { success: false, error: 'Failed to upload audio file' },
         { status: 500 }
@@ -68,24 +54,25 @@ export async function POST(request: NextRequest) {
       .from('provider-patient-messages')
       .getPublicUrl(fileName);
 
-    // Insert metadata into database
+    // Insert metadata into database with sender_type='patient'
     const { data: dbData, error: dbError } = await supabase
       .from('provider_patient_audio_messages')
       .insert({
         access_code: accessCode,
         provider_user_id: providerUserId,
-        patient_user_id: finalPatientUserId,
+        patient_user_id: patientUserId,
         intake_id: intakeId,
         audio_url: publicUrlData.publicUrl,
         duration_seconds: durationSeconds,
         file_size_bytes: buffer.length,
-        mime_type: mimeType
+        mime_type: mimeType,
+        sender_type: 'patient' // Mark as patient message
       })
       .select()
       .single();
 
     if (dbError) {
-      console.error('Error inserting audio metadata:', dbError);
+      console.error('Error inserting patient audio metadata:', dbError);
       return NextResponse.json(
         { success: false, error: 'Failed to save audio metadata' },
         { status: 500 }
@@ -94,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      recording: {
+      message: {
         id: dbData.id,
         audioUrl: publicUrlData.publicUrl,
         createdAt: dbData.created_at,
@@ -102,7 +89,7 @@ export async function POST(request: NextRequest) {
       }
     });
   } catch (error) {
-    console.error('Error in upload-audio-response:', error);
+    console.error('Error in send-audio-reply:', error);
     return NextResponse.json(
       { success: false, error: 'Internal server error' },
       { status: 500 }

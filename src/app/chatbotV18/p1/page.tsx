@@ -10,6 +10,7 @@ export default function PatientIntakeLanding() {
   const { user } = useAuth();
   const [accessCode, setAccessCode] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   const handleNextSteps = () => {
     // Navigate to how-it-works page
@@ -23,8 +24,8 @@ export default function PatientIntakeLanding() {
       return;
     }
 
-    // User is logged in - show empty message box
-    alert('Your message box is empty. Therapists will reach out once they review your intake.');
+    // Navigate to messages page
+    router.push('/chatbotV18/p1/messages');
   };
 
   // Fetch most recent access code on mount
@@ -59,6 +60,26 @@ export default function PatientIntakeLanding() {
     fetchAccessCode();
   }, [user?.uid, user?.email]);
 
+  // Fetch unread message count
+  useEffect(() => {
+    const fetchUnreadCount = async () => {
+      if (!user?.uid) return;
+
+      try {
+        const response = await fetch(`/api/patient/provider-messages?patient_user_id=${user.uid}`);
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+          setUnreadCount(result.unreadCount || 0);
+        }
+      } catch (error) {
+        console.error('Failed to fetch unread count:', error);
+      }
+    };
+
+    fetchUnreadCount();
+  }, [user?.uid]);
+
   return (
     <div className="w-full h-full flex items-center justify-center p-6">
       <div className="w-full max-w-6xl">
@@ -86,11 +107,23 @@ export default function PatientIntakeLanding() {
           </div>
 
           {/* Returning Patient Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg flex flex-col">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg flex flex-col relative">
             {/* Returning Badge */}
             <div className="inline-block bg-yellow-400 text-gray-900 px-4 py-1 rounded-lg font-semibold text-sm mb-4 self-start">
               Returning
             </div>
+            {/* Unread Badge */}
+            {unreadCount > 0 && (
+              <button
+                onClick={handleViewMessages}
+                className="absolute top-4 right-4 hover:scale-110 transition-transform"
+                aria-label={`${unreadCount} unread messages`}
+              >
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-500 text-white cursor-pointer">
+                  {unreadCount}
+                </span>
+              </button>
+            )}
             <h2 className="text-3xl font-bold mb-4 text-gray-800 dark:text-gray-100">
               Check Your Matches
             </h2>

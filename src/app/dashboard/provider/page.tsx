@@ -18,6 +18,7 @@ const ProviderDashboard: React.FC = () => {
   const [aiPreviewStatus, setAiPreviewStatus] = useState<string | null>(null);
   const [aiPreviewGeneratedAt, setAiPreviewGeneratedAt] = useState<string | null>(null);
   const [accessCode, setAccessCode] = useState<string>('');
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
 
   useEffect(() => {
     async function checkAccess() {
@@ -44,6 +45,13 @@ const ProviderDashboard: React.FC = () => {
         if (data.success && data.profile) {
           setAiPreviewStatus(data.profile.ai_preview_status || 'not_started');
           setAiPreviewGeneratedAt(data.profile.ai_preview_generated_at);
+        }
+
+        // Fetch unread patient messages count
+        const messagesResponse = await fetch(`/api/provider/patient-messages?provider_user_id=${user.uid}`);
+        const messagesData = await messagesResponse.json();
+        if (messagesData.success) {
+          setUnreadMessagesCount(messagesData.unreadCount || 0);
         }
 
         setLoading(false);
@@ -83,11 +91,17 @@ const ProviderDashboard: React.FC = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             {/* Direct Messages */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border p-6 relative flex flex-col">
-              <div className="absolute top-4 right-4">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                  0
-                </span>
-              </div>
+              {unreadMessagesCount > 0 && (
+                <button
+                  onClick={() => router.push('/dashboard/provider/messages')}
+                  className="absolute top-4 right-4 hover:scale-110 transition-transform"
+                  aria-label={`${unreadMessagesCount} unread messages`}
+                >
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 cursor-pointer">
+                    {unreadMessagesCount}
+                  </span>
+                </button>
+              )}
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-indigo-600 dark:text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -99,10 +113,10 @@ const ProviderDashboard: React.FC = () => {
                 </h3>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 flex-grow">
-                Check your inbox for messages from potential clients.
+                Check your inbox for messages from patients.
               </p>
               <button
-                onClick={() => alert('No new messages')}
+                onClick={() => router.push('/dashboard/provider/messages')}
                 className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors"
               >
                 View Inbox
