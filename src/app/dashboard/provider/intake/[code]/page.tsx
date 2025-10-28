@@ -50,6 +50,40 @@ interface IntakeSummary {
   voiceTranscript: string | null;
 }
 
+// Collapsible Panel Component
+const CollapsiblePanel: React.FC<{
+  id: string;
+  title: string;
+  isCollapsed: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+  className?: string;
+}> = ({ id, title, isCollapsed, onToggle, children, className = '' }) => {
+  return (
+    <div className={`bg-white rounded-lg shadow-sm border mb-6 ${className}`}>
+      <div
+        className="flex items-center justify-between p-6 cursor-pointer hover:bg-gray-50 transition-colors"
+        onClick={onToggle}
+      >
+        <h2 className="text-2xl font-bold text-gray-800">{title}</h2>
+        <svg
+          className={`w-6 h-6 text-gray-600 transition-transform ${isCollapsed ? '' : 'rotate-180'}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </div>
+      {!isCollapsed && (
+        <div className="px-6 pb-6">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const ProviderIntakeView: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
@@ -71,6 +105,198 @@ const ProviderIntakeView: React.FC = () => {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [transcriptStatus, setTranscriptStatus] = useState<string>('');
   const [showFullTranscript, setShowFullTranscript] = useState(false);
+
+  // Collapsible panels state
+  const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>({});
+
+  // Provider audio recording state
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
+  const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [providerRecordings, setProviderRecordings] = useState<Array<{
+    id: string;
+    audioUrl: string;
+    createdAt: string;
+    durationSeconds: number;
+  }>>([]);
+  const [loadingRecordings, setLoadingRecordings] = useState(true);
+
+  // Load collapsed state from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('provider-intake-collapsed-panels');
+    if (saved) {
+      try {
+        setCollapsedPanels(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to parse collapsed panels state:', e);
+      }
+    }
+  }, []);
+
+  // Save collapsed state to localStorage
+  const togglePanel = (panelId: string) => {
+    setCollapsedPanels(prev => {
+      const newState = { ...prev, [panelId]: !prev[panelId] };
+      localStorage.setItem('provider-intake-collapsed-panels', JSON.stringify(newState));
+      return newState;
+    });
+  };
+
+  // Recording timer
+  useEffect(() => {
+    let interval: NodeJS.Timeout | null = null;
+    if (isRecording) {
+      interval = setInterval(() => {
+        setRecordingTime(prev => {
+          if (prev >= 1800) { // 30 minutes = 1800 seconds
+            stopRecording();
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 1000);
+    } else {
+      if (interval) clearInterval(interval);
+    }
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRecording]);
+
+  // Fetch provider recordings
+  const fetchProviderRecordings = async (intakeId: string) => {
+    try {
+      const response = await fetch(`/api/provider/audio-responses?intake_id=${intakeId}`);
+      const result = await response.json();
+
+      if (result.success && result.recordings) {
+        setProviderRecordings(result.recordings);
+      }
+    } catch (error) {
+      console.error('Error fetching provider recordings:', error);
+    } finally {
+      setLoadingRecordings(false);
+    }
+  };
+
+  // Start recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Determine MIME type based on browser support
+      let mimeType = 'audio/webm';
+      if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+        mimeType = 'audio/webm;codecs=opus';
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        mimeType = 'audio/mp4';
+      } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+        mimeType = 'audio/webm';
+      }
+
+      const recorder = new MediaRecorder(stream, { mimeType });
+      const chunks: Blob[] = [];
+
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunks.push(e.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        setRecordedAudioUrl(url);
+        setRecordedAudioBlob(blob);
+        setAudioChunks([]);
+
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setRecordingTime(0);
+      setAudioChunks([]);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Failed to start recording. Please ensure microphone permissions are granted.');
+    }
+  };
+
+  // Stop recording
+  const stopRecording = () => {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+      mediaRecorder.stop();
+      setIsRecording(false);
+    }
+  };
+
+  // Cancel recording
+  const cancelRecording = () => {
+    if (recordedAudioUrl) {
+      URL.revokeObjectURL(recordedAudioUrl);
+    }
+    setRecordedAudioUrl(null);
+    setRecordedAudioBlob(null);
+    setRecordingTime(0);
+  };
+
+  // Upload recording
+  const uploadRecording = async () => {
+    if (!recordedAudioBlob || !intakeData) return;
+
+    setIsUploading(true);
+    try {
+      // Get file extension from blob type
+      const fileExt = recordedAudioBlob.type.includes('mp4') ? 'mp4' : 'webm';
+      const timestamp = Date.now();
+      const fileName = `${code}/${user?.uid}/${timestamp}-${crypto.randomUUID()}.${fileExt}`;
+
+      // Create FormData
+      const formData = new FormData();
+      formData.append('audio', recordedAudioBlob, fileName);
+      formData.append('accessCode', code);
+      formData.append('providerUserId', user?.uid || '');
+      formData.append('patientUserId', intakeData.user_id || '');
+      formData.append('intakeId', intakeData.id);
+      formData.append('fileName', fileName);
+      formData.append('durationSeconds', recordingTime.toString());
+      formData.append('mimeType', recordedAudioBlob.type);
+
+      const response = await fetch('/api/provider/upload-audio-response', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+      if (!result.success) throw new Error(result.error);
+
+      // Refresh recordings list
+      await fetchProviderRecordings(intakeData.id);
+
+      // Clear recording
+      cancelRecording();
+      alert('Audio response uploaded successfully!');
+    } catch (error) {
+      console.error('Error uploading recording:', error);
+      alert('Failed to upload recording. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  // Format recording time
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     async function loadIntakeData() {
@@ -128,6 +354,9 @@ const ProviderIntakeView: React.FC = () => {
 
         // Fetch AI summary (will wait for transcript)
         fetchSummary(result.intake.id);
+
+        // Fetch provider recordings
+        fetchProviderRecordings(result.intake.id);
 
       } catch (error) {
         console.error('Error loading intake data:', error);
@@ -373,9 +602,12 @@ const ProviderIntakeView: React.FC = () => {
 
           {/* AI Summary Section */}
           {!summaryLoading && summary && (
-            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">AI Summary</h2>
-
+            <CollapsiblePanel
+              id="ai-summary"
+              title="AI Summary"
+              isCollapsed={collapsedPanels['ai-summary'] || false}
+              onToggle={() => togglePanel('ai-summary')}
+            >
               <div className="space-y-4">
                 {summary.formDataSummary?.clientProfile && (
                   <div>
@@ -453,7 +685,7 @@ const ProviderIntakeView: React.FC = () => {
                   </div>
                 )}
               </div>
-            </div>
+            </CollapsiblePanel>
           )}
 
           {summaryLoading && (
@@ -468,9 +700,12 @@ const ProviderIntakeView: React.FC = () => {
 
           {/* Voice Transcript Section */}
           {transcript && (
-            <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">Voice Transcript</h2>
-
+            <CollapsiblePanel
+              id="voice-transcript"
+              title="Voice Transcript"
+              isCollapsed={collapsedPanels['voice-transcript'] || false}
+              onToggle={() => togglePanel('voice-transcript')}
+            >
               {!showFullTranscript ? (
                 <div>
                   <p className="text-gray-700 mb-4 line-clamp-3">
@@ -496,7 +731,7 @@ const ProviderIntakeView: React.FC = () => {
                   </button>
                 </div>
               )}
-            </div>
+            </CollapsiblePanel>
           )}
 
           {transcriptStatus === 'processing' && !transcript && (
@@ -510,9 +745,12 @@ const ProviderIntakeView: React.FC = () => {
           )}
 
           {/* Audio Recording Section */}
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Voice Recording</h2>
-
+          <CollapsiblePanel
+            id="voice-recording"
+            title="Voice Recording"
+            isCollapsed={collapsedPanels['voice-recording'] || false}
+            onToggle={() => togglePanel('voice-recording')}
+          >
             {audioLoading ? (
               <div className="flex items-center text-gray-600">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
@@ -558,11 +796,107 @@ const ProviderIntakeView: React.FC = () => {
             ) : (
               <p className="text-gray-600">No voice recording available for this intake.</p>
             )}
-          </div>
+
+            {/* Provider Response Recording */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">Provider Audio Response</h3>
+
+              {/* Recording Controls */}
+              {!recordedAudioUrl && (
+                <div className="mb-4">
+                  {!isRecording ? (
+                    <button
+                      onClick={startRecording}
+                      className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                      </svg>
+                      Record Provider Response
+                    </button>
+                  ) : (
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
+                        <span className="text-gray-800 font-medium">Recording: {formatTime(recordingTime)}</span>
+                        {recordingTime >= 1800 && <span className="text-red-600 text-sm">(Max duration reached)</span>}
+                      </div>
+                      <button
+                        onClick={stopRecording}
+                        className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+                      >
+                        Stop Recording
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Playback and Upload */}
+              {recordedAudioUrl && (
+                <div className="mb-4 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-blue-800 font-medium mb-3">Recording Preview ({formatTime(recordingTime)})</p>
+                  <audio controls className="w-full mb-4">
+                    <source src={recordedAudioUrl} type={recordedAudioBlob?.type || 'audio/webm'} />
+                    Your browser does not support the audio element.
+                  </audio>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={uploadRecording}
+                      disabled={isUploading}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isUploading ? 'Uploading...' : 'Upload Response'}
+                    </button>
+                    <button
+                      onClick={cancelRecording}
+                      disabled={isUploading}
+                      className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Cancel / Re-record
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Previous Recordings */}
+              <div className="mt-6">
+                <h4 className="text-lg font-semibold text-gray-800 mb-3">Previous Recordings</h4>
+                {loadingRecordings ? (
+                  <div className="flex items-center text-gray-600">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-600 mr-2"></div>
+                    Loading recordings...
+                  </div>
+                ) : providerRecordings.length > 0 ? (
+                  <div className="space-y-3">
+                    {providerRecordings.map((recording) => (
+                      <div key={recording.id} className="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-gray-600">
+                            {new Date(recording.createdAt).toLocaleString()} ({formatTime(recording.durationSeconds)})
+                          </span>
+                        </div>
+                        <audio controls className="w-full">
+                          <source src={recording.audioUrl} />
+                          Your browser does not support the audio element.
+                        </audio>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-gray-600 text-sm">No recordings yet.</p>
+                )}
+              </div>
+            </div>
+          </CollapsiblePanel>
 
           {/* Personal Information */}
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Personal Information</h2>
+          <CollapsiblePanel
+            id="personal-info"
+            title="Personal Information"
+            isCollapsed={collapsedPanels['personal-info'] || false}
+            onToggle={() => togglePanel('personal-info')}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700">Full Legal Name:</label>
@@ -591,11 +925,15 @@ const ProviderIntakeView: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+          </CollapsiblePanel>
 
           {/* Contact Information */}
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Contact Information</h2>
+          <CollapsiblePanel
+            id="contact-info"
+            title="Contact Information"
+            isCollapsed={collapsedPanels['contact-info'] || false}
+            onToggle={() => togglePanel('contact-info')}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700">Email:</label>
@@ -606,11 +944,15 @@ const ProviderIntakeView: React.FC = () => {
                 <p className="text-gray-900">{intakeData.phone}</p>
               </div>
             </div>
-          </div>
+          </CollapsiblePanel>
 
           {/* Location */}
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Location</h2>
+          <CollapsiblePanel
+            id="location"
+            title="Location"
+            isCollapsed={collapsedPanels['location'] || false}
+            onToggle={() => togglePanel('location')}
+          >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700">State:</label>
@@ -625,11 +967,15 @@ const ProviderIntakeView: React.FC = () => {
                 <p className="text-gray-900">{intakeData.zipCode}</p>
               </div>
             </div>
-          </div>
+          </CollapsiblePanel>
 
           {/* Insurance & Payment */}
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Insurance & Payment</h2>
+          <CollapsiblePanel
+            id="insurance-payment"
+            title="Insurance & Payment"
+            isCollapsed={collapsedPanels['insurance-payment'] || false}
+            onToggle={() => togglePanel('insurance-payment')}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700">Insurance Provider:</label>
@@ -654,11 +1000,15 @@ const ProviderIntakeView: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+          </CollapsiblePanel>
 
           {/* Session Preferences */}
-          <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">Session Preferences</h2>
+          <CollapsiblePanel
+            id="session-preferences"
+            title="Session Preferences"
+            isCollapsed={collapsedPanels['session-preferences'] || false}
+            onToggle={() => togglePanel('session-preferences')}
+          >
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-semibold text-gray-700">Session Preference:</label>
@@ -675,7 +1025,7 @@ const ProviderIntakeView: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </CollapsiblePanel>
 
           {/* Metadata */}
           <div className="bg-gray-50 rounded-lg border p-4">
