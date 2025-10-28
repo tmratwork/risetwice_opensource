@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     // Upload file to Supabase storage (same bucket as provider messages)
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { error: uploadError } = await supabase.storage
       .from('provider-patient-messages')
       .upload(fileName, buffer, {
         contentType: mimeType,

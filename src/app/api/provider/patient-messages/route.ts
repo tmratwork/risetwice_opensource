@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
         createdAt: msg.created_at
       });
       return acc;
-    }, {} as Record<string, any>);
+    }, {} as Record<string, { patientUserId: string; intakeId: string; accessCode: string; messages: Array<{ id: string; senderType: string; audioUrl: string; durationSeconds: number; readAt: string | null; createdAt: string }> }>);
 
     const conversationList = Object.values(conversations || {});
 
