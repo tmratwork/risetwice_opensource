@@ -291,6 +291,12 @@ export default function V16AdminPage() {
       name: 'V18 Patient Intake AI Prompt',
       description: 'Initial patient intake assessment AI for V18 mental health support system',
       category: 'V18 Patient Intake'
+    },
+    {
+      id: 'v18_intake_summary',
+      name: 'V18 Intake Summary AI Prompt',
+      description: 'AI prompt for generating provider-facing summaries from patient intake data and voice transcripts',
+      category: 'V18 Patient Intake'
     }
   ];
 
@@ -309,7 +315,8 @@ export default function V16AdminPage() {
           </p>
 
           <div className="grid gap-4">
-            {v18Prompts.map((prompt) => (
+            {/* V18 Patient Intake Prompt */}
+            {v18Prompts.filter(p => p.id === 'v18_patient_intake').map((prompt) => (
               <div key={prompt.id} className="border border-orange-300 dark:border-orange-600 rounded-lg p-4 bg-white dark:bg-gray-800">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -365,6 +372,36 @@ export default function V16AdminPage() {
                 </Link>
               </div>
             </div>
+
+            {/* V18 Intake Summary Prompt */}
+            {v18Prompts.filter(p => p.id === 'v18_intake_summary').map((prompt) => (
+              <div key={prompt.id} className="border border-orange-300 dark:border-orange-600 rounded-lg p-4 bg-white dark:bg-gray-800">
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                        {prompt.name}
+                      </h3>
+                      <span className="px-2 py-1 text-xs bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 rounded">
+                        {prompt.category}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      {prompt.description}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/chatbotV18/admin/v18-prompt/${prompt.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors ml-4"
+                  >
+                    <span>Edit</span>
+                    <ExternalLink size={16} />
+                  </Link>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
 

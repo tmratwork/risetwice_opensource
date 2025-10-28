@@ -15,6 +15,12 @@ const V18_PROMPT_CONFIGS = {
     description: 'Initial patient intake assessment AI for V18 mental health support system',
     category: 'V18 Patient Intake',
     instructions: 'This is the main patient intake AI that conducts initial assessment, ensures safety, and provides mental health support in the V18 system.'
+  },
+  v18_intake_summary: {
+    name: 'V18 Intake Summary AI Prompt',
+    description: 'AI prompt for generating provider-facing summaries from patient intake data and voice transcripts',
+    category: 'V18 Patient Intake',
+    instructions: 'This prompt is used by the API to generate professional summaries of patient intake information for healthcare providers, including key concerns, urgency level, and recommended specializations.'
   }
 };
 

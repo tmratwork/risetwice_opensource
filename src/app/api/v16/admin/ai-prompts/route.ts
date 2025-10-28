@@ -14,7 +14,8 @@ const V16_PROMPT_TYPES = [
   'dbt_specialist',
   'universal',
   'universal_functions',
-  'v18_patient_intake' // V18 Patient Intake System
+  'v18_patient_intake', // V18 Patient Intake System
+  'v18_intake_summary' // V18 Provider Intake Summary Generation
 ] as const;
 
 export async function GET(request: NextRequest) {

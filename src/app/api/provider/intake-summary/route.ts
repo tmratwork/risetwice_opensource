@@ -32,6 +32,7 @@ export async function GET(request: NextRequest) {
         success: true,
         summary: {
           summaryText: existingSummary.summary_text,
+          formDataSummary: existingSummary.form_data_summary || null,
           keyConcerns: existingSummary.key_concerns || [],
           urgencyLevel: existingSummary.urgency_level || 'low',
           recommendedSpecializations: existingSummary.recommended_specializations || [],
@@ -91,7 +92,20 @@ export async function GET(request: NextRequest) {
     }
 
     // Generate AI summary
-    const summary = await generateIntakeSummary(intake, voiceTranscript);
+    let summary;
+    try {
+      summary = await generateIntakeSummary(intake, voiceTranscript);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('Failed to generate AI summary:', errorMessage);
+
+      // Return visible error - NO fallback
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to generate intake summary',
+        details: errorMessage
+      }, { status: 500 });
+    }
 
     // Store summary in database
     const { data: savedSummary, error: saveError } = await supabaseAdmin
@@ -99,6 +113,7 @@ export async function GET(request: NextRequest) {
       .insert({
         intake_id: intakeId,
         summary_text: summary.summaryText,
+        form_data_summary: summary.formDataSummary,
         key_concerns: summary.keyConcerns,
         urgency_level: summary.urgencyLevel,
         recommended_specializations: summary.recommendedSpecializations,
@@ -110,7 +125,12 @@ export async function GET(request: NextRequest) {
 
     if (saveError) {
       console.error('Failed to save summary:', saveError);
-      // Don't fail the request - return generated summary anyway
+      // Return visible error - database save failures should be visible
+      return NextResponse.json({
+        success: false,
+        error: 'Failed to save intake summary to database',
+        details: saveError.message
+      }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -132,6 +152,20 @@ export async function GET(request: NextRequest) {
 
 async function generateIntakeSummary(intake: Record<string, unknown>, voiceTranscript: string | null) {
   const claudeModel = getClaudeModel();
+
+  // Fetch prompt from Supabase
+  const { data: promptData, error: promptError } = await supabaseAdmin
+    .from('ai_prompts')
+    .select('prompt_content')
+    .eq('prompt_type', 'v18_intake_summary')
+    .eq('is_active', true)
+    .single();
+
+  if (promptError || !promptData || !promptData.prompt_content) {
+    throw new Error('V18 Intake Summary prompt not found in database. Please configure it in the admin panel at /chatbotV18/admin');
+  }
+
+  const promptTemplate = promptData.prompt_content;
 
   // Prepare intake data for AI analysis
   const intakeContext = `
@@ -161,82 +195,74 @@ Contact:
 ${voiceTranscript ? `\nVoice Intake Transcript:\n${voiceTranscript}` : ''}
 `;
 
-  const prompt = `You are an experienced mental health intake coordinator analyzing patient intake information for a therapist.
+  // Replace {{INTAKE_CONTEXT}} placeholder in prompt template
+  const prompt = promptTemplate.replace('{{INTAKE_CONTEXT}}', intakeContext);
 
-Based on the following patient intake information, provide a comprehensive summary to help a therapist determine if they can help this patient.
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': process.env.ANTHROPIC_API_KEY!,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: claudeModel,
+      max_tokens: 2000,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
+    })
+  });
 
-${intakeContext}
-
-Please provide your analysis in the following JSON format:
-{
-  "summaryText": "A 2-3 paragraph summary highlighting key information about the patient, their situation, and what they're seeking in therapy",
-  "keyConcerns": ["Array of 3-5 key concerns or issues that should be addressed"],
-  "urgencyLevel": "low|medium|high|crisis",
-  "recommendedSpecializations": ["Array of 2-4 therapy specializations that would be most relevant for this patient"]
-}
-
-Consider factors like:
-- Patient demographics and life situation
-- Insurance and financial considerations
-- Scheduling and session preferences
-- Any concerns expressed in voice intake (if available)
-- Potential red flags or urgent needs
-
-Respond ONLY with valid JSON, no additional text.`;
-
-  try {
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': process.env.ANTHROPIC_API_KEY!,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify({
-        model: claudeModel,
-        max_tokens: 2000,
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ]
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`Claude API error: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    let content = result.content[0].text;
-
-    // Remove markdown code block wrapping if present (Claude sometimes wraps JSON in ```json)
-    content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-
-    // Parse JSON response
-    const summary = JSON.parse(content);
-
-    return {
-      summaryText: summary.summaryText,
-      keyConcerns: summary.keyConcerns || [],
-      urgencyLevel: summary.urgencyLevel || 'low',
-      recommendedSpecializations: summary.recommendedSpecializations || [],
-      voiceTranscript: voiceTranscript
-    };
-
-  } catch (error) {
-    console.error('Failed to generate AI summary:', error);
-
-    // Return fallback summary
-    return {
-      summaryText: `Patient intake for ${intake.full_legal_name}. Looking for ${intake.session_preference} therapy sessions. Insurance: ${intake.insurance_provider}. Available: ${Array.isArray(intake.availability) ? (intake.availability as string[]).join(', ') : 'Not specified'}.`,
-      keyConcerns: ['Initial consultation needed'],
-      urgencyLevel: 'medium',
-      recommendedSpecializations: ['General therapy'],
-      voiceTranscript: voiceTranscript
-    };
+  if (!response.ok) {
+    throw new Error(`Claude API error: ${response.statusText}`);
   }
+
+  const result = await response.json();
+  let content = result.content[0].text;
+
+  // Remove markdown code block wrapping if present (Claude sometimes wraps JSON in ```json)
+  content = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+
+  // Parse JSON response
+  const summary = JSON.parse(content);
+
+  // Build backward-compatible summary text from new structure
+  const summaryText = `
+Client Profile: ${summary.clientProfile || 'Not specified'}
+
+Presenting Concern: ${summary.presentingConcern || 'Not specified'}
+
+Primary Goal: ${summary.primaryGoal || 'Not specified'}
+
+Therapy History: ${summary.therapyHistory || 'Not specified'}
+
+Clinical Background: ${summary.clinicalBackground || 'Not specified'}
+
+Desired Therapeutic Style: ${summary.desiredStyle || 'Not specified'}
+
+Key Preferences: ${summary.keyPreferences || 'Not specified'}
+`.trim();
+
+  return {
+    summaryText,
+    formDataSummary: {
+      clientProfile: summary.clientProfile || null,
+      presentingConcern: summary.presentingConcern || null,
+      primaryGoal: summary.primaryGoal || null,
+      therapyHistory: summary.therapyHistory || null,
+      clinicalBackground: summary.clinicalBackground || null,
+      desiredStyle: summary.desiredStyle || null,
+      keyPreferences: summary.keyPreferences || null
+    },
+    keyConcerns: [], // No longer used in new structure
+    urgencyLevel: summary.urgencyLevel || 'low',
+    recommendedSpecializations: summary.recommendedSpecializations || [],
+    voiceTranscript: voiceTranscript
+  };
 }
 
 function calculateAge(dateOfBirth: string): number {

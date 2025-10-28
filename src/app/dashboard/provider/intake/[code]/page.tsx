@@ -35,6 +35,15 @@ interface IntakeData {
 
 interface IntakeSummary {
   summaryText: string;
+  formDataSummary?: {
+    clientProfile: string | null;
+    presentingConcern: string | null;
+    primaryGoal: string | null;
+    therapyHistory: string | null;
+    clinicalBackground: string | null;
+    desiredStyle: string | null;
+    keyPreferences: string | null;
+  } | null;
   keyConcerns: string[];
   urgencyLevel: string;
   recommendedSpecializations: string[];
@@ -371,49 +380,83 @@ const ProviderIntakeView: React.FC = () => {
             <div className="bg-white rounded-lg shadow-sm border p-6 mb-6">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">AI Summary</h2>
 
-              <div className="mb-4">
-                <div className="prose max-w-none text-gray-700">
-                  {summary.summaryText}
-                </div>
-              </div>
-
-              {summary.keyConcerns && summary.keyConcerns.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Key Concerns:</h3>
-                  <ul className="list-disc list-inside text-gray-700">
-                    {summary.keyConcerns.map((concern, index) => (
-                      <li key={index}>{concern}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {summary.urgencyLevel && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Urgency Level:</h3>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                    summary.urgencyLevel === 'crisis' ? 'bg-red-100 text-red-800' :
-                    summary.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                    summary.urgencyLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-green-100 text-green-800'
-                  }`}>
-                    {summary.urgencyLevel.charAt(0).toUpperCase() + summary.urgencyLevel.slice(1)}
-                  </span>
-                </div>
-              )}
-
-              {summary.recommendedSpecializations && summary.recommendedSpecializations.length > 0 && (
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Recommended Specializations:</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {summary.recommendedSpecializations.map((spec, index) => (
-                      <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
-                        {spec}
-                      </span>
-                    ))}
+              <div className="space-y-4">
+                {summary.formDataSummary?.clientProfile && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Client Profile</h3>
+                    <p className="text-gray-700">{summary.formDataSummary.clientProfile}</p>
                   </div>
-                </div>
-              )}
+                )}
+
+                {summary.formDataSummary?.presentingConcern && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Presenting Concern</h3>
+                    <p className="text-gray-700">{summary.formDataSummary.presentingConcern}</p>
+                  </div>
+                )}
+
+                {summary.formDataSummary?.primaryGoal && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Primary Goal</h3>
+                    <p className="text-gray-700">{summary.formDataSummary.primaryGoal}</p>
+                  </div>
+                )}
+
+                {summary.formDataSummary?.therapyHistory && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Therapy History</h3>
+                    <p className="text-gray-700">{summary.formDataSummary.therapyHistory}</p>
+                  </div>
+                )}
+
+                {summary.formDataSummary?.clinicalBackground && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Clinical Background</h3>
+                    <p className="text-gray-700">{summary.formDataSummary.clinicalBackground}</p>
+                  </div>
+                )}
+
+                {summary.formDataSummary?.desiredStyle && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Desired Therapeutic Style</h3>
+                    <p className="text-gray-700">{summary.formDataSummary.desiredStyle}</p>
+                  </div>
+                )}
+
+                {summary.formDataSummary?.keyPreferences && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-1">Key Preferences</h3>
+                    <p className="text-gray-700">{summary.formDataSummary.keyPreferences}</p>
+                  </div>
+                )}
+
+                {summary.urgencyLevel && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Urgency Level</h3>
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                      summary.urgencyLevel === 'crisis' ? 'bg-red-100 text-red-800' :
+                      summary.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' :
+                      summary.urgencyLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {summary.urgencyLevel.charAt(0).toUpperCase() + summary.urgencyLevel.slice(1)}
+                    </span>
+                  </div>
+                )}
+
+                {summary.recommendedSpecializations && summary.recommendedSpecializations.length > 0 && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Recommended Specializations</h3>
+                    <div className="flex flex-wrap gap-2">
+                      {summary.recommendedSpecializations.map((spec, index) => (
+                        <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm">
+                          {spec}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
