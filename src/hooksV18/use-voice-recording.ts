@@ -227,7 +227,7 @@ export function useVoiceRecording() {
     }
   }, []);
 
-  // Auto-start recording when WebRTC connects
+  // Auto-start recording when WebRTC connects, stop when disconnects
   useEffect(() => {
     console.log('[v18_voice_recording] useEffect triggered:', {
       isConnected,
@@ -237,6 +237,9 @@ export function useVoiceRecording() {
     if (isConnected && !isRecordingRef.current) {
       console.log('[v18_voice_recording] Conditions met - calling startRecording');
       startRecording();
+    } else if (!isConnected && isRecordingRef.current) {
+      console.log('[v18_voice_recording] WebRTC disconnected - stopping recording');
+      stopRecording();
     } else {
       console.log('[v18_voice_recording] Conditions NOT met for starting recording:', {
         isConnected,
@@ -244,9 +247,9 @@ export function useVoiceRecording() {
         reason: !isConnected ? 'Not connected' : 'Already recording'
       });
     }
-  }, [isConnected, startRecording]);
+  }, [isConnected, startRecording, stopRecording]);
 
-  // Cleanup on unmount or disconnect
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (isRecordingRef.current) {
