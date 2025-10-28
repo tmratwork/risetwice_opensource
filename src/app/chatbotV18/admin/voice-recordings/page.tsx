@@ -277,6 +277,19 @@ export default function VoiceRecordingsPage() {
                   )}
                 </div>
 
+                {/* Audio Player */}
+                {combinedUrl && (
+                  <div className="mt-4">
+                    <audio controls className="w-full">
+                      <source src={combinedUrl} type="audio/webm" />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
+                      Note: Audio is in WebM format. If playback fails, please use Chrome or Firefox.
+                    </p>
+                  </div>
+                )}
+
                 {/* Error message */}
                 {error && (
                   <div className="mt-3 p-3 bg-red-100 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
