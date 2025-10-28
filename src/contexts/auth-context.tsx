@@ -43,6 +43,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                     setUser(user);
                     setLoading(false);
                     setFirebaseAvailable(true);
+
+                    // Store user_id in localStorage for patient intake linking
+                    if (user) {
+                        localStorage.setItem('firebase_user_id', user.uid);
+                    } else {
+                        localStorage.removeItem('firebase_user_id');
+                    }
                 });
 
                 return unsubscribe;

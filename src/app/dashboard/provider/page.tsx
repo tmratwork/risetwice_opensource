@@ -156,16 +156,21 @@ const ProviderDashboard: React.FC = () => {
                 <input
                   type="text"
                   value={accessCode}
-                  onChange={(e) => setAccessCode(e.target.value)}
-                  placeholder="Enter code"
+                  onChange={(e) => setAccessCode(e.target.value.replace(/\D/g, '').slice(0, 5))}
+                  placeholder="Enter 5-digit code"
+                  maxLength={5}
                   className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
                 <button
-                  onClick={() => {
-                    alert('Code is not valid');
-                    setAccessCode('');
+                  onClick={async () => {
+                    if (accessCode.length !== 5) {
+                      alert('Please enter a valid 5-digit code');
+                      return;
+                    }
+                    router.push(`/dashboard/provider/intake/${accessCode}`);
                   }}
-                  className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors"
+                  disabled={accessCode.length !== 5}
+                  className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
                   Submit
                 </button>

@@ -34,10 +34,17 @@ export function useVoiceRecording() {
       // Mark as uploading
       chunkUploadQueue.current.set(chunkIndex, { ...chunkInfo, uploading: true, failed: false });
 
-      const conversationId = conversationIdRef.current || localStorage.getItem('selectedBookId');
+      // Get conversation_id: first try patient intake session, then fall back to selectedBookId
+      const conversationId = conversationIdRef.current ||
+                            localStorage.getItem('patient_conversation_id') ||
+                            localStorage.getItem('selectedBookId');
       if (!conversationId) {
         throw new Error('No conversation ID available for chunk upload');
       }
+
+      // Get user_id and intake_id from localStorage for linking
+      const userId = localStorage.getItem('firebase_user_id');
+      const intakeId = localStorage.getItem('patient_intake_id');
 
       // Create FormData for chunk upload
       const formData = new FormData();
@@ -46,10 +53,16 @@ export function useVoiceRecording() {
       formData.append('chunk_index', chunkIndex.toString());
       formData.append('purpose', 'voice_chunk');
 
+      // Link to patient intake
+      if (userId) formData.append('user_id', userId);
+      if (intakeId) formData.append('intake_id', intakeId);
+
       console.log(`[v18_voice_recording] Uploading audio chunk ${chunkIndex}:`, {
         chunkSize: chunk.size,
         conversationId: conversationId,
-        chunkIndex: chunkIndex
+        chunkIndex: chunkIndex,
+        userId,
+        intakeId
       });
 
       // Upload to chunk endpoint
@@ -150,8 +163,9 @@ export function useVoiceRecording() {
       mediaRecorder.start(5000); // 5-second chunks
       isRecordingRef.current = true;
 
-      // Get conversation ID for uploads
-      conversationIdRef.current = localStorage.getItem('selectedBookId');
+      // Get conversation ID for uploads (patient intake session takes priority)
+      conversationIdRef.current = localStorage.getItem('patient_conversation_id') ||
+                                   localStorage.getItem('selectedBookId');
 
       console.log('[v18_voice_recording] ✅ Recording session started using WebRTC stream:', {
         mimeType,

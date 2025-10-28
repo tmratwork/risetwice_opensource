@@ -43,9 +43,24 @@ export async function POST(request: NextRequest) {
     // Create Supabase client with service role key for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+    // Generate unique 5-digit access code
+    const { data: accessCodeData, error: accessCodeError } = await supabase
+      .rpc('generate_unique_access_code');
+
+    if (accessCodeError) {
+      console.error('Failed to generate access code:', accessCodeError);
+      return NextResponse.json(
+        { error: 'Failed to generate access code', details: accessCodeError.message },
+        { status: 500 }
+      );
+    }
+
+    const accessCode = accessCodeData as string;
+
     // Prepare data for insertion
     const intakeData = {
       user_id: body.userId || null,
+      access_code: accessCode,
       full_legal_name: body.fullLegalName,
       preferred_name: body.preferredName || null,
       pronouns: body.pronouns || null,
@@ -81,11 +96,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate a fresh conversation_id for the upcoming voice session
+    const conversationId = crypto.randomUUID();
+
+    // Update the intake record with conversation_id
+    await supabase
+      .from('patient_intake')
+      .update({ conversation_id: conversationId })
+      .eq('id', data.id);
+
     return NextResponse.json(
       {
         success: true,
         message: 'Intake form submitted successfully',
-        intakeId: data.id
+        intakeId: data.id,
+        accessCode: data.access_code,
+        conversationId: conversationId
       },
       { status: 201 }
     );

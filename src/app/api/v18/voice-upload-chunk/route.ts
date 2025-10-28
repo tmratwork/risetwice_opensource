@@ -19,6 +19,8 @@ export async function POST(request: NextRequest) {
     const conversationId = formData.get('conversation_id') as string;
     const chunkIndex = parseInt(formData.get('chunk_index') as string);
     const purpose = formData.get('purpose') as string;
+    const userId = formData.get('user_id') as string | null;
+    const intakeId = formData.get('intake_id') as string | null;
 
     // Validate required fields
     if (!audioFile) {
@@ -112,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`${logPrefix} Chunk upload successful:`, uploadData);
 
-    // Record successful chunk in database
+    // Record successful chunk in database with user linking
     const { data: chunkRecord, error: dbError } = await supabaseAdmin
       .from('v18_audio_chunks')
       .insert({
@@ -121,7 +123,9 @@ export async function POST(request: NextRequest) {
         storage_path: storagePath,
         file_size: audioFile.size,
         mime_type: audioFile.type,
-        status: 'uploaded'
+        status: 'uploaded',
+        user_id: userId || null,
+        intake_id: intakeId || null
       })
       .select()
       .single();
