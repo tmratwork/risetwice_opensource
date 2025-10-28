@@ -108,7 +108,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Store summary in database
-    const { data: savedSummary, error: saveError } = await supabaseAdmin
+    const { error: saveError } = await supabaseAdmin
       .from('patient_intake_summaries')
       .insert({
         intake_id: intakeId,

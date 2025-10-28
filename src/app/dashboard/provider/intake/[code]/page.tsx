@@ -6,7 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { useRouter, useParams } from 'next/navigation';
-import { getUserRole, UserRole } from '@/utils/user-role';
+import { getUserRole } from '@/utils/user-role';
 import { Header } from '@/components/header';
 
 interface IntakeData {
@@ -57,7 +57,6 @@ const ProviderIntakeView: React.FC = () => {
   const code = params?.code as string;
 
   const [loading, setLoading] = useState(true);
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
   const [intakeData, setIntakeData] = useState<IntakeData | null>(null);
   const [summary, setSummary] = useState<IntakeSummary | null>(null);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -69,7 +68,6 @@ const ProviderIntakeView: React.FC = () => {
   const [needsCombination, setNeedsCombination] = useState(false);
   const [jobStatus, setJobStatus] = useState<string>('');
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [currentIntakeId, setCurrentIntakeId] = useState<string | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [transcriptStatus, setTranscriptStatus] = useState<string>('');
   const [showFullTranscript, setShowFullTranscript] = useState(false);
@@ -85,7 +83,6 @@ const ProviderIntakeView: React.FC = () => {
 
       try {
         const role = await getUserRole(user.uid);
-        setUserRole(role);
 
         // Redirect non-providers
         if (role !== 'provider') {
@@ -169,7 +166,6 @@ const ProviderIntakeView: React.FC = () => {
           setNeedsCombination(true);
           setChunkCount(result.chunkCount || 0);
           setJobStatus(result.jobStatus || 'processing');
-          setCurrentIntakeId(intakeId);
 
           // Start polling if status is processing and not already polling
           if (result.jobStatus === 'processing' && !pollingInterval) {

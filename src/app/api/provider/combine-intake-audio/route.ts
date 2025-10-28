@@ -171,7 +171,7 @@ export async function POST(request: NextRequest) {
 
     try {
       const uploadStartTime = Date.now();
-      const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
+      const { error: uploadError } = await supabaseAdmin.storage
         .from('audio-recordings')
         .upload(combinedPath, combinedBlob, {
           contentType: 'audio/webm;codecs=opus',
