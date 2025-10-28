@@ -63,6 +63,7 @@ export async function POST(request: NextRequest) {
         intake_id,
         conversation_id,
         combined_audio_path,
+        transcript_text: '', // Empty initially, will be updated after transcription
         model_used: transcriptionModel,
         status: 'processing',
         transcription_started_at: new Date().toISOString()
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     if (jobError || !transcriptJob) {
       console.error('[audio_transcription] ❌ Failed to create transcription job:', jobError);
       return NextResponse.json(
-        { error: 'Failed to create transcription job' },
+        { error: 'Failed to create transcription job', details: jobError },
         { status: 500 }
       );
     }
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
     const formData = new FormData();
     formData.append('file', audioFile);
     formData.append('model', transcriptionModel);
-    formData.append('response_format', 'verbose_json'); // Get detailed response with timestamps
+    formData.append('response_format', 'json'); // Use 'json' format for gpt-4o-transcribe
 
     const transcriptionStartTime = Date.now();
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
