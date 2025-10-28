@@ -31,6 +31,7 @@ interface IntakeData {
   status: string;
   createdAt: string;
   conversationId: string | null;
+  userId: string;
 }
 
 interface IntakeSummary {
@@ -58,7 +59,7 @@ const CollapsiblePanel: React.FC<{
   onToggle: () => void;
   children: React.ReactNode;
   className?: string;
-}> = ({ id, title, isCollapsed, onToggle, children, className = '' }) => {
+}> = ({ title, isCollapsed, onToggle, children, className = '' }) => {
   return (
     <div className={`bg-white rounded-lg shadow-sm border mb-6 ${className}`}>
       <div
@@ -113,7 +114,6 @@ const ProviderIntakeView: React.FC = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
   const [recordedAudioUrl, setRecordedAudioUrl] = useState<string | null>(null);
   const [recordedAudioBlob, setRecordedAudioBlob] = useState<Blob | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -212,7 +212,6 @@ const ProviderIntakeView: React.FC = () => {
         const url = URL.createObjectURL(blob);
         setRecordedAudioUrl(url);
         setRecordedAudioBlob(blob);
-        setAudioChunks([]);
 
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
@@ -222,7 +221,6 @@ const ProviderIntakeView: React.FC = () => {
       setMediaRecorder(recorder);
       setIsRecording(true);
       setRecordingTime(0);
-      setAudioChunks([]);
     } catch (error) {
       console.error('Error starting recording:', error);
       alert('Failed to start recording. Please ensure microphone permissions are granted.');
@@ -263,7 +261,7 @@ const ProviderIntakeView: React.FC = () => {
       formData.append('audio', recordedAudioBlob, fileName);
       formData.append('accessCode', code);
       formData.append('providerUserId', user?.uid || '');
-      formData.append('patientUserId', intakeData.user_id || '');
+      formData.append('patientUserId', intakeData.userId || '');
       formData.append('intakeId', intakeData.id);
       formData.append('fileName', fileName);
       formData.append('durationSeconds', recordingTime.toString());
