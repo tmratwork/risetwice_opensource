@@ -5,6 +5,15 @@
 
 import React, { useRef, useState, useEffect } from 'react';
 
+// Module-level singleton to prevent multiple audio graph creation (survives React Strict Mode remounts)
+let globalAudioContext: AudioContext | null = null;
+let globalPatientSource: MediaElementAudioSourceNode | null = null;
+let globalAiSource: MediaElementAudioSourceNode | null = null;
+let globalPatientPanner: StereoPannerNode | null = null;
+let globalAiPanner: StereoPannerNode | null = null;
+let globalPatientGain: GainNode | null = null;
+let globalAiGain: GainNode | null = null;
+
 interface SynchronizedAudioPlayerProps {
   patientAudioUrl: string;
   aiAudioUrl: string;
@@ -21,7 +30,8 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
   const aiSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
   const patientPannerRef = useRef<StereoPannerNode | null>(null);
   const aiPannerRef = useRef<StereoPannerNode | null>(null);
-  const isInitializedRef = useRef(false); // Use ref to persist across re-renders
+  const patientGainRef = useRef<GainNode | null>(null);
+  const aiGainRef = useRef<GainNode | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -32,100 +42,123 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
 
   // Initialize Web Audio API for stereo panning
   useEffect(() => {
-    if (!patientAudioRef.current || !aiAudioRef.current || isInitializedRef.current) return;
+    // HARD STOP if already initialized at module level (survives React Strict Mode remounts)
+    if (globalAudioContext) {
+      console.log('[sync_player] ⏭️ Skipping initialization - module-level singleton exists');
+      // Store refs to existing nodes so this component instance can access them
+      audioContextRef.current = globalAudioContext;
+      patientSourceRef.current = globalPatientSource;
+      aiSourceRef.current = globalAiSource;
+      patientPannerRef.current = globalPatientPanner;
+      aiPannerRef.current = globalAiPanner;
+      patientGainRef.current = globalPatientGain;
+      aiGainRef.current = globalAiGain;
+      return;
+    }
 
-    const initAudio = async () => {
-      try {
-        console.log('[sync_player] 🎵 Initializing Web Audio API...');
+    // IMMEDIATELY claim the singleton spot (before any other work)
+    // This prevents the second parallel effect from proceeding
+    globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    audioContextRef.current = globalAudioContext;
 
-        const patientEl = patientAudioRef.current;
-        const aiEl = aiAudioRef.current;
-        if (!patientEl || !aiEl) return;
+    console.log('[sync_player] 🎵 Initializing Web Audio API (FIRST AND ONLY TIME)...');
 
-        // Wait for both audio elements to load metadata
-        await Promise.all([
-          new Promise((resolve) => {
-            if (patientEl.readyState >= 1) resolve(true);
-            else patientEl.addEventListener('loadedmetadata', () => resolve(true), { once: true });
-          }),
-          new Promise((resolve) => {
-            if (aiEl.readyState >= 1) resolve(true);
-            else aiEl.addEventListener('loadedmetadata', () => resolve(true), { once: true });
-          })
-        ]);
+    const patientAudio = patientAudioRef.current;
+    const aiAudio = aiAudioRef.current;
 
-        console.log('[sync_player] ✅ Both audio elements loaded');
+    if (!patientAudio || !aiAudio) {
+      console.log('[sync_player] ❌ Audio elements not ready');
+      return;
+    }
 
-        // Create AudioContext
-        const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        audioContextRef.current = audioContext;
-        console.log('[sync_player] ✅ AudioContext created, state:', audioContext.state);
+    // Wait for audio elements to load
+    const loadPromises = [
+      new Promise((resolve) => {
+        if (patientAudio.readyState >= 2) resolve(null);
+        else patientAudio.addEventListener('loadeddata', () => resolve(null), { once: true });
+      }),
+      new Promise((resolve) => {
+        if (aiAudio.readyState >= 2) resolve(null);
+        else aiAudio.addEventListener('loadeddata', () => resolve(null), { once: true });
+      })
+    ];
 
-        // Create source nodes from audio elements
-        const patientSource = audioContext.createMediaElementSource(patientEl);
-        const aiSource = audioContext.createMediaElementSource(aiEl);
-        patientSourceRef.current = patientSource;
-        aiSourceRef.current = aiSource;
-        console.log('[sync_player] ✅ Media element sources created');
+    Promise.all(loadPromises).then(() => {
+      console.log('[sync_player] ✅ Both audio elements loaded');
 
-        // Create stereo panner nodes
-        const patientPanner = audioContext.createStereoPanner();
-        const aiPanner = audioContext.createStereoPanner();
-        patientPannerRef.current = patientPanner;
-        aiPannerRef.current = aiPanner;
+      // Set audio element volumes to 1.0 (GainNode controls volume)
+      patientAudio.volume = 1.0;
+      aiAudio.volume = 1.0;
+      console.log('[sync_player] ✅ Audio element volumes set to 1.0 (GainNode controls volume)');
 
-        // Create gain nodes for volume control
-        const patientGain = audioContext.createGain();
-        const aiGain = audioContext.createGain();
-        patientGain.gain.value = patientVolume;
-        aiGain.gain.value = aiVolume;
-        console.log('[sync_player] ✅ Panner and gain nodes created');
+      // Use the ALREADY CREATED globalAudioContext
+      const audioContext = globalAudioContext!;
+      console.log('[sync_player] ✅ AudioContext created, state:', audioContext.state);
 
-        // Set initial panning: AI left (-1), Patient right (+1)
-        if (isStereoEnabled) {
-          aiPanner.pan.value = -1; // Left ear
-          patientPanner.pan.value = 1; // Right ear
-          console.log('[sync_player] 🎧 Stereo mode: AI left, Patient right');
-        } else {
-          aiPanner.pan.value = 0; // Center
-          patientPanner.pan.value = 0; // Center
-          console.log('[sync_player] 🔊 Mono mode: Both centered');
-        }
+      // Create media sources - THIS CAN ONLY BE DONE ONCE PER ELEMENT
+      const patientSource = audioContext.createMediaElementSource(patientAudio);
+      const aiSource = audioContext.createMediaElementSource(aiAudio);
+      console.log('[sync_player] ✅ Media element sources created');
 
-        // Connect the audio graph: source -> panner -> gain -> destination
-        patientSource.connect(patientPanner);
-        patientPanner.connect(patientGain);
-        patientGain.connect(audioContext.destination);
+      // Create panner and gain nodes
+      const patientPanner = audioContext.createStereoPanner();
+      const aiPanner = audioContext.createStereoPanner();
+      const patientGain = audioContext.createGain();
+      const aiGain = audioContext.createGain();
+      console.log('[sync_player] ✅ Panner and gain nodes created');
 
-        aiSource.connect(aiPanner);
-        aiPanner.connect(aiGain);
-        aiGain.connect(audioContext.destination);
+      // Configure stereo panning
+      patientPanner.pan.value = 1;  // Full right
+      aiPanner.pan.value = -1;      // Full left
+      console.log('[sync_player] 🎧 Stereo mode: AI left, Patient right');
 
-        console.log('[sync_player] ✅ Audio graph connected');
+      // Set initial gains
+      patientGain.gain.value = (patientVolume * patientVolume * patientVolume) * 2;
+      aiGain.gain.value = (aiVolume * aiVolume * aiVolume) * 2;
 
-        // Store gain nodes for volume updates
-        (patientPannerRef.current as any).gainNode = patientGain;
-        (aiPannerRef.current as any).gainNode = aiGain;
+      // Connect the audio graph
+      patientSource.connect(patientPanner);
+      patientPanner.connect(patientGain);
+      patientGain.connect(audioContext.destination);
 
-        isInitializedRef.current = true;
-        console.log('[sync_player] ✅ Web Audio API initialized successfully');
-      } catch (error) {
-        console.error('[sync_player] ❌ Failed to initialize Web Audio API:', error);
-      }
-    };
+      aiSource.connect(aiPanner);
+      aiPanner.connect(aiGain);
+      aiGain.connect(audioContext.destination);
 
-    initAudio();
+      console.log('[sync_player] ✅ Audio graph connected');
 
-    return () => {
-      // Don't reset isInitializedRef in cleanup to prevent double-init from React Strict Mode
-      // The ref persists across re-mounts, preventing createMediaElementSource from being called twice
-      if (audioContextRef.current) {
-        console.log('[sync_player] 🧹 Cleaning up AudioContext');
-        audioContextRef.current.close();
-      }
-    };
+      // Debug connection counts
+      console.log('[sync_player] 🔍 Connection diagnostics:');
+      console.log('[sync_player] Patient source numberOfOutputs:', patientSource.numberOfOutputs);
+      console.log('[sync_player] Patient panner numberOfOutputs:', patientPanner.numberOfOutputs);
+      console.log('[sync_player] Patient gain numberOfOutputs:', patientGain.numberOfOutputs);
+      console.log('[sync_player] AI source numberOfOutputs:', aiSource.numberOfOutputs);
+      console.log('[sync_player] AI panner numberOfOutputs:', aiPanner.numberOfOutputs);
+      console.log('[sync_player] AI gain numberOfOutputs:', aiGain.numberOfOutputs);
+      console.log('[sync_player] Expected: all values should be 1. If >1, there are duplicate connections!');
+
+      // Store in module-level globals
+      globalPatientSource = patientSource;
+      globalAiSource = aiSource;
+      globalPatientPanner = patientPanner;
+      globalAiPanner = aiPanner;
+      globalPatientGain = patientGain;
+      globalAiGain = aiGain;
+
+      // Store in component refs
+      patientSourceRef.current = patientSource;
+      aiSourceRef.current = aiSource;
+      patientPannerRef.current = patientPanner;
+      aiPannerRef.current = aiPanner;
+      patientGainRef.current = patientGain;
+      aiGainRef.current = aiGain;
+
+      console.log('[sync_player] ✅ Web Audio API initialized successfully (singleton created)');
+    });
+
+    // NO CLEANUP - module-level singleton must persist to prevent recreating multiple audio graphs
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [patientAudioUrl, aiAudioUrl]); // Re-initialize when URLs change
+  }, []); // Empty deps - only run once ever
 
   // Update stereo panning when toggle changes
   useEffect(() => {
@@ -141,17 +174,31 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
   }, [isStereoEnabled]);
 
   // Update volume when sliders change
+  // Use exponential curve for more dramatic volume control (perceived loudness is logarithmic)
+  // Allow amplification up to 200% (gain value of 2.0)
   useEffect(() => {
-    if (patientPannerRef.current) {
-      const gainNode = (patientPannerRef.current as any).gainNode as GainNode;
-      if (gainNode) gainNode.gain.value = patientVolume;
+    if (patientGainRef.current) {
+      const rawVolume = patientVolume;
+      const calculatedGain = (rawVolume * rawVolume * rawVolume) * 2;
+      patientGainRef.current.gain.value = calculatedGain;
+
+      console.log('[sync_player] 🎚️ Patient volume slider changed:');
+      console.log('[sync_player]   Slider value:', rawVolume);
+      console.log('[sync_player]   Calculated gain:', calculatedGain);
+      console.log('[sync_player]   Actual gain.value:', patientGainRef.current.gain.value);
     }
   }, [patientVolume]);
 
   useEffect(() => {
-    if (aiPannerRef.current) {
-      const gainNode = (aiPannerRef.current as any).gainNode as GainNode;
-      if (gainNode) gainNode.gain.value = aiVolume;
+    if (aiGainRef.current) {
+      const rawVolume = aiVolume;
+      const calculatedGain = (rawVolume * rawVolume * rawVolume) * 2;
+      aiGainRef.current.gain.value = calculatedGain;
+
+      console.log('[sync_player] 🎚️ AI volume slider changed:');
+      console.log('[sync_player]   Slider value:', rawVolume);
+      console.log('[sync_player]   Calculated gain:', calculatedGain);
+      console.log('[sync_player]   Actual gain.value:', aiGainRef.current.gain.value);
     }
   }, [aiVolume]);
 
@@ -230,10 +277,8 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       console.log('[sync_player] AI audio paused?', aiAudio.paused, 'currentTime:', aiAudio.currentTime, 'volume:', aiAudio.volume);
 
       // Check gain node values
-      const patientGainNode = (patientPannerRef.current as any)?.gainNode as GainNode;
-      const aiGainNode = (aiPannerRef.current as any)?.gainNode as GainNode;
-      console.log('[sync_player] Patient gain value:', patientGainNode?.gain.value);
-      console.log('[sync_player] AI gain value:', aiGainNode?.gain.value);
+      console.log('[sync_player] Patient gain value:', patientGainRef.current?.gain.value);
+      console.log('[sync_player] AI gain value:', aiGainRef.current?.gain.value);
       console.log('[sync_player] Patient panner value:', patientPannerRef.current?.pan.value);
       console.log('[sync_player] AI panner value:', aiPannerRef.current?.pan.value);
 
@@ -350,34 +395,32 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
         <div>
           <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Patient Volume (Right Ear)
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={patientVolume}
-            onChange={(e) => setPatientVolume(parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-          />
-          <div className="text-xs text-gray-600 mt-1">{Math.round(patientVolume * 100)}%</div>
-        </div>
-
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
             AI Volume (Left Ear)
           </label>
           <input
             type="range"
             min="0"
             max="1"
-            step="0.1"
+            step="0.01"
             value={aiVolume}
             onChange={(e) => setAiVolume(parseFloat(e.target.value))}
             className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
           />
-          <div className="text-xs text-gray-600 mt-1">{Math.round(aiVolume * 100)}%</div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-gray-700 mb-2 block">
+            Patient Volume (Right Ear)
+          </label>
+          <input
+            type="range"
+            min="0"
+            max="1"
+            step="0.01"
+            value={patientVolume}
+            onChange={(e) => setPatientVolume(parseFloat(e.target.value))}
+            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+          />
         </div>
       </div>
     </div>
