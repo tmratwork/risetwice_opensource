@@ -112,8 +112,14 @@ export async function GET(request: NextRequest) {
     }
 
     // Find combined audio file for the specified speaker
-    const combinedFilePrefix = speaker === 'ai' ? 'combined-ai-' : 'combined-';
-    const combinedFile = files?.find(file => file.name.startsWith(combinedFilePrefix));
+    const combinedFile = files?.find(file => {
+      if (speaker === 'ai') {
+        return file.name.startsWith('combined-ai-');
+      } else {
+        // Patient: match 'combined-' but NOT 'combined-ai-'
+        return file.name.startsWith('combined-') && !file.name.startsWith('combined-ai-');
+      }
+    });
 
     console.log('[provider_audio] 🔍 Combined file search:', {
       found: !!combinedFile,
