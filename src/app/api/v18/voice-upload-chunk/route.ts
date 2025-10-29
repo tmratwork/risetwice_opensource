@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       // If file already exists in storage (409 conflict), treat as success
       // This handles race conditions or orphaned storage files from previous sessions
-      if (uploadError.message?.includes('already exists') || uploadError.statusCode === '409') {
+      if (uploadError.message?.includes('already exists')) {
         console.log(`${logPrefix} File already exists in storage, treating as success: ${storagePath}`);
       } else {
         // Real upload error - log and fail

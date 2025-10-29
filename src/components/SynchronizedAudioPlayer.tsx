@@ -58,7 +58,8 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
 
     // IMMEDIATELY claim the singleton spot (before any other work)
     // This prevents the second parallel effect from proceeding
-    globalAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const AudioContextConstructor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+    globalAudioContext = new AudioContextConstructor();
     audioContextRef.current = globalAudioContext;
 
     console.log('[sync_player] 🎵 Initializing Web Audio API (FIRST AND ONLY TIME)...');

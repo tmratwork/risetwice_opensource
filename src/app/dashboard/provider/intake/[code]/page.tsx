@@ -118,7 +118,6 @@ const ProviderIntakeView: React.FC = () => {
   const [aiNeedsCombination, setAiNeedsCombination] = useState(false);
   const [aiJobStatus, setAiJobStatus] = useState<string>('');
   const [aiPollingInterval, setAiPollingInterval] = useState<NodeJS.Timeout | null>(null);
-  const [aiAudioFilePath, setAiAudioFilePath] = useState<string | null>(null);
 
   // Collapsible panels state
   const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>({});
@@ -553,11 +552,7 @@ const ProviderIntakeView: React.FC = () => {
           setHasAiAudio(true);
           setAiNeedsCombination(false);
 
-          // Extract file path from response
-          if (result.conversationId) {
-            const filePath = `v18-voice-recordings/${result.conversationId}/${result.fileName || 'combined-ai-audio.webm'}`;
-            setAiAudioFilePath(filePath);
-          }
+          // File path is available in result if needed in future
 
           // Clear polling if it exists
           if (aiPollingInterval) {
@@ -628,11 +623,7 @@ const ProviderIntakeView: React.FC = () => {
           setAiNeedsCombination(false);
           setAiJobStatus('completed');
 
-          // Extract file path from polling result
-          if (result.conversationId) {
-            const filePath = `v18-voice-recordings/${result.conversationId}/${result.fileName || 'combined-ai-audio.webm'}`;
-            setAiAudioFilePath(filePath);
-          }
+          // File path is available in result if needed in future
 
           return;
         }
