@@ -181,9 +181,9 @@ export async function POST(request: NextRequest) {
       await fs.promises.writeFile(tempInputPath, inputBuffer);
       console.log(`[audio_combination] 💾 Wrote combined blob to temp file - ${Date.now() - startTime}ms elapsed`);
 
-      // STEP 3: Re-encode ONLY to add keyframes (not re-concatenate)
+      // STEP 3: Re-encode to ensure proper format (NO keyframes option - that's for video only)
       const outputPath = path.join(tempDir, 'output.webm');
-      console.log(`[audio_combination] 🔧 Starting FFmpeg re-encoding to add keyframes...`);
+      console.log(`[audio_combination] 🔧 Starting FFmpeg re-encoding...`);
 
       await new Promise<void>((resolve, reject) => {
         const ffmpegStartTime = Date.now();
@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
           .audioCodec('libopus')
           .audioBitrate('64k')
           .outputOptions([
-            '-force_key_frames', 'expr:gte(t,n_forced*2)' // Keyframe every 2 seconds
+            '-vn' // No video (audio only)
           ])
           .output(outputPath)
           .on('start', (commandLine) => {

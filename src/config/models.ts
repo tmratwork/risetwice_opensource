@@ -42,7 +42,7 @@ export const MODELS = {
     MEMORY_PROCESSING: "gpt-5-mini", // GPT-5 mini for memory operations
     MEMORY_MERGE: "gpt-5-mini", // GPT-5 mini for memory merging
     ANALYSIS: "gpt-5-mini", // Upgraded from gpt-4o to gpt-5-mini
-    TRANSCRIPTION: "gpt-4o-transcribe", // Keep current transcription model
+    TRANSCRIPTION: "whisper-1", // Use whisper-1 (gpt-4o-transcribe has issues with silence/pauses)
     HIGH_COMPLEXITY: "gpt-5", // Use full GPT-5 for complex reasoning
   }
 } as const;
