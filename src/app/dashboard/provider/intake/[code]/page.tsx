@@ -109,6 +109,16 @@ const ProviderIntakeView: React.FC = () => {
   const [showFullTranscript, setShowFullTranscript] = useState(false);
   const [audioFilePath, setAudioFilePath] = useState<string | null>(null);
 
+  // AI audio state
+  const [aiAudioUrl, setAiAudioUrl] = useState<string | null>(null);
+  const [hasAiAudio, setHasAiAudio] = useState(false);
+  const [aiAudioLoading, setAiAudioLoading] = useState(true);
+  const [aiChunkCount, setAiChunkCount] = useState<number>(0);
+  const [aiNeedsCombination, setAiNeedsCombination] = useState(false);
+  const [aiJobStatus, setAiJobStatus] = useState<string>('');
+  const [aiPollingInterval, setAiPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [aiAudioFilePath, setAiAudioFilePath] = useState<string | null>(null);
+
   // Collapsible panels state
   const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>({});
 
@@ -347,8 +357,11 @@ const ProviderIntakeView: React.FC = () => {
         setIntakeData(result.intake);
         setLoading(false);
 
-        // Fetch audio recording
+        // Fetch patient audio recording
         fetchAudioRecording(result.intake.id);
+
+        // Fetch AI audio recording
+        fetchAiAudioRecording(result.intake.id);
 
         // Fetch transcript
         fetchTranscript(result.intake.id);
@@ -517,8 +530,153 @@ const ProviderIntakeView: React.FC = () => {
         console.log('[provider_intake] 🧹 Cleaning up polling on unmount');
         clearInterval(pollingInterval);
       }
+      if (aiPollingInterval) {
+        console.log('[provider_intake] 🧹 Cleaning up AI polling on unmount');
+        clearInterval(aiPollingInterval);
+      }
     };
-  }, [pollingInterval]);
+  }, [pollingInterval, aiPollingInterval]);
+
+  const fetchAiAudioRecording = async (intakeId: string) => {
+    try {
+      console.log('[provider_intake] 🤖 Fetching AI audio for intake:', intakeId);
+      const response = await fetch(`/api/provider/intake-audio?intake_id=${intakeId}&speaker=ai`);
+      const result = await response.json();
+
+      console.log('[provider_intake] 📋 AI audio fetch result:', result);
+
+      if (result.success && result.hasRecording) {
+        if (result.audioUrl) {
+          console.log('[provider_intake] ✅ AI audio URL ready');
+          setAiAudioUrl(result.audioUrl);
+          setHasAiAudio(true);
+          setAiNeedsCombination(false);
+
+          // Extract file path from response
+          if (result.conversationId) {
+            const filePath = `v18-voice-recordings/${result.conversationId}/${result.fileName || 'combined-ai-audio.webm'}`;
+            setAiAudioFilePath(filePath);
+          }
+
+          // Clear polling if it exists
+          if (aiPollingInterval) {
+            console.log('[provider_intake] 🛑 Clearing AI polling interval');
+            clearInterval(aiPollingInterval);
+            setAiPollingInterval(null);
+          }
+        } else if (result.needsCombination) {
+          console.log('[provider_intake] ⏳ AI audio needs combination, status:', result.jobStatus);
+          setHasAiAudio(true);
+          setAiNeedsCombination(true);
+          setAiChunkCount(result.chunkCount || 0);
+          setAiJobStatus(result.jobStatus || 'processing');
+
+          // Start polling if status is processing and not already polling
+          if (result.jobStatus === 'processing' && !aiPollingInterval) {
+            console.log('[provider_intake] 🔄 Starting polling for AI audio combination');
+            startAiPolling(intakeId);
+          }
+        }
+      } else {
+        setHasAiAudio(false);
+      }
+    } catch (error) {
+      console.error('[provider_intake] ❌ Error fetching AI audio:', error);
+      setHasAiAudio(false);
+    } finally {
+      setAiAudioLoading(false);
+    }
+  };
+
+  const startAiPolling = (intakeId: string) => {
+    // Store interval reference locally to avoid closure issues
+    let localInterval: NodeJS.Timeout | null = null;
+
+    const pollAiAudio = async () => {
+      console.log('[provider_intake] 🔍 Polling AI audio status...');
+
+      try {
+        const response = await fetch(`/api/provider/intake-audio?intake_id=${intakeId}&speaker=ai`);
+        const result = await response.json();
+
+        console.log('[provider_intake] 📊 AI poll result:', {
+          hasRecording: result.hasRecording,
+          audioUrl: !!result.audioUrl,
+          jobStatus: result.jobStatus
+        });
+
+        if (result.success && result.hasRecording && result.audioUrl) {
+          console.log('[provider_intake] 🛑 AI audio ready - stopping polling');
+
+          // Clear local interval
+          if (localInterval) {
+            clearInterval(localInterval);
+            localInterval = null;
+            console.log('[provider_intake] ✅ Local AI interval cleared');
+          }
+
+          // Clear state interval
+          if (aiPollingInterval) {
+            clearInterval(aiPollingInterval);
+            setAiPollingInterval(null);
+            console.log('[provider_intake] ✅ State AI interval cleared');
+          }
+
+          // Update state
+          setAiAudioUrl(result.audioUrl);
+          setAiNeedsCombination(false);
+          setAiJobStatus('completed');
+
+          // Extract file path from polling result
+          if (result.conversationId) {
+            const filePath = `v18-voice-recordings/${result.conversationId}/${result.fileName || 'combined-ai-audio.webm'}`;
+            setAiAudioFilePath(filePath);
+          }
+
+          return;
+        }
+
+        // Stop polling if job failed
+        if (result.jobStatus === 'failed') {
+          console.log('[provider_intake] 🛑 AI job failed - stopping polling');
+
+          // Clear local interval
+          if (localInterval) {
+            clearInterval(localInterval);
+            localInterval = null;
+            console.log('[provider_intake] ✅ Local AI interval cleared');
+          }
+
+          // Clear state interval
+          if (aiPollingInterval) {
+            clearInterval(aiPollingInterval);
+            setAiPollingInterval(null);
+            console.log('[provider_intake] ✅ State AI interval cleared');
+          }
+
+          // Update status
+          setAiJobStatus('failed');
+          setAiNeedsCombination(false);
+
+          return;
+        }
+
+        // Update status if still processing
+        if (result.jobStatus) {
+          setAiJobStatus(result.jobStatus);
+        }
+      } catch (error) {
+        console.error('[provider_intake] ❌ AI polling error:', error);
+      }
+    };
+
+    // Initial poll
+    pollAiAudio();
+
+    // Poll every 2 seconds
+    localInterval = setInterval(pollAiAudio, 2000);
+    setAiPollingInterval(localInterval);
+  };
 
   const fetchSummary = async (intakeId: string) => {
     try {
@@ -852,6 +1010,58 @@ const ProviderIntakeView: React.FC = () => {
             ) : (
               <p className="text-gray-600">No voice recording available for this intake.</p>
             )}
+
+            {/* AI Audio Recording Section */}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-xl font-bold text-gray-800 mb-4">AI Voice Recording</h3>
+              <p className="text-sm text-gray-600 mb-4">This is what the AI said during the intake conversation.</p>
+
+              {aiAudioLoading ? (
+                <div className="flex items-center text-gray-600">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
+                  Loading AI audio...
+                </div>
+              ) : hasAiAudio && aiAudioUrl ? (
+                <div>
+                  <audio controls className="w-full">
+                    <source src={aiAudioUrl} type="audio/webm" />
+                    Your browser does not support the audio element.
+                  </audio>
+                  <p className="text-sm text-gray-600 mt-2">
+                    Note: Audio is in WebM format. If playback fails, please use Chrome or Firefox.
+                  </p>
+                </div>
+              ) : hasAiAudio && aiNeedsCombination && aiJobStatus === 'failed' ? (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                  <p className="text-red-800 font-medium mb-2">AI audio combination failed</p>
+                  <p className="text-red-700 text-sm mb-3">
+                    The AI audio recording exists ({aiChunkCount} chunks) but failed to combine.
+                    Please contact support to resolve this issue.
+                  </p>
+                  <p className="text-red-600 text-xs">
+                    Conversation ID: {intakeData?.conversationId}
+                  </p>
+                </div>
+              ) : hasAiAudio && aiNeedsCombination ? (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center mb-2">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                    <p className="text-blue-800 font-medium">Preparing AI audio playback...</p>
+                  </div>
+                  <p className="text-blue-700 text-sm">
+                    Combining {aiChunkCount} AI audio chunks from the intake session.
+                    This will take a few moments.
+                  </p>
+                  {aiJobStatus && (
+                    <p className="text-blue-600 text-xs mt-2">
+                      Status: {aiJobStatus === 'processing' ? 'Processing...' : aiJobStatus}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-gray-600">No AI audio recording available for this intake.</p>
+              )}
+            </div>
 
             {/* Provider Response Recording */}
             <div className="mt-8 pt-6 border-t border-gray-200">

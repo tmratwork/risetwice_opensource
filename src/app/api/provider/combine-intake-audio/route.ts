@@ -13,9 +13,9 @@ export const maxDuration = 300; // 5 minutes for large audio files
 
 export async function POST(request: NextRequest) {
   try {
-    const { intake_id, conversation_id } = await request.json();
+    const { intake_id, conversation_id, speaker = 'patient' } = await request.json();
 
-    console.log('[audio_combination] 🎯 Starting combination for:', { intake_id, conversation_id });
+    console.log('[audio_combination] 🎯 Starting combination for:', { intake_id, conversation_id, speaker });
 
     if (!intake_id || !conversation_id) {
       return NextResponse.json(
@@ -24,11 +24,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if combination already in progress
+    // Check if combination already in progress for this speaker
     const { data: existingJob, error: jobCheckError } = await supabaseAdmin
       .from('audio_combination_jobs')
       .select('*')
       .eq('conversation_id', conversation_id)
+      .eq('speaker', speaker)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -62,6 +63,7 @@ export async function POST(request: NextRequest) {
       .insert({
         conversation_id,
         intake_id,
+        speaker,
         status: 'processing',
         started_at: new Date().toISOString()
       })
@@ -78,12 +80,26 @@ export async function POST(request: NextRequest) {
 
     console.log('[audio_combination] 📝 Created job:', job.id);
 
-    // Fetch all audio chunks
-    const { data: chunks, error: chunksError } = await supabaseAdmin
+    // Fetch audio chunks for the specified speaker
+    let { data: chunks, error: chunksError } = await supabaseAdmin
       .from('v18_audio_chunks')
       .select('*')
       .eq('conversation_id', conversation_id)
+      .eq('speaker', speaker)
       .order('chunk_index', { ascending: true });
+
+    // If no chunks found for patient speaker, fallback to any chunks (for backwards compatibility)
+    if (speaker === 'patient' && (!chunks || chunks.length === 0)) {
+      console.log('[audio_combination] ⚠️ No patient chunks found, falling back to any chunks...');
+      const result = await supabaseAdmin
+        .from('v18_audio_chunks')
+        .select('*')
+        .eq('conversation_id', conversation_id)
+        .order('chunk_index', { ascending: true });
+
+      chunks = result.data;
+      chunksError = result.error;
+    }
 
     if (chunksError || !chunks || chunks.length === 0) {
       console.error('[audio_combination] ❌ No chunks found:', chunksError);
@@ -222,7 +238,8 @@ export async function POST(request: NextRequest) {
       console.log(`[audio_combination] 🔗 Final file size: ${finalBlob.size} bytes (${(finalBlob.size / 1024 / 1024).toFixed(2)} MB) - ${Date.now() - startTime}ms elapsed`);
 
       // STEP 5: Upload the re-encoded file
-      const combinedFileName = `combined-${Date.now()}.webm`;
+      const filePrefix = speaker === 'ai' ? 'combined-ai-' : 'combined-';
+      const combinedFileName = `${filePrefix}${Date.now()}.webm`;
       combinedPath = `v18-voice-recordings/${conversation_id}/${combinedFileName}`;
 
       console.log(`[audio_combination] 📤 Starting upload: ${(finalBlob.size / 1024 / 1024).toFixed(2)} MB - ${Date.now() - startTime}ms elapsed`);

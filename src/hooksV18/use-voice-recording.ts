@@ -92,7 +92,18 @@ export function useVoiceRecording() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
+        const errorText = await response.text();
+        let errorData;
+        try {
+          errorData = JSON.parse(errorText);
+        } catch {
+          errorData = { error: errorText };
+        }
+        console.error(`[v18_voice_recording] ❌ ${speaker} chunk ${chunkIndex} API error:`, {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
         throw new Error(errorData.error || `Upload failed: ${response.statusText}`);
       }
 
@@ -112,8 +123,9 @@ export function useVoiceRecording() {
 
   // Start recording BOTH patient and AI audio streams
   const startRecording = useCallback(async () => {
-    if (isRecordingPatientRef.current || isRecordingAiRef.current) {
-      console.log('[v18_voice_recording] Recording already active');
+    // Only check if PATIENT recording is active (AI recording starts independently)
+    if (isRecordingPatientRef.current) {
+      console.log('[v18_voice_recording] Patient recording already active');
       return;
     }
 
@@ -140,8 +152,16 @@ export function useVoiceRecording() {
 
       // === PATIENT AUDIO STREAM (microphone input) ===
       const patientStream = connectionManager.getAudioInputStream();
+      console.log('[v18_voice_recording] 🎤 Attempting to get patient audio stream:', {
+        connectionManagerExists: !!connectionManager,
+        patientStreamExists: !!patientStream,
+        patientStreamId: patientStream?.id,
+        patientStreamActive: patientStream?.active,
+        audioTracksCount: patientStream?.getAudioTracks().length
+      });
+
       if (patientStream) {
-        console.log('[v18_voice_recording] Setting up PATIENT audio recording:', {
+        console.log('[v18_voice_recording] ✅ Setting up PATIENT audio recording:', {
           streamId: patientStream.id,
           active: patientStream.active,
           audioTracks: patientStream.getAudioTracks().length
@@ -185,7 +205,11 @@ export function useVoiceRecording() {
 
         console.log('[v18_voice_recording] ✅ PATIENT recording started');
       } else {
-        console.warn('[v18_voice_recording] ⚠️ Patient audio stream not available');
+        console.error('[v18_voice_recording] ❌ Patient audio stream NOT AVAILABLE - patient audio will NOT be recorded!', {
+          connectionManagerExists: !!connectionManager,
+          patientStreamNull: patientStream === null,
+          patientStreamUndefined: patientStream === undefined
+        });
       }
 
       console.log('[v18_voice_recording] ✅ Dual-stream recording session initialized:', {
@@ -410,26 +434,30 @@ export function useVoiceRecording() {
 
   // Auto-start recording when WebRTC connects, stop when disconnects
   useEffect(() => {
-    const isRecording = isRecordingPatientRef.current || isRecordingAiRef.current;
+    // Only check if PATIENT recording has started (AI recording starts independently via listener)
+    const isPatientRecording = isRecordingPatientRef.current;
+    const isAnyRecording = isRecordingPatientRef.current || isRecordingAiRef.current;
 
     console.log('[v18_voice_recording] useEffect triggered:', {
       isConnected,
       isRecordingPatient: isRecordingPatientRef.current,
       isRecordingAi: isRecordingAiRef.current,
-      isRecording
+      isPatientRecording,
+      isAnyRecording
     });
 
-    if (isConnected && !isRecording) {
-      console.log('[v18_voice_recording] Conditions met - calling startRecording');
+    // Start patient recording when connected (even if AI recording already started)
+    if (isConnected && !isPatientRecording) {
+      console.log('[v18_voice_recording] Conditions met - calling startRecording for PATIENT audio');
       startRecording();
-    } else if (!isConnected && isRecording) {
-      console.log('[v18_voice_recording] WebRTC disconnected - stopping recording');
+    } else if (!isConnected && isAnyRecording) {
+      console.log('[v18_voice_recording] WebRTC disconnected - stopping all recording');
       stopRecording();
     } else {
       console.log('[v18_voice_recording] Conditions NOT met for starting recording:', {
         isConnected,
-        isRecording,
-        reason: !isConnected ? 'Not connected' : 'Already recording'
+        isPatientRecording,
+        reason: !isConnected ? 'Not connected' : 'Patient recording already active'
       });
     }
   }, [isConnected, startRecording, stopRecording]);

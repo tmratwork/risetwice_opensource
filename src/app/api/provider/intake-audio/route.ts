@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
     const intakeId = searchParams.get('intake_id');
+    const speaker = searchParams.get('speaker') || 'patient'; // Default to patient for backwards compatibility
 
-    console.log('[provider_audio] 🎯 API called with intake_id:', intakeId);
+    console.log('[provider_audio] 🎯 API called with intake_id:', intakeId, 'speaker:', speaker);
 
     if (!intakeId) {
       console.log('[provider_audio] ❌ No intake_id provided');
@@ -110,8 +111,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Find combined audio file
-    const combinedFile = files?.find(file => file.name.startsWith('combined-'));
+    // Find combined audio file for the specified speaker
+    const combinedFilePrefix = speaker === 'ai' ? 'combined-ai-' : 'combined-';
+    const combinedFile = files?.find(file => file.name.startsWith(combinedFilePrefix));
 
     console.log('[provider_audio] 🔍 Combined file search:', {
       found: !!combinedFile,
@@ -147,13 +149,28 @@ export async function GET(request: NextRequest) {
     }
 
     // No combined file exists - check if we have chunks to combine
-    console.log('[provider_audio] 📦 No combined file - checking for chunks...');
+    console.log(`[provider_audio] 📦 No combined file - checking for ${speaker} chunks...`);
 
-    const { data: chunks, error: chunksError } = await supabaseAdmin
+    // Fetch chunks for the specified speaker
+    let { data: chunks, error: chunksError } = await supabaseAdmin
       .from('v18_audio_chunks')
       .select('*')
       .eq('conversation_id', conversationId)
+      .eq('speaker', speaker)
       .order('chunk_index', { ascending: true });
+
+    // If no chunks found for the requested speaker and it's patient, fallback to any chunks (for backwards compatibility)
+    if (speaker === 'patient' && (!chunks || chunks.length === 0)) {
+      console.log('[provider_audio] ⚠️ No patient chunks found, checking for any chunks...');
+      const result = await supabaseAdmin
+        .from('v18_audio_chunks')
+        .select('*')
+        .eq('conversation_id', conversationId)
+        .order('chunk_index', { ascending: true });
+
+      chunks = result.data;
+      chunksError = result.error;
+    }
 
     console.log('[provider_audio] 📦 Chunks query result:', {
       chunkCount: chunks?.length,
@@ -171,11 +188,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check if combination job already exists
+    // Check if combination job already exists for this speaker
     const { data: existingJob, error: jobCheckError } = await supabaseAdmin
       .from('audio_combination_jobs')
       .select('*')
       .eq('conversation_id', conversationId)
+      .eq('speaker', speaker)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -207,7 +225,7 @@ export async function GET(request: NextRequest) {
     }
 
     // No job exists - trigger combination in background (don't wait for completion)
-    console.log('[provider_audio] 🚀 Triggering audio combination in background...');
+    console.log(`[provider_audio] 🚀 Triggering ${speaker} audio combination in background...`);
 
     // Fire and forget - don't await
     fetch(`${request.nextUrl.origin}/api/provider/combine-intake-audio`, {
@@ -215,7 +233,8 @@ export async function GET(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         intake_id: intakeId,
-        conversation_id: conversationId
+        conversation_id: conversationId,
+        speaker: speaker
       })
     }).catch(err => {
       console.error('[provider_audio] ❌ Failed to trigger combination:', err);

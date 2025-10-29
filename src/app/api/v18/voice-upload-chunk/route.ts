@@ -102,26 +102,33 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error(`${logPrefix} Supabase Storage upload failed:`, uploadError);
+      // If file already exists in storage (409 conflict), treat as success
+      // This handles race conditions or orphaned storage files from previous sessions
+      if (uploadError.message?.includes('already exists') || uploadError.statusCode === '409') {
+        console.log(`${logPrefix} File already exists in storage, treating as success: ${storagePath}`);
+      } else {
+        // Real upload error - log and fail
+        console.error(`${logPrefix} Supabase Storage upload failed:`, uploadError);
 
-      // Record failed chunk in database for retry tracking
-      await supabaseAdmin.from('v18_audio_chunks').insert({
-        conversation_id: conversationId,
-        chunk_index: chunkIndex,
-        storage_path: storagePath,
-        file_size: audioFile.size,
-        mime_type: audioFile.type,
-        speaker: speaker, // NEW: Include speaker type
-        status: 'failed',
-        retry_count: 1
-      });
+        // Record failed chunk in database for retry tracking
+        await supabaseAdmin.from('v18_audio_chunks').insert({
+          conversation_id: conversationId,
+          chunk_index: chunkIndex,
+          storage_path: storagePath,
+          file_size: audioFile.size,
+          mime_type: audioFile.type,
+          speaker: speaker,
+          status: 'failed',
+          retry_count: 1
+        });
 
-      return NextResponse.json({
-        success: false,
-        error: 'Failed to upload audio chunk',
-        details: uploadError.message,
-        chunk_index: chunkIndex
-      }, { status: 500 });
+        return NextResponse.json({
+          success: false,
+          error: 'Failed to upload audio chunk',
+          details: uploadError.message,
+          chunk_index: chunkIndex
+        }, { status: 500 });
+      }
     }
 
     console.log(`${logPrefix} Chunk upload successful:`, uploadData);
