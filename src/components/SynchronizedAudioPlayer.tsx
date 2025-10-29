@@ -39,6 +39,7 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
   const [patientVolume, setPatientVolume] = useState(1.0);
   const [aiVolume, setAiVolume] = useState(0.7); // AI slightly quieter by default
   const [isStereoEnabled, setIsStereoEnabled] = useState(true);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
 
   // Initialize Web Audio API for stereo panning
   useEffect(() => {
@@ -91,6 +92,11 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       patientAudio.volume = 1.0;
       aiAudio.volume = 1.0;
       console.log('[sync_player] ✅ Audio element volumes set to 1.0 (GainNode controls volume)');
+
+      // Enable pitch preservation for playback speed changes (prevents chipmunk effect)
+      patientAudio.preservesPitch = true;
+      aiAudio.preservesPitch = true;
+      console.log('[sync_player] ✅ Pitch preservation enabled');
 
       // Use the ALREADY CREATED globalAudioContext
       const audioContext = globalAudioContext!;
@@ -202,6 +208,18 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       console.log('[sync_player]   Actual gain.value:', aiGainRef.current.gain.value);
     }
   }, [aiVolume]);
+
+  // Update playback speed when slider changes
+  useEffect(() => {
+    const patientAudio = patientAudioRef.current;
+    const aiAudio = aiAudioRef.current;
+
+    if (patientAudio && aiAudio) {
+      patientAudio.playbackRate = playbackSpeed;
+      aiAudio.playbackRate = playbackSpeed;
+      console.log('[sync_player] ⚡ Playback speed changed to:', playbackSpeed);
+    }
+  }, [playbackSpeed]);
 
   // Update duration when metadata loads
   useEffect(() => {
@@ -391,6 +409,56 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
           background: `linear-gradient(to right, #2563eb 0%, #2563eb ${(currentTime / duration) * 100}%, #e5e7eb ${(currentTime / duration) * 100}%, #e5e7eb 100%)`
         }}
       />
+
+      {/* Playback speed control */}
+      <div className="pt-4 border-t border-gray-200">
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-gray-700">
+            Playback Speed: {playbackSpeed.toFixed(2)}x
+          </label>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setPlaybackSpeed(0.75)}
+              className={`px-2 py-1 text-xs rounded ${playbackSpeed === 0.75 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              0.75x
+            </button>
+            <button
+              onClick={() => setPlaybackSpeed(1.0)}
+              className={`px-2 py-1 text-xs rounded ${playbackSpeed === 1.0 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              1x
+            </button>
+            <button
+              onClick={() => setPlaybackSpeed(1.25)}
+              className={`px-2 py-1 text-xs rounded ${playbackSpeed === 1.25 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              1.25x
+            </button>
+            <button
+              onClick={() => setPlaybackSpeed(1.5)}
+              className={`px-2 py-1 text-xs rounded ${playbackSpeed === 1.5 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              1.5x
+            </button>
+            <button
+              onClick={() => setPlaybackSpeed(2.0)}
+              className={`px-2 py-1 text-xs rounded ${playbackSpeed === 2.0 ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700 hover:bg-gray-300'}`}
+            >
+              2x
+            </button>
+          </div>
+        </div>
+        <input
+          type="range"
+          min="0.5"
+          max="2.0"
+          step="0.05"
+          value={playbackSpeed}
+          onChange={(e) => setPlaybackSpeed(parseFloat(e.target.value))}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+        />
+      </div>
 
       {/* Volume controls */}
       <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
