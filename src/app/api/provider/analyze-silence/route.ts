@@ -82,20 +82,24 @@ export async function POST(request: NextRequest) {
       duration: duration.toFixed(2) + 's'
     });
 
-    // Store results in database
-    const { error: insertError } = await supabaseAdmin
+    // Store results in database (upsert to handle race conditions)
+    const { error: upsertError } = await supabaseAdmin
       .from('audio_silence_analysis')
-      .insert({
+      .upsert({
         file_path: filePath,
         bucket_name: bucketName,
         silence_segments: silenceSegments,
         duration_seconds: duration,
         threshold_db: -50,
-        min_silence_duration: 0.5
+        min_silence_duration: 0.5,
+        analyzed_at: new Date().toISOString()
+      }, {
+        onConflict: 'file_path',
+        ignoreDuplicates: false  // Update if exists
       });
 
-    if (insertError) {
-      console.error('[silence_analysis] ❌ Failed to store analysis:', insertError);
+    if (upsertError) {
+      console.error('[silence_analysis] ❌ Failed to store analysis:', upsertError);
       // Don't fail the request - return the analysis anyway
     } else {
       console.log('[silence_analysis] ✅ Analysis stored in database');
