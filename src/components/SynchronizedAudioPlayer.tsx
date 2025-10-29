@@ -117,10 +117,11 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
     initAudio();
 
     return () => {
-      if (audioContextRef.current && isInitializedRef.current) {
+      // Don't reset isInitializedRef in cleanup to prevent double-init from React Strict Mode
+      // The ref persists across re-mounts, preventing createMediaElementSource from being called twice
+      if (audioContextRef.current) {
         console.log('[sync_player] 🧹 Cleaning up AudioContext');
         audioContextRef.current.close();
-        isInitializedRef.current = false;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -276,8 +277,8 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
   return (
     <div className="bg-white rounded-lg border p-4">
       {/* Hidden audio elements */}
-      <audio ref={patientAudioRef} src={patientAudioUrl} preload="metadata" />
-      <audio ref={aiAudioRef} src={aiAudioUrl} preload="metadata" />
+      <audio ref={patientAudioRef} src={patientAudioUrl} preload="metadata" crossOrigin="anonymous" />
+      <audio ref={aiAudioRef} src={aiAudioUrl} preload="metadata" crossOrigin="anonymous" />
 
       {/* Stereo mode info */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
