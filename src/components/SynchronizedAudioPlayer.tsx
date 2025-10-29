@@ -113,8 +113,8 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       console.log('[sync_player] 🎧 Stereo mode: AI left, Patient right');
 
       // Set initial gains
-      patientGain.gain.value = (patientVolume * patientVolume * patientVolume) * 2;
-      aiGain.gain.value = (aiVolume * aiVolume * aiVolume) * 2;
+      patientGain.gain.value = (patientVolume * patientVolume * patientVolume) * 4;
+      aiGain.gain.value = (aiVolume * aiVolume * aiVolume) * 4;
 
       // Connect the audio graph
       patientSource.connect(patientPanner);
@@ -175,11 +175,11 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
 
   // Update volume when sliders change
   // Use exponential curve for more dramatic volume control (perceived loudness is logarithmic)
-  // Allow amplification up to 200% (gain value of 2.0)
+  // Allow amplification up to 400% (gain value of 4.0)
   useEffect(() => {
     if (patientGainRef.current) {
       const rawVolume = patientVolume;
-      const calculatedGain = (rawVolume * rawVolume * rawVolume) * 2;
+      const calculatedGain = (rawVolume * rawVolume * rawVolume) * 4;
       patientGainRef.current.gain.value = calculatedGain;
 
       console.log('[sync_player] 🎚️ Patient volume slider changed:');
@@ -192,7 +192,7 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
   useEffect(() => {
     if (aiGainRef.current) {
       const rawVolume = aiVolume;
-      const calculatedGain = (rawVolume * rawVolume * rawVolume) * 2;
+      const calculatedGain = (rawVolume * rawVolume * rawVolume) * 4;
       aiGainRef.current.gain.value = calculatedGain;
 
       console.log('[sync_player] 🎚️ AI volume slider changed:');
