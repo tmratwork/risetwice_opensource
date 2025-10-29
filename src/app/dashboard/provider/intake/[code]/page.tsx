@@ -540,7 +540,9 @@ const ProviderIntakeView: React.FC = () => {
     }
   };
 
-  const fetchTranscript = async (intakeId: string) => {
+  const fetchTranscript = async (intakeId: string, retryCount = 0) => {
+    const MAX_RETRIES = 40; // 40 retries * 3 seconds = 2 minutes max wait
+
     try {
       const response = await fetch(`/api/provider/intake-transcript?intake_id=${intakeId}`);
       const result = await response.json();
@@ -548,10 +550,17 @@ const ProviderIntakeView: React.FC = () => {
       if (result.success && result.transcript) {
         setTranscript(result.transcript);
         setTranscriptStatus(result.status);
-      } else if (result.status === 'processing') {
-        setTranscriptStatus('processing');
+      } else if (result.status === 'processing' || result.status === 'not_found') {
+        if (retryCount >= MAX_RETRIES) {
+          console.warn('[transcript] Max retries reached - stopping polling');
+          setTranscriptStatus('timeout');
+          return;
+        }
+
+        // Keep polling if transcript is processing or not yet available
+        setTranscriptStatus(result.status === 'processing' ? 'processing' : 'pending');
         // Poll again in 3 seconds
-        setTimeout(() => fetchTranscript(intakeId), 3000);
+        setTimeout(() => fetchTranscript(intakeId, retryCount + 1), 3000);
       }
     } catch (error) {
       console.error('Error fetching transcript:', error);
