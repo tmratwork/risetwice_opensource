@@ -19,6 +19,7 @@ export async function POST(request: NextRequest) {
     const conversationId = formData.get('conversation_id') as string;
     const chunkIndex = parseInt(formData.get('chunk_index') as string);
     const purpose = formData.get('purpose') as string;
+    const speaker = (formData.get('speaker') as string) || 'patient'; // NEW: Default to 'patient' for backward compatibility
     const userId = formData.get('user_id') as string | null;
     const intakeId = formData.get('intake_id') as string | null;
 
@@ -44,12 +45,21 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
+    // Validate speaker value
+    if (speaker !== 'patient' && speaker !== 'ai') {
+      console.error(`${logPrefix} Invalid speaker value: ${speaker}`);
+      return NextResponse.json({
+        error: 'Invalid speaker value. Must be "patient" or "ai"'
+      }, { status: 400 });
+    }
+
     console.log(`${logPrefix} Processing chunk:`, {
       fileName: audioFile.name,
       fileSize: audioFile.size,
       fileType: audioFile.type,
       conversationId: conversationId,
       chunkIndex: chunkIndex,
+      speaker: speaker, // NEW: Log speaker type
       purpose: purpose || 'voice_chunk'
     });
 
@@ -57,18 +67,19 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await audioFile.arrayBuffer();
     const fileBuffer = new Uint8Array(arrayBuffer);
 
-    // Create unique filename for chunk
+    // Create unique filename for chunk with speaker subdirectory
     const chunkFileName = `chunk-${String(chunkIndex).padStart(3, '0')}.webm`;
-    const storagePath = `v18-voice-recordings/${conversationId}/${chunkFileName}`;
+    const storagePath = `v18-voice-recordings/${conversationId}/${speaker}/${chunkFileName}`; // NEW: Separate by speaker
 
     console.log(`${logPrefix} Uploading chunk to Supabase Storage: ${storagePath}`);
 
-    // Check if chunk already exists (prevent duplicates)
+    // Check if chunk already exists (prevent duplicates) - check by conversation, chunk index, AND speaker
     const { data: existingChunk } = await supabaseAdmin
       .from('v18_audio_chunks')
       .select('id')
       .eq('conversation_id', conversationId)
       .eq('chunk_index', chunkIndex)
+      .eq('speaker', speaker) // NEW: Also check speaker to allow same chunk index for different speakers
       .single();
 
     if (existingChunk) {
@@ -100,6 +111,7 @@ export async function POST(request: NextRequest) {
         storage_path: storagePath,
         file_size: audioFile.size,
         mime_type: audioFile.type,
+        speaker: speaker, // NEW: Include speaker type
         status: 'failed',
         retry_count: 1
       });
@@ -114,7 +126,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`${logPrefix} Chunk upload successful:`, uploadData);
 
-    // Record successful chunk in database with user linking
+    // Record successful chunk in database with user linking and speaker identification
     const { data: chunkRecord, error: dbError } = await supabaseAdmin
       .from('v18_audio_chunks')
       .insert({
@@ -123,6 +135,7 @@ export async function POST(request: NextRequest) {
         storage_path: storagePath,
         file_size: audioFile.size,
         mime_type: audioFile.type,
+        speaker: speaker, // NEW: Include speaker type
         status: 'uploaded',
         user_id: userId || null,
         intake_id: intakeId || null

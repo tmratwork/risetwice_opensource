@@ -511,6 +511,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
           return;
         } else {
           // For assistant messages, use existing logic
+          // Get current specialist from store to avoid stale closure
+          const currentSpecialist = useWebRTCStore.getState().triageSession?.currentSpecialist;
+
           const finalMessage: Conversation = {
             id: `${messageRole}-final-${id}`,
             role: messageRole,
@@ -518,14 +521,14 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             timestamp: new Date().toISOString(),
             isFinal: true,
             status: "final",
-            specialist: messageRole === 'assistant' ? (triageSession.currentSpecialist || undefined) : undefined
+            specialist: messageRole === 'assistant' ? (currentSpecialist || undefined) : undefined
           };
 
           logSpecialistTracking('🎯 Final message created', {
             messageId: finalMessage.id,
             messageRole: finalMessage.role,
             assignedSpecialist: finalMessage.specialist,
-            currentSpecialist: triageSession.currentSpecialist
+            currentSpecialist: currentSpecialist
           });
 
           const existingStreamingMessage = incompleteMessages.get(id);
@@ -542,7 +545,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             });
 
             // Add the final complete message (this will save to database)
-            addConversationMessage(finalMessage);
+            useWebRTCStore.getState().addConversationMessage(finalMessage);
 
             incompleteMessages.delete(id);
           } else {
@@ -553,7 +556,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             );
             useWebRTCStore.setState({ conversation: filteredConversation });
 
-            addConversationMessage(finalMessage);
+            useWebRTCStore.getState().addConversationMessage(finalMessage);
           }
         }
       } else {
@@ -602,6 +605,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             });
           } else {
             // Create new incomplete message
+            // Get current specialist from store to avoid stale closure
+            const currentSpecialist = useWebRTCStore.getState().triageSession?.currentSpecialist;
+
             const newMessage: Conversation = {
               id: `${messageRole}-streaming-${id}`,
               role: messageRole,
@@ -609,7 +615,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               timestamp: new Date().toISOString(),
               isFinal: false,
               status: "speaking",
-              specialist: messageRole === 'assistant' ? (triageSession.currentSpecialist || undefined) : undefined
+              specialist: messageRole === 'assistant' ? (currentSpecialist || undefined) : undefined
             };
 
             incompleteMessages.set(id, newMessage);
@@ -621,7 +627,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             );
             useWebRTCStore.setState({ conversation: filteredConversation });
 
-            addConversationMessage(newMessage);
+            useWebRTCStore.getState().addConversationMessage(newMessage);
           }
         }
       }
@@ -633,7 +639,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       // console.log('[V16] 🧹 MESSAGE: Cleaning up transcript subscription');
       unsubscribe();
     };
-  }, [addConversationMessage, triageSession.currentSpecialist]);
+  }, []); // Empty deps - subscribe only once on mount to avoid duplicate subscriptions
 
   // Auto-scroll to bottom when conversation changes
   useEffect(() => {
