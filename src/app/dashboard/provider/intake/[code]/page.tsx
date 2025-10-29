@@ -860,19 +860,6 @@ const ProviderIntakeView: React.FC = () => {
                   </div>
                 )}
 
-                {summary.urgencyLevel && (
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-800 mb-2">Urgency Level</h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${summary.urgencyLevel === 'crisis' ? 'bg-red-100 text-red-800' :
-                      summary.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                        summary.urgencyLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-green-100 text-green-800'
-                      }`}>
-                      {summary.urgencyLevel.charAt(0).toUpperCase() + summary.urgencyLevel.slice(1)}
-                    </span>
-                  </div>
-                )}
-
                 {summary.recommendedSpecializations && summary.recommendedSpecializations.length > 0 && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">Recommended Specializations</h3>
