@@ -952,6 +952,7 @@ const ProviderIntakeView: React.FC = () => {
             isCollapsed={collapsedPanels['voice-recording'] || false}
             onToggle={() => togglePanel('voice-recording')}
           >
+            <h3 className="text-xl font-bold text-gray-800 mb-4">Patient Recording</h3>
             {audioLoading ? (
               <div className="flex items-center text-gray-600">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
