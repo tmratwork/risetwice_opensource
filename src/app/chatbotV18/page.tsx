@@ -399,28 +399,31 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
         if (messageRole === "user") {
           // V18 Voice Mode: Show transcript as user speaks, add hint when complete
           // Mic stays unmuted and listening until user presses X or ↑
-          console.log('[V18] Voice transcript received:', data, 'isComplete:', isComplete);
+          console.log('[V18] 🎙️ Voice transcript received:', {
+            text: data,
+            isComplete,
+            messageId: id,
+            timestamp: new Date().toISOString(),
+            stackTrace: new Error().stack?.split('\n').slice(1, 3).join('\n')
+          });
 
           // V18 UI: Auto-show audio controls when user speaks
           setShowAudioControls(true);
 
-          // When receiving a complete transcript (isComplete: true), remove ALL non-final user bubbles
-          // except previous complete transcripts waiting to be sent
-          // When streaming (isComplete: false), only remove placeholders
+          // Filter logic: Remove streaming placeholders and old hint bubbles, but KEEP old complete transcripts
+          // This allows users to speak multiple times before clicking ↑, and see all their messages
           const filteredConversation = updatedConversation.filter(msg => {
             if (msg.role === "user" && !msg.isFinal) {
-              // Always remove these placeholder bubbles
+              // Always remove placeholder bubbles (streaming and hints)
               if (msg.text === "Listening..." || msg.text === "Tap ↑ to send") {
                 return false;
               }
-              // If receiving a complete transcript, remove streaming bubbles (short text, partial transcripts)
-              // But keep longer transcripts that are previous complete utterances
-              if (isComplete) {
-                // Remove short streaming bubbles (likely partial transcripts like "1", "3,", etc)
-                if (msg.text.length < 5) {
-                  return false;
-                }
+              // If receiving a complete transcript, remove the streaming bubble with the same text
+              // (it will be replaced by the complete version with a new ID)
+              if (isComplete && msg.text === data) {
+                return false;
               }
+              // KEEP all other non-final user messages (old complete transcripts waiting to be sent)
             }
             return true;
           });
