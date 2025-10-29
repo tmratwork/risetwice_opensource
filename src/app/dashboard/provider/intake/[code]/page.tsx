@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useRouter, useParams } from 'next/navigation';
 import { getUserRole } from '@/utils/user-role';
 import { Header } from '@/components/header';
+import { AudioPlayerWithSilenceSkip } from '@/components/AudioPlayerWithSilenceSkip';
 
 interface IntakeData {
   id: string;
@@ -106,6 +107,7 @@ const ProviderIntakeView: React.FC = () => {
   const [transcript, setTranscript] = useState<string | null>(null);
   const [transcriptStatus, setTranscriptStatus] = useState<string>('');
   const [showFullTranscript, setShowFullTranscript] = useState(false);
+  const [audioFilePath, setAudioFilePath] = useState<string | null>(null);
 
   // Collapsible panels state
   const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>({});
@@ -382,6 +384,12 @@ const ProviderIntakeView: React.FC = () => {
           setHasAudio(true);
           setNeedsCombination(false);
 
+          // Extract file path from response (for silence analysis)
+          if (result.conversationId) {
+            const filePath = `v18-voice-recordings/${result.conversationId}/${result.fileName || 'combined-audio.webm'}`;
+            setAudioFilePath(filePath);
+          }
+
           // Clear polling if it exists
           if (pollingInterval) {
             console.log('[provider_intake] 🛑 Clearing polling interval');
@@ -450,6 +458,37 @@ const ProviderIntakeView: React.FC = () => {
           setAudioUrl(result.audioUrl);
           setNeedsCombination(false);
           setJobStatus('completed');
+
+          // Extract file path from polling result
+          if (result.conversationId) {
+            const filePath = `v18-voice-recordings/${result.conversationId}/${result.fileName || 'combined-audio.webm'}`;
+            setAudioFilePath(filePath);
+          }
+
+          return;
+        }
+
+        // Stop polling if job failed
+        if (result.jobStatus === 'failed') {
+          console.log('[provider_intake] 🛑 Job failed - stopping polling');
+
+          // Clear local interval
+          if (localInterval) {
+            clearInterval(localInterval);
+            localInterval = null;
+            console.log('[provider_intake] ✅ Local interval cleared');
+          }
+
+          // Clear state interval
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+            console.log('[provider_intake] ✅ State interval cleared');
+          }
+
+          // Update status
+          setJobStatus('failed');
+          setNeedsCombination(false);
 
           return;
         }
@@ -755,6 +794,15 @@ const ProviderIntakeView: React.FC = () => {
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
                 Loading audio...
               </div>
+            ) : hasAudio && audioUrl && audioFilePath ? (
+              <AudioPlayerWithSilenceSkip
+                audioUrl={audioUrl}
+                filePath={audioFilePath}
+                bucketName="audio-recordings"
+                onAnalysisComplete={(segmentCount) => {
+                  console.log('[provider_intake] ✅ Silence analysis complete:', segmentCount, 'segments');
+                }}
+              />
             ) : hasAudio && audioUrl ? (
               <div>
                 <audio controls className="w-full">

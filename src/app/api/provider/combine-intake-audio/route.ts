@@ -3,6 +3,10 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import ffmpeg from 'fluent-ffmpeg';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for large audio files
@@ -159,21 +163,74 @@ export async function POST(request: NextRequest) {
 
     console.log(`[audio_combination] ✅ All chunks downloaded - ${Date.now() - startTime}ms total`);
 
-    // Combine chunks into single blob
+    // STEP 1: Concatenate blobs (simple and reliable)
     const combinedBlob = new Blob(allBlobs, { type: 'audio/webm;codecs=opus' });
     console.log(`[audio_combination] 🔗 Combined blob size: ${combinedBlob.size} bytes (${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB) - ${Date.now() - startTime}ms elapsed`);
 
-    // Upload combined file
-    const combinedFileName = `combined-${Date.now()}.webm`;
-    const combinedPath = `v18-voice-recordings/${conversation_id}/${combinedFileName}`;
+    // Create temp directory for FFmpeg processing
+    const tempDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), 'audio-combination-'));
+    console.log(`[audio_combination] 📁 Created temp directory: ${tempDir}`);
 
-    console.log(`[audio_combination] 📤 Starting upload: ${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB - ${Date.now() - startTime}ms elapsed`);
+    let combinedPath = '';
+    let finalBlob: Blob;
 
     try {
+      // STEP 2: Write combined blob to temp file
+      const tempInputPath = path.join(tempDir, 'input.webm');
+      const inputBuffer = Buffer.from(await combinedBlob.arrayBuffer());
+      await fs.promises.writeFile(tempInputPath, inputBuffer);
+      console.log(`[audio_combination] 💾 Wrote combined blob to temp file - ${Date.now() - startTime}ms elapsed`);
+
+      // STEP 3: Re-encode ONLY to add keyframes (not re-concatenate)
+      const outputPath = path.join(tempDir, 'output.webm');
+      console.log(`[audio_combination] 🔧 Starting FFmpeg re-encoding to add keyframes...`);
+
+      await new Promise<void>((resolve, reject) => {
+        const ffmpegStartTime = Date.now();
+
+        ffmpeg(tempInputPath)
+          .audioCodec('libopus')
+          .audioBitrate('64k')
+          .outputOptions([
+            '-force_key_frames', 'expr:gte(t,n_forced*2)' // Keyframe every 2 seconds
+          ])
+          .output(outputPath)
+          .on('start', (commandLine) => {
+            console.log(`[audio_combination] 🎬 FFmpeg command: ${commandLine}`);
+          })
+          .on('progress', (progress) => {
+            if (progress.percent) {
+              console.log(`[audio_combination] 📊 FFmpeg progress: ${progress.percent.toFixed(1)}%`);
+            }
+          })
+          .on('end', () => {
+            const ffmpegTime = Date.now() - ffmpegStartTime;
+            console.log(`[audio_combination] ✅ FFmpeg re-encoding complete - ${ffmpegTime}ms (${(ffmpegTime / 1000).toFixed(1)}s)`);
+            resolve();
+          })
+          .on('error', (err) => {
+            console.error('[audio_combination] ❌ FFmpeg error:', err.message);
+            reject(err);
+          })
+          .run();
+      });
+
+      // STEP 4: Read the re-encoded file
+      console.log(`[audio_combination] 📖 Reading re-encoded file...`);
+      const finalBuffer = await fs.promises.readFile(outputPath);
+      finalBlob = new Blob([finalBuffer], { type: 'audio/webm;codecs=opus' });
+      console.log(`[audio_combination] 🔗 Final file size: ${finalBlob.size} bytes (${(finalBlob.size / 1024 / 1024).toFixed(2)} MB) - ${Date.now() - startTime}ms elapsed`);
+
+      // STEP 5: Upload the re-encoded file
+      const combinedFileName = `combined-${Date.now()}.webm`;
+      combinedPath = `v18-voice-recordings/${conversation_id}/${combinedFileName}`;
+
+      console.log(`[audio_combination] 📤 Starting upload: ${(finalBlob.size / 1024 / 1024).toFixed(2)} MB - ${Date.now() - startTime}ms elapsed`);
+
       const uploadStartTime = Date.now();
       const { error: uploadError } = await supabaseAdmin.storage
         .from('audio-recordings')
-        .upload(combinedPath, combinedBlob, {
+        .upload(combinedPath, finalBlob, {
           contentType: 'audio/webm;codecs=opus',
           upsert: true
         });
@@ -183,21 +240,33 @@ export async function POST(request: NextRequest) {
       }
 
       console.log(`[audio_combination] ✅ Upload successful: ${Date.now() - uploadStartTime}ms upload time - ${Date.now() - startTime}ms total elapsed`);
-    } catch (uploadError) {
-      const errorMsg = uploadError instanceof Error ? uploadError.message : String(uploadError);
-      console.error('[audio_combination] ❌ Upload failed:', errorMsg);
 
+      // Clean up temp files
+      console.log(`[audio_combination] 🧹 Cleaning up temp directory...`);
+      await fs.promises.rm(tempDir, { recursive: true, force: true });
+      console.log(`[audio_combination] ✅ Temp directory cleaned up`);
+
+    } catch (error) {
+      // Clean up temp files on error
+      console.error('[audio_combination] ❌ Error during FFmpeg processing:', error);
+      try {
+        await fs.promises.rm(tempDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        console.error('[audio_combination] ⚠️ Failed to cleanup temp directory:', cleanupError);
+      }
+
+      const errorMsg = error instanceof Error ? error.message : String(error);
       await supabaseAdmin
         .from('audio_combination_jobs')
         .update({
           status: 'failed',
-          error_message: `Upload failed: ${errorMsg}`,
+          error_message: `FFmpeg processing failed: ${errorMsg}`,
           completed_at: new Date().toISOString()
         })
         .eq('id', job.id);
 
       return NextResponse.json(
-        { error: 'Failed to upload combined audio', details: errorMsg },
+        { error: 'Failed to combine audio with FFmpeg', details: errorMsg },
         { status: 500 }
       );
     }
@@ -247,7 +316,7 @@ export async function POST(request: NextRequest) {
       filePath: combinedPath,
       chunkCount: chunks.length,
       durationMs: totalTime,
-      fileSizeMB: parseFloat((combinedBlob.size / 1024 / 1024).toFixed(2))
+      fileSizeMB: parseFloat((finalBlob.size / 1024 / 1024).toFixed(2))
     });
 
   } catch (error) {
