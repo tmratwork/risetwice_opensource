@@ -19,15 +19,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Check if summary already exists
-    const { data: existingSummary, error: summaryError } = await supabaseAdmin
+    // Check if summary already exists - get most recent if multiple exist
+    console.log('[intake_summary] 🔍 Checking for existing summary for intake_id:', intakeId);
+    const { data: existingSummaries, error: summaryError } = await supabaseAdmin
       .from('patient_intake_summaries')
       .select('*')
       .eq('intake_id', intakeId)
-      .single();
+      .order('created_at', { ascending: false })
+      .limit(1);
 
-    if (!summaryError && existingSummary) {
+    if (summaryError) {
+      console.log('[intake_summary] ⚠️ Error checking for existing summary:', summaryError.message);
+    }
+
+    if (!summaryError && existingSummaries && existingSummaries.length > 0) {
+      const existingSummary = existingSummaries[0];
       // Return existing summary
+      console.log('[intake_summary] ✅ Found existing summary, returning from database (created:', existingSummary.created_at, ')');
       return NextResponse.json({
         success: true,
         summary: {
@@ -40,6 +48,8 @@ export async function GET(request: NextRequest) {
         }
       });
     }
+
+    console.log('[intake_summary] 🆕 No existing summary - generating new one...');
 
     // No summary exists - generate one
     const { data: intake, error: intakeError } = await supabaseAdmin

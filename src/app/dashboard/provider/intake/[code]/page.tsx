@@ -9,6 +9,7 @@ import { useRouter, useParams } from 'next/navigation';
 import { getUserRole } from '@/utils/user-role';
 import { Header } from '@/components/header';
 import { AudioPlayerWithSilenceSkip } from '@/components/AudioPlayerWithSilenceSkip';
+import { SynchronizedAudioPlayer } from '@/components/SynchronizedAudioPlayer';
 
 interface IntakeData {
   id: string;
@@ -684,13 +685,18 @@ const ProviderIntakeView: React.FC = () => {
       const result = await response.json();
 
       if (result.success && result.summary) {
+        // Summary exists in database - use it
         setSummary(result.summary);
         setSummaryLoading(false);
       } else if (result.status === 'pending_transcript') {
-        // Summary waiting for transcript - keep loading state
+        // Summary waiting for transcript - keep loading state and poll
         console.log('Summary pending transcript:', result.message);
         // Poll again in 3 seconds
         setTimeout(() => fetchSummary(intakeId), 3000);
+      } else if (!result.success) {
+        // API error - stop loading
+        console.error('Failed to fetch summary:', result.error);
+        setSummaryLoading(false);
       }
     } catch (error) {
       console.error('Error fetching summary:', error);
@@ -866,12 +872,11 @@ const ProviderIntakeView: React.FC = () => {
                 {summary.urgencyLevel && (
                   <div>
                     <h3 className="text-lg font-semibold text-gray-800 mb-2">Urgency Level</h3>
-                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
-                      summary.urgencyLevel === 'crisis' ? 'bg-red-100 text-red-800' :
+                    <span className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${summary.urgencyLevel === 'crisis' ? 'bg-red-100 text-red-800' :
                       summary.urgencyLevel === 'high' ? 'bg-orange-100 text-orange-800' :
-                      summary.urgencyLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-green-100 text-green-800'
-                    }`}>
+                        summary.urgencyLevel === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-green-100 text-green-800'
+                      }`}>
                       {summary.urgencyLevel.charAt(0).toUpperCase() + summary.urgencyLevel.slice(1)}
                     </span>
                   </div>
@@ -952,7 +957,7 @@ const ProviderIntakeView: React.FC = () => {
           {/* Audio Recording Section */}
           <CollapsiblePanel
             id="voice-recording"
-            title="Voice Recording"
+            title="Voice Recordings"
             isCollapsed={collapsedPanels['voice-recording'] || false}
             onToggle={() => togglePanel('voice-recording')}
           >
@@ -1062,6 +1067,21 @@ const ProviderIntakeView: React.FC = () => {
                 <p className="text-gray-600">No AI audio recording available for this intake.</p>
               )}
             </div>
+
+            {/* Combined Intake Recording (Synchronized Playback) */}
+            {hasAudio && audioUrl && hasAiAudio && aiAudioUrl && (
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Full Intake Recording</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Listen to both sides of the conversation simultaneously.
+                  With headphones: AI in left ear, patient in right ear.
+                </p>
+                <SynchronizedAudioPlayer
+                  patientAudioUrl={audioUrl}
+                  aiAudioUrl={aiAudioUrl}
+                />
+              </div>
+            )}
 
             {/* Provider Response Recording */}
             <div className="mt-8 pt-6 border-t border-gray-200">
