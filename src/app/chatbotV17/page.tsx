@@ -68,6 +68,10 @@ export default function ChatBotV17Page() {
   const [selectedTherapist, setSelectedTherapist] = useState<Therapist | null>(null);
   const [detailedTherapistData, setDetailedTherapistData] = useState<DetailedTherapist | null>(null);
 
+  // Mic hint callout state
+  const [hasSeenMicHint, setHasSeenMicHint] = useState(false);
+  const [showMicHint, setShowMicHint] = useState(false);
+
   // ✅ FIX: Use selectors for reactive state (bubble visibility)
   const isUserSpeaking = useElevenLabsStore((state) => state.isUserSpeaking);
   const isThinking = useElevenLabsStore((state) => state.isThinking);
@@ -583,6 +587,27 @@ export default function ChatBotV17Page() {
     }
   }, [store.conversationHistory]);
 
+  // Show mic hint callout after WebRTC connects (with delay)
+  useEffect(() => {
+    if (isConnected && !hasSeenMicHint) {
+      const timer = setTimeout(() => {
+        setShowMicHint(true);
+      }, 500); // Show after 500ms delay
+
+      return () => clearTimeout(timer);
+    } else {
+      setShowMicHint(false);
+    }
+  }, [isConnected, hasSeenMicHint]);
+
+  // Hide mic hint when user unmutes
+  useEffect(() => {
+    if (showMicHint && !store.isMuted) {
+      setShowMicHint(false);
+      setHasSeenMicHint(true);
+    }
+  }, [store.isMuted, showMicHint]);
+
   // Show detailed therapist view
   if (showDetailedView && detailedTherapistData) {
     return (
@@ -953,11 +978,41 @@ export default function ChatBotV17Page() {
           aria-label="Microphone control - click to mute or unmute your microphone"
           aria-describedby="mic-description"
           onClick={toggleMicrophone}
+          style={{ position: 'relative' }}
         >
           <AudioOrbV15 isFunctionExecuting={false} />
           <div id="mic-description" className="sr-only">
             Microphone control button located in the center of the screen. Click to toggle your microphone on or off. Visual indicator shows blue animation when AI is speaking.
           </div>
+
+          {/* Mic hint callout */}
+          {showMicHint && store.isMuted && (
+            <div
+              className="absolute px-6 py-4 text-base font-medium rounded-full shadow-2xl"
+              style={{
+                left: '50%',
+                top: '-85px',
+                transform: 'translateX(-50%)',
+                whiteSpace: 'nowrap',
+                pointerEvents: 'none',
+                zIndex: 9999,
+                background: '#1f2937',
+                color: '#ffffff'
+              }}
+            >
+              Unmute mic to talk
+              {/* Arrow pointing down to the orb */}
+              <div
+                className="absolute left-1/2 transform -translate-x-1/2"
+                style={{
+                  top: '100%',
+                  borderLeft: '10px solid transparent',
+                  borderRight: '10px solid transparent',
+                  borderTop: '12px solid #1f2937'
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
 
