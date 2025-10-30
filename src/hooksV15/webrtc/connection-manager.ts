@@ -1437,11 +1437,9 @@ export class ConnectionManager {
 
         this.dataChannel.send(JSON.stringify(message));
 
-        // Then send response.create with greeting instructions after delay
+        // Then send response.create without greeting instructions after delay
         setTimeout(() => {
           if (this.dataChannel && this.dataChannel.readyState === 'open') {
-            const greetingInstructions = this.config.greetingInstructions;
-
             // EXPERIMENT: Use response.create WITHOUT instructions field
             // Testing if AI will follow system prompt without greeting instructions override
             console.log('[EXPERIMENT] Sending response.create WITHOUT instructions field');
