@@ -96,20 +96,6 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNext }) => {
             </div>
           </div>
 
-          {/* Step 3 */}
-          <div className="flex gap-4">
-            <div className="flex-shrink-0 w-16 h-16 rounded-full bg-black flex items-center justify-center text-white text-2xl font-bold">
-              3
-            </div>
-            <div className="bg-white rounded-2xl p-6 flex-1">
-              <h3 className="text-xl font-bold mb-3 text-gray-900">Record Your Pitch</h3>
-              <p className="text-gray-800 leading-relaxed">
-                Create a free profile and record a short, private voice message to introduce yourself.
-                This is your chance to make a personal connection and show why you&apos;re a good fit.
-              </p>
-            </div>
-          </div>
-
           {/* Step 2 */}
           <div className="flex gap-4">
             <div className="flex-shrink-0 w-16 h-16 rounded-full bg-black flex items-center justify-center text-white text-2xl font-bold">
@@ -120,6 +106,20 @@ const WelcomeScreen: React.FC<WelcomeScreenProps> = ({ onNext }) => {
               <p className="text-gray-800 leading-relaxed">
                 Use your uniue code to listen to the patient&apos;s intake and a summary of their preferences.
                 No more guesswork- you know what they&apos;re looking for upfront.
+              </p>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="flex gap-4">
+            <div className="flex-shrink-0 w-16 h-16 rounded-full bg-black flex items-center justify-center text-white text-2xl font-bold">
+              3
+            </div>
+            <div className="bg-white rounded-2xl p-6 flex-1">
+              <h3 className="text-xl font-bold mb-3 text-gray-900">Record Your Pitch</h3>
+              <p className="text-gray-800 leading-relaxed">
+                Create a free profile and record a short, private voice message to introduce yourself.
+                This is your chance to make a personal connection and show why you&apos;re a good fit.
               </p>
             </div>
           </div>
