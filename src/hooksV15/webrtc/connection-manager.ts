@@ -1442,49 +1442,24 @@ export class ConnectionManager {
           if (this.dataChannel && this.dataChannel.readyState === 'open') {
             const greetingInstructions = this.config.greetingInstructions;
 
-            if (!greetingInstructions) {
-              // For new conversations without specific greeting instructions, use basic response creation
-              console.log('[functionCallDiagnosis] No greeting instructions provided, using basic response creation');
-              const response = {
-                type: "response.create",
-                response: {
-                  modalities: ["text", "audio"],
-                  max_output_tokens: 2000
-                }
-              };
+            // EXPERIMENT: Use response.create WITHOUT instructions field
+            // Testing if AI will follow system prompt without greeting instructions override
+            console.log('[EXPERIMENT] Sending response.create WITHOUT instructions field');
 
-              this.dataChannel.send(JSON.stringify(response));
-
-              optimizedAudioLogger.info('webrtc', 'basic_initial_response_sent', {
-                hasCustomGreeting: false
-              });
-            } else {
-              // Log greeting instructions being sent to AI
-              if (process.env.NEXT_PUBLIC_ENABLE_RESOURCE_GREETING_LOGS === 'true') {
-                console.log('[resource_greeting] Connection manager: sending greeting to AI', {
-                  greetingInstructions: greetingInstructions,
-                  hasGreetingInstructions: !!greetingInstructions,
-                  greetingInstructionsLength: greetingInstructions.length,
-                  greetingPreview: greetingInstructions.substring(0, 200) + '...',
-                  source: 'connection_manager_sendInitialGreeting'
-                });
+            const response = {
+              type: "response.create",
+              response: {
+                modalities: ["text", "audio"],
+                max_output_tokens: 2000
               }
+            };
 
-              const response = {
-                type: "response.create",
-                response: {
-                  modalities: ["text", "audio"],
-                  instructions: greetingInstructions,
-                  max_output_tokens: 2000
-                }
-              };
+            this.dataChannel.send(JSON.stringify(response));
 
-              this.dataChannel.send(JSON.stringify(response));
-
-              optimizedAudioLogger.info('webrtc', 'initial_greeting_sent', {
-                instructionsLength: greetingInstructions.length
-              });
-            }
+            optimizedAudioLogger.info('webrtc', 'response_create_without_instructions_sent', {
+              experiment: 'testing_without_greeting_instructions_field',
+              note: 'AI should follow system prompt only'
+            });
           }
         }, 1000); // Use same 1000ms delay as V11
       }
