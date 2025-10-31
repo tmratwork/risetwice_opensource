@@ -7,6 +7,12 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import ffmpeg from 'fluent-ffmpeg';
+import ffmpegPath from 'ffmpeg-static';
+
+// Set FFmpeg path for Vercel serverless environment
+if (ffmpegPath) {
+  ffmpeg.setFfmpegPath(ffmpegPath);
+}
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for large audio files
