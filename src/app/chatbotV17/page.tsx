@@ -844,7 +844,37 @@ export default function ChatBotV17Page() {
                 aria-label={`${msg.role === 'user' ? 'Your message' : 'AI assistant response'} at ${new Date(msg.timestamp).toLocaleTimeString()}`}
               >
                 <div className="message-content">
-                  <p className="message-text">{msg.text}</p>
+                  <p className="message-text" style={{ display: 'inline' }}>{msg.text}</p>
+                  {msg.role === 'assistant' && (
+                    <button
+                      type="button"
+                      onClick={toggleAudioOutputMute}
+                      className={`control-button ${store.isAudioOutputMuted ? 'muted' : ''}`}
+                      aria-label={store.isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
+                      style={{
+                        display: 'inline-flex',
+                        padding: '4px',
+                        borderRadius: '50%',
+                        minWidth: '28px',
+                        height: '28px',
+                        backgroundColor: store.isAudioOutputMuted ? '#ef4444' : 'white',
+                        color: store.isAudioOutputMuted ? 'white' : '#6b7280',
+                        marginLeft: '8px',
+                        verticalAlign: 'middle',
+                        border: '1px solid #e5e7eb'
+                      }}
+                    >
+                      {store.isAudioOutputMuted ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M3.63 3.63c-.39.39-.39 1.02 0 1.41L7.29 8.7 7 9H4c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71v-4.17l4.18 4.18c-.49.37-1.02.68-1.6.91-.36.15-.58.53-.58.92 0 .72.73 1.18 1.39.91.8-.33 1.54-.77 2.2-1.31l1.34 1.34c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L5.05 3.63c-.39-.39-1.02-.39-1.42 0zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zm-7-8c-.15 0-.29.01-.43.03l1.85 1.85c.56.18 1.02.56 1.34 1.05L17 7.3c-.63-.9-1.68-1.3-2.71-1.3z" />
+                        </svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M3 9v6h4l5 5V4L7 9H3zm7-.17v6.34L7.83 13H5v-2h2.83L10 8.83zM16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77 0-4.28-2.99-7.86-7-8.77z" />
+                        </svg>
+                      )}
+                    </button>
+                  )}
                   {msg.status && msg.status !== 'final' && (
                     <div className="message-status">
                       <span className="status-indicator">{msg.status}</span>
@@ -914,31 +944,6 @@ export default function ChatBotV17Page() {
             e.preventDefault();
             handleSendMessage();
           }} className="input-container">
-            <button
-              type="button"
-              onClick={toggleAudioOutputMute}
-              className={`control-button ${store.isAudioOutputMuted ? 'muted' : ''}`}
-              aria-label={store.isAudioOutputMuted ? "Unmute speakers" : "Mute speakers"}
-              style={{
-                padding: '8px',
-                borderRadius: '50%',
-                minWidth: '40px',
-                height: '40px',
-                backgroundColor: store.isAudioOutputMuted ? '#ef4444' : '#6b7280',
-                color: 'white'
-              }}
-            >
-              {store.isAudioOutputMuted ? (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3.63 3.63c-.39.39-.39 1.02 0 1.41L7.29 8.7 7 9H4c-.55 0-1 .45-1 1v4c0 .55.45 1 1 1h3l3.29 3.29c.63.63 1.71.18 1.71-.71v-4.17l4.18 4.18c-.49.37-1.02.68-1.6.91-.36.15-.58.53-.58.92 0 .72.73 1.18 1.39.91.8-.33 1.54-.77 2.2-1.31l1.34 1.34c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L5.05 3.63c-.39-.39-1.02-.39-1.42 0zM19 12c0 .94-.2 1.82-.54 2.64l1.51 1.51C20.63 14.91 21 13.5 21 12c0-4.28-2.99-7.86-7-8.77v2.06c2.89.86 5 3.54 5 6.71zm-7-8c-.15 0-.29.01-.43.03l1.85 1.85c.56.18 1.02.56 1.34 1.05L17 7.3c-.63-.9-1.68-1.3-2.71-1.3z" />
-                </svg>
-              ) : (
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 9v6h4l5 5V4L7 9H3zm7-.17v6.34L7.83 13H5v-2h2.83L10 8.83zM16.5 12c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77 0-4.28-2.99-7.86-7-8.77z" />
-                </svg>
-              )}
-            </button>
-
             <label htmlFor="message-input" className="sr-only">
               Type your message to RiseTwice AI
             </label>

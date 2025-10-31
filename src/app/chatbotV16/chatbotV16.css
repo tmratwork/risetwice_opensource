@@ -257,7 +257,7 @@ html.dark body {
   border: 1px solid var(--border-color);
   background-color: var(--bg-secondary);
   color: var(--text-primary);
-  margin-left: 12px;
+  margin-left: 0;
   margin-right: 12px;
   font-size: 1rem;
   transition: all 0.2s ease;
