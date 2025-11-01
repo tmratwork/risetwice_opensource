@@ -939,6 +939,10 @@ const ProviderIntakeView: React.FC = () => {
             isCollapsed={collapsedPanels['voice-recording'] || false}
             onToggle={() => togglePanel('voice-recording')}
           >
+            {/* Patient Recording - HIDDEN FOR TESTING */}
+            {/* To re-enable: Change {false && ( to {true && ( on line below */}
+            {false && (
+            <div>
             <h3 className="text-xl font-bold text-gray-800 mb-4">Patient Recording</h3>
             {audioLoading ? (
               <div className="flex items-center text-gray-600">
@@ -994,8 +998,12 @@ const ProviderIntakeView: React.FC = () => {
             ) : (
               <p className="text-gray-600">No voice recording available for this intake.</p>
             )}
+            </div>
+            )}
 
-            {/* AI Audio Recording Section */}
+            {/* AI Audio Recording Section - HIDDEN FOR TESTING */}
+            {/* To re-enable: Change {false && ( to {true && ( on line below */}
+            {false && (
             <div className="mt-8 pt-6 border-t border-gray-200">
               <h3 className="text-xl font-bold text-gray-800 mb-4">AI Voice Recording</h3>
               <p className="text-sm text-gray-600 mb-4">This is what the AI said during the intake conversation.</p>
@@ -1046,6 +1054,7 @@ const ProviderIntakeView: React.FC = () => {
                 <p className="text-gray-600">No AI audio recording available for this intake.</p>
               )}
             </div>
+            )}
 
             {/* Combined Intake Recording (Synchronized Playback) */}
             {hasAudio && audioUrl && hasAiAudio && aiAudioUrl && (
@@ -1063,7 +1072,7 @@ const ProviderIntakeView: React.FC = () => {
             )}
 
             {/* Provider Response Recording */}
-            <div className="mt-8 pt-6 border-t border-gray-200">
+            <div>
               <h3 className="text-xl font-bold text-gray-800 mb-4">Provider Audio Response</h3>
 
               {/* Recording Controls */}
