@@ -136,6 +136,8 @@ const ProviderIntakeView: React.FC = () => {
     durationSeconds: number;
   }>>([]);
   const [loadingRecordings, setLoadingRecordings] = useState(true);
+  const [isLicenseVerified, setIsLicenseVerified] = useState<boolean>(true); // Default to true, will check on load
+  const [licenseCheckLoading, setLicenseCheckLoading] = useState(true);
 
   // Load collapsed state from localStorage
   useEffect(() => {
@@ -327,12 +329,34 @@ const ProviderIntakeView: React.FC = () => {
           return;
         }
 
-        // Validate access code
-        if (!code || code.length !== 5) {
+        // Validate access code (5 digits, or 'a' + 5 digits for unverified providers)
+        if (!code || (code.length !== 5 && code.length !== 6)) {
           setError('Invalid access code');
           setLoading(false);
           return;
         }
+
+        // Check if access code starts with 'a' - if so, verify license
+        const needsLicenseCheck = code.toLowerCase().startsWith('a');
+        if (needsLicenseCheck) {
+          // Query Supabase to check license verification status
+          const licenseResponse = await fetch('/api/provider/check-license-verification', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              providerUserId: user.uid
+            })
+          });
+
+          const licenseResult = await licenseResponse.json();
+          setIsLicenseVerified(licenseResult.isVerified || false);
+        } else {
+          // Regular access code (no 'a' prefix) - assume verified
+          setIsLicenseVerified(true);
+        }
+        setLicenseCheckLoading(false);
 
         // Fetch intake data
         const response = await fetch('/api/provider/validate-intake-code', {
@@ -939,6 +963,23 @@ const ProviderIntakeView: React.FC = () => {
             isCollapsed={collapsedPanels['voice-recording'] || false}
             onToggle={() => togglePanel('voice-recording')}
           >
+            {/* License Verification Check */}
+            {!isLicenseVerified ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-900 mb-2">License Verification Required</h3>
+                    <p className="text-blue-800">
+                      To listen to the patient intake session and reply to the patient in voice, please enter your license number for verification.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
             {/* Patient Recording - HIDDEN FOR TESTING */}
             {/* To re-enable: Change {false && ( to {true && ( on line below */}
             {false && (
@@ -1161,6 +1202,8 @@ const ProviderIntakeView: React.FC = () => {
                 )}
               </div>
             </div>
+              </>
+            )}
           </CollapsiblePanel>
 
           {/* Personal Information */}
@@ -1207,16 +1250,33 @@ const ProviderIntakeView: React.FC = () => {
             isCollapsed={collapsedPanels['contact-info'] || false}
             onToggle={() => togglePanel('contact-info')}
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Email:</label>
-                <p className="text-gray-900">{intakeData.email}</p>
+            {/* License Verification Check */}
+            {!isLicenseVerified ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                <div className="flex items-start gap-3">
+                  <svg className="w-6 h-6 text-blue-600 mt-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <div>
+                    <h3 className="text-lg font-semibold text-blue-900 mb-2">License Verification Required</h3>
+                    <p className="text-blue-800">
+                      To view patient contact information, please enter your license number for verification.
+                    </p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label className="text-sm font-semibold text-gray-700">Phone:</label>
-                <p className="text-gray-900">{intakeData.phone}</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Email:</label>
+                  <p className="text-gray-900">{intakeData.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-semibold text-gray-700">Phone:</label>
+                  <p className="text-gray-900">{intakeData.phone}</p>
+                </div>
               </div>
-            </div>
+            )}
           </CollapsiblePanel>
 
           {/* Location */}

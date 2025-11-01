@@ -19,8 +19,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate access code format (5 digits)
-    if (!/^\d{5}$/.test(accessCode)) {
+    // Validate access code format (5 digits, or 'a' + 5 digits for unverified providers)
+    const isUnverifiedCode = accessCode.toLowerCase().startsWith('a');
+    let actualAccessCode = accessCode;
+
+    if (isUnverifiedCode) {
+      // Remove 'a' prefix to get actual access code
+      actualAccessCode = accessCode.substring(1);
+      if (!/^\d{5}$/.test(actualAccessCode)) {
+        return NextResponse.json(
+          { error: 'Invalid access code format' },
+          { status: 400 }
+        );
+      }
+    } else if (!/^\d{5}$/.test(accessCode)) {
       return NextResponse.json(
         { error: 'Invalid access code format' },
         { status: 400 }
@@ -29,11 +41,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find patient intake by access code
+    // Find patient intake by access code (use actual code without 'a' prefix)
     const { data: intake, error: intakeError } = await supabase
       .from('patient_intake')
       .select('*')
-      .eq('access_code', accessCode)
+      .eq('access_code', actualAccessCode)
       .single();
 
     if (intakeError || !intake) {
