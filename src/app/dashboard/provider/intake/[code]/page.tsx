@@ -137,7 +137,6 @@ const ProviderIntakeView: React.FC = () => {
   }>>([]);
   const [loadingRecordings, setLoadingRecordings] = useState(true);
   const [isLicenseVerified, setIsLicenseVerified] = useState<boolean>(true); // Default to true, will check on load
-  const [licenseCheckLoading, setLicenseCheckLoading] = useState(true);
 
   // Load collapsed state from localStorage
   useEffect(() => {
@@ -356,7 +355,6 @@ const ProviderIntakeView: React.FC = () => {
           // Regular access code (no 'a' prefix) - assume verified
           setIsLicenseVerified(true);
         }
-        setLicenseCheckLoading(false);
 
         // Fetch intake data
         const response = await fetch('/api/provider/validate-intake-code', {
