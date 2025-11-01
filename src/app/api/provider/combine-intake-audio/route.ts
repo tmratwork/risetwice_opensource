@@ -7,11 +7,29 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from 'ffmpeg-static';
+import { execSync } from 'child_process';
 
-// Set FFmpeg path for Vercel serverless environment
-if (ffmpegPath) {
-  ffmpeg.setFfmpegPath(ffmpegPath);
+// Try to set FFmpeg path - prefer system ffmpeg, fallback to ffmpeg-static
+try {
+  // Check if system ffmpeg exists
+  const systemFfmpeg = execSync('which ffmpeg', { encoding: 'utf-8' }).trim();
+  if (systemFfmpeg) {
+    console.log('[audio_combination] 🎬 Using system FFmpeg:', systemFfmpeg);
+    ffmpeg.setFfmpegPath(systemFfmpeg);
+  }
+} catch (error) {
+  // System ffmpeg not found, try ffmpeg-static
+  try {
+    const ffmpegStatic = require('ffmpeg-static');
+    if (ffmpegStatic && typeof ffmpegStatic === 'string' && !ffmpegStatic.includes('/ROOT/')) {
+      console.log('[audio_combination] 🎬 Using ffmpeg-static:', ffmpegStatic);
+      ffmpeg.setFfmpegPath(ffmpegStatic);
+    } else {
+      console.warn('[audio_combination] ⚠️ ffmpeg-static path invalid:', ffmpegStatic);
+    }
+  } catch (staticError) {
+    console.error('[audio_combination] ❌ Failed to load ffmpeg-static:', staticError);
+  }
 }
 
 export const dynamic = 'force-dynamic';

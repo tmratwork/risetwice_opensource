@@ -212,7 +212,37 @@ export async function GET(request: NextRequest) {
     });
 
     if (!jobCheckError && existingJob) {
-      // Job exists - return its status
+      // If job failed, trigger a new combination attempt
+      if (existingJob.status === 'failed') {
+        console.log(`[provider_audio] 🔄 Previous job failed - triggering retry...`);
+
+        // Trigger new combination in background (don't wait for completion)
+        fetch(`${request.nextUrl.origin}/api/provider/combine-intake-audio`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            intake_id: intakeId,
+            conversation_id: conversationId,
+            speaker: speaker
+          })
+        }).catch(err => {
+          console.error('[provider_audio] ❌ Failed to trigger retry:', err);
+        });
+
+        // Return status indicating retry is in progress
+        return NextResponse.json({
+          success: true,
+          hasRecording: true,
+          needsCombination: true,
+          jobId: existingJob.id,
+          jobStatus: 'processing', // Show as processing for retry
+          chunkCount: chunks.length,
+          conversationId: conversationId,
+          message: 'Retrying audio combination'
+        });
+      }
+
+      // Job exists and is not failed - return its status
       return NextResponse.json({
         success: true,
         hasRecording: true,
@@ -224,8 +254,6 @@ export async function GET(request: NextRequest) {
         combinedFilePath: existingJob.combined_file_path,
         message: existingJob.status === 'completed'
           ? 'Audio is ready'
-          : existingJob.status === 'failed'
-          ? 'Audio combination failed'
           : 'Audio combination in progress'
       });
     }

@@ -1,3 +1,13 @@
+The error is because you copied the SQL comment. Here's the correct SQL without the comment:
+DELETE FROM audio_combination_jobs 
+WHERE conversation_id = '674b7ee2-ec2e-43b4-bea0-b0df3085256e'
+AND status = 'failed';
+Or if you want to clear ALL failed jobs (not just this conversation):
+DELETE FROM audio_combination_jobs 
+WHERE status = 'failed';
+
+---
+
 -- Delete test user therapist profile from S2 therapist profiles (this will cascade to related S2 tables)
 DELETE FROM s2_therapist_profiles WHERE user_id = 'wo8lLHQzNThLRQkbZIuC1AmXkpD2';
 
