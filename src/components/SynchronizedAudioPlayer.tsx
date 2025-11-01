@@ -114,10 +114,16 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       const aiGain = audioContext.createGain();
       console.log('[sync_player] ✅ Panner and gain nodes created');
 
-      // Configure stereo panning
-      patientPanner.pan.value = 1;  // Full right
-      aiPanner.pan.value = -1;      // Full left
-      console.log('[sync_player] 🎧 Stereo mode: AI left, Patient right');
+      // Configure stereo panning based on initial state
+      if (isStereoEnabled) {
+        patientPanner.pan.value = 1;  // Full right
+        aiPanner.pan.value = -1;      // Full left
+        console.log('[sync_player] 🎧 Stereo mode: AI left, Patient right');
+      } else {
+        patientPanner.pan.value = 0;  // Center
+        aiPanner.pan.value = 0;       // Center
+        console.log('[sync_player] 🎧 Mono mode: Both centered');
+      }
 
       // Set initial gains
       patientGain.gain.value = (patientVolume * patientVolume * patientVolume) * 4;
@@ -169,14 +175,19 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
 
   // Update stereo panning when toggle changes
   useEffect(() => {
-    if (!patientPannerRef.current || !aiPannerRef.current) return;
+    if (!patientPannerRef.current || !aiPannerRef.current) {
+      console.log('[sync_player] ⏸️ Panner refs not ready yet');
+      return;
+    }
 
     if (isStereoEnabled) {
       aiPannerRef.current.pan.value = -1; // Left ear
       patientPannerRef.current.pan.value = 1; // Right ear
+      console.log('[sync_player] 🎧 Switched to STEREO mode');
     } else {
       aiPannerRef.current.pan.value = 0; // Center
       patientPannerRef.current.pan.value = 0; // Center
+      console.log('[sync_player] 🎧 Switched to MONO mode');
     }
   }, [isStereoEnabled]);
 

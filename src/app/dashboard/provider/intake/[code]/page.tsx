@@ -942,124 +942,123 @@ const ProviderIntakeView: React.FC = () => {
             {/* Patient Recording - HIDDEN FOR TESTING */}
             {/* To re-enable: Change {false && ( to {true && ( on line below */}
             {false && (
-            <div>
-            <h3 className="text-xl font-bold text-gray-800 mb-4">Patient Recording</h3>
-            {audioLoading ? (
-              <div className="flex items-center text-gray-600">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
-                Loading audio...
-              </div>
-            ) : hasAudio && audioUrl && audioFilePath ? (
-              <AudioPlayerWithSilenceSkip
-                audioUrl={audioUrl}
-                filePath={audioFilePath}
-                bucketName="audio-recordings"
-                onAnalysisComplete={(segmentCount) => {
-                  console.log('[provider_intake] ✅ Silence analysis complete:', segmentCount, 'segments');
-                }}
-              />
-            ) : hasAudio && audioUrl ? (
               <div>
-                <audio controls className="w-full">
-                  <source src={audioUrl} type="audio/webm" />
-                  Your browser does not support the audio element.
-                </audio>
-                <p className="text-sm text-gray-600 mt-2">
-                  Note: Audio is in WebM format. If playback fails, please use Chrome or Firefox.
-                </p>
-              </div>
-            ) : hasAudio && needsCombination && jobStatus === 'failed' ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-800 font-medium mb-2">Audio combination failed</p>
-                <p className="text-red-700 text-sm mb-3">
-                  The audio recording exists ({chunkCount} chunks) but failed to combine.
-                  Please contact support to resolve this issue.
-                </p>
-                <p className="text-red-600 text-xs">
-                  Conversation ID: {intakeData?.conversationId}
-                </p>
-              </div>
-            ) : hasAudio && needsCombination ? (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <div className="flex items-center mb-2">
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                  <p className="text-blue-800 font-medium">Preparing audio playback...</p>
-                </div>
-                <p className="text-blue-700 text-sm">
-                  Combining {chunkCount} audio chunks from the patient intake session.
-                  This will take a few moments.
-                </p>
-                {jobStatus && (
-                  <p className="text-blue-600 text-xs mt-2">
-                    Status: {jobStatus === 'processing' ? 'Processing...' : jobStatus}
-                  </p>
+                <h3 className="text-xl font-bold text-gray-800 mb-4">Patient Recording</h3>
+                {audioLoading ? (
+                  <div className="flex items-center text-gray-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
+                    Loading audio...
+                  </div>
+                ) : hasAudio && audioUrl && audioFilePath ? (
+                  <AudioPlayerWithSilenceSkip
+                    audioUrl={audioUrl}
+                    filePath={audioFilePath}
+                    bucketName="audio-recordings"
+                    onAnalysisComplete={(segmentCount) => {
+                      console.log('[provider_intake] ✅ Silence analysis complete:', segmentCount, 'segments');
+                    }}
+                  />
+                ) : hasAudio && audioUrl ? (
+                  <div>
+                    <audio controls className="w-full">
+                      <source src={audioUrl} type="audio/webm" />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Note: Audio is in WebM format. If playback fails, please use Chrome or Firefox.
+                    </p>
+                  </div>
+                ) : hasAudio && needsCombination && jobStatus === 'failed' ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-800 font-medium mb-2">Audio combination failed</p>
+                    <p className="text-red-700 text-sm mb-3">
+                      The audio recording exists ({chunkCount} chunks) but failed to combine.
+                      Please contact support to resolve this issue.
+                    </p>
+                    <p className="text-red-600 text-xs">
+                      Conversation ID: {intakeData?.conversationId}
+                    </p>
+                  </div>
+                ) : hasAudio && needsCombination ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                      <p className="text-blue-800 font-medium">Preparing audio playback...</p>
+                    </div>
+                    <p className="text-blue-700 text-sm">
+                      Combining {chunkCount} audio chunks from the patient intake session.
+                      This will take a few moments.
+                    </p>
+                    {jobStatus && (
+                      <p className="text-blue-600 text-xs mt-2">
+                        Status: {jobStatus === 'processing' ? 'Processing...' : jobStatus}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">No voice recording available for this intake.</p>
                 )}
               </div>
-            ) : (
-              <p className="text-gray-600">No voice recording available for this intake.</p>
-            )}
-            </div>
             )}
 
             {/* AI Audio Recording Section - HIDDEN FOR TESTING */}
             {/* To re-enable: Change {false && ( to {true && ( on line below */}
             {false && (
-            <div className="mt-8 pt-6 border-t border-gray-200">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">AI Voice Recording</h3>
-              <p className="text-sm text-gray-600 mb-4">This is what the AI said during the intake conversation.</p>
+              <div className="mt-8 pt-6 border-t border-gray-200">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">AI Voice Recording</h3>
+                <p className="text-sm text-gray-600 mb-4">This is what the AI said during the intake conversation.</p>
 
-              {aiAudioLoading ? (
-                <div className="flex items-center text-gray-600">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
-                  Loading AI audio...
-                </div>
-              ) : hasAiAudio && aiAudioUrl ? (
-                <div>
-                  <audio controls className="w-full">
-                    <source src={aiAudioUrl} type="audio/webm" />
-                    Your browser does not support the audio element.
-                  </audio>
-                  <p className="text-sm text-gray-600 mt-2">
-                    Note: Audio is in WebM format. If playback fails, please use Chrome or Firefox.
-                  </p>
-                </div>
-              ) : hasAiAudio && aiNeedsCombination && aiJobStatus === 'failed' ? (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-red-800 font-medium mb-2">AI audio combination failed</p>
-                  <p className="text-red-700 text-sm mb-3">
-                    The AI audio recording exists ({aiChunkCount} chunks) but failed to combine.
-                    Please contact support to resolve this issue.
-                  </p>
-                  <p className="text-red-600 text-xs">
-                    Conversation ID: {intakeData?.conversationId}
-                  </p>
-                </div>
-              ) : hasAiAudio && aiNeedsCombination ? (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-center mb-2">
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
-                    <p className="text-blue-800 font-medium">Preparing AI audio playback...</p>
+                {aiAudioLoading ? (
+                  <div className="flex items-center text-gray-600">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-gray-600 mr-3"></div>
+                    Loading AI audio...
                   </div>
-                  <p className="text-blue-700 text-sm">
-                    Combining {aiChunkCount} AI audio chunks from the intake session.
-                    This will take a few moments.
-                  </p>
-                  {aiJobStatus && (
-                    <p className="text-blue-600 text-xs mt-2">
-                      Status: {aiJobStatus === 'processing' ? 'Processing...' : aiJobStatus}
+                ) : hasAiAudio && aiAudioUrl ? (
+                  <div>
+                    <audio controls className="w-full">
+                      <source src={aiAudioUrl} type="audio/webm" />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Note: Audio is in WebM format. If playback fails, please use Chrome or Firefox.
                     </p>
-                  )}
-                </div>
-              ) : (
-                <p className="text-gray-600">No AI audio recording available for this intake.</p>
-              )}
-            </div>
+                  </div>
+                ) : hasAiAudio && aiNeedsCombination && aiJobStatus === 'failed' ? (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-800 font-medium mb-2">AI audio combination failed</p>
+                    <p className="text-red-700 text-sm mb-3">
+                      The AI audio recording exists ({aiChunkCount} chunks) but failed to combine.
+                      Please contact support to resolve this issue.
+                    </p>
+                    <p className="text-red-600 text-xs">
+                      Conversation ID: {intakeData?.conversationId}
+                    </p>
+                  </div>
+                ) : hasAiAudio && aiNeedsCombination ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                    <div className="flex items-center mb-2">
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+                      <p className="text-blue-800 font-medium">Preparing AI audio playback...</p>
+                    </div>
+                    <p className="text-blue-700 text-sm">
+                      Combining {aiChunkCount} AI audio chunks from the intake session.
+                      This will take a few moments.
+                    </p>
+                    {aiJobStatus && (
+                      <p className="text-blue-600 text-xs mt-2">
+                        Status: {aiJobStatus === 'processing' ? 'Processing...' : aiJobStatus}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">No AI audio recording available for this intake.</p>
+                )}
+              </div>
             )}
 
             {/* Combined Intake Recording (Synchronized Playback) */}
             {hasAudio && audioUrl && hasAiAudio && aiAudioUrl && (
               <div className="mt-8 pt-6 border-t border-gray-200">
-                <h3 className="text-xl font-bold text-gray-800 mb-2">Full Intake Recording</h3>
                 <p className="text-sm text-gray-600 mb-4">
                   Listen to both sides of the conversation simultaneously.
                   With headphones: AI in left ear, patient in right ear.
