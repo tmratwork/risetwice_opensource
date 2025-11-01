@@ -785,7 +785,7 @@ const ProviderIntakeView: React.FC = () => {
     <>
       <Header />
       <div className="min-h-screen" style={{ backgroundColor: '#c1d7ca', paddingTop: '80px', paddingBottom: '80px' }}>
-        <div className="max-w-6xl mx-auto px-4 py-8">
+        <div className="max-w-6xl mx-auto px-4 py-8" style={{ paddingBottom: '100px' }}>
           {/* Header */}
           <div className="mb-6 flex items-center justify-between">
             <button

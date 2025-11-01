@@ -4,7 +4,7 @@
 "use client";
 
 import { AuthProvider } from '@/contexts/auth-context';
-import { MobileFooterNavV15 } from '@/app/chatbotV16/components/MobileFooterNavV15';
+import { MobileFooterNavV18 } from '@/app/chatbotV18/components/MobileFooterNavV18';
 
 export default function DashboardLayout({
   children,
@@ -19,7 +19,7 @@ export default function DashboardLayout({
       {/* Fixed Footer - Conditional based on deployment */}
       {process.env.NEXT_PUBLIC_FOOTER_TYPE !== 'none' && (
         <div className="fixed bottom-0 left-0 right-0 z-50">
-          <MobileFooterNavV15 />
+          <MobileFooterNavV18 />
         </div>
       )}
     </AuthProvider>
