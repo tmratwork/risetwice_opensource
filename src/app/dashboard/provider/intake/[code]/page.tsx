@@ -951,8 +951,8 @@ const ProviderIntakeView: React.FC = () => {
                   </div>
                 ) : hasAudio && audioUrl && audioFilePath ? (
                   <AudioPlayerWithSilenceSkip
-                    audioUrl={audioUrl}
-                    filePath={audioFilePath}
+                    audioUrl={audioUrl!}
+                    filePath={audioFilePath!}
                     bucketName="audio-recordings"
                     onAnalysisComplete={(segmentCount) => {
                       console.log('[provider_intake] ✅ Silence analysis complete:', segmentCount, 'segments');
@@ -961,7 +961,7 @@ const ProviderIntakeView: React.FC = () => {
                 ) : hasAudio && audioUrl ? (
                   <div>
                     <audio controls className="w-full">
-                      <source src={audioUrl} type="audio/webm" />
+                      <source src={audioUrl || undefined} type="audio/webm" />
                       Your browser does not support the audio element.
                     </audio>
                     <p className="text-sm text-gray-600 mt-2">
@@ -1016,7 +1016,7 @@ const ProviderIntakeView: React.FC = () => {
                 ) : hasAiAudio && aiAudioUrl ? (
                   <div>
                     <audio controls className="w-full">
-                      <source src={aiAudioUrl} type="audio/webm" />
+                      <source src={aiAudioUrl || undefined} type="audio/webm" />
                       Your browser does not support the audio element.
                     </audio>
                     <p className="text-sm text-gray-600 mt-2">
