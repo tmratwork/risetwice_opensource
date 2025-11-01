@@ -17,10 +17,11 @@ try {
     console.log('[audio_combination] 🎬 Using system FFmpeg:', systemFfmpeg);
     ffmpeg.setFfmpegPath(systemFfmpeg);
   }
-} catch (error) {
+} catch {
   // System ffmpeg not found, try ffmpeg-static
   try {
-    const ffmpegStatic = require('ffmpeg-static');
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const ffmpegStatic = require('ffmpeg-static') as string | null;
     if (ffmpegStatic && typeof ffmpegStatic === 'string' && !ffmpegStatic.includes('/ROOT/')) {
       console.log('[audio_combination] 🎬 Using ffmpeg-static:', ffmpegStatic);
       ffmpeg.setFfmpegPath(ffmpegStatic);
