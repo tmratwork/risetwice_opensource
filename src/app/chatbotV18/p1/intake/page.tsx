@@ -522,7 +522,7 @@ export default function PatientIntakePage() {
             {/* Price Range Selection */}
             <div className="space-y-4 pt-4">
               <label className="block text-sm font-semibold text-gray-700">
-                Preferred Pricing Ranges (Optional)
+                Preferred Pricing Ranges
               </label>
               <p className="text-xs text-gray-500 mb-3">
                 Select all that apply. $ = Less than $90, $$ = $90-$130, $$$ = More than $130
