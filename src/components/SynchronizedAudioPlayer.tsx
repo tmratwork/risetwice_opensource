@@ -358,14 +358,9 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       {/* Stereo mode info */}
       <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15.536a5 5 0 001.414 1.414m2.828-9.9a9 9 0 000 12.728" />
-            </svg>
-            <span className="text-sm font-medium text-blue-800">
-              {isStereoEnabled ? '🎧 Stereo Mode: AI (Left Ear) • Patient (Right Ear)' : '🔊 Mono Mode: Both Centered'}
-            </span>
-          </div>
+          <span className="text-sm font-medium text-blue-800">
+            {isStereoEnabled ? 'Stereo Mode: AI (Left Ear) • Patient (Right Ear)' : 'Mono Mode: Both Centered'}
+          </span>
           <button
             onClick={() => setIsStereoEnabled(!isStereoEnabled)}
             className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
