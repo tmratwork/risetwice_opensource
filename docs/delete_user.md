@@ -1,3 +1,20 @@
+-- Delete jobs by intake access code
+DELETE FROM audio_combination_jobs 
+WHERE conversation_id IN (
+  SELECT conversation_id 
+  FROM patient_intake 
+  WHERE access_code = '23337'
+);
+
+===
+
+-- Get the conversation_id for intake code 23337
+SELECT id, conversation_id, access_code 
+FROM patient_intake 
+WHERE access_code = '23337';
+
+===
+
 The error is because you copied the SQL comment. Here's the correct SQL without the comment:
 DELETE FROM audio_combination_jobs 
 WHERE conversation_id = '674b7ee2-ec2e-43b4-bea0-b0df3085256e'
