@@ -243,6 +243,12 @@ export default function V16AdminPage() {
       name: 'V18 Voice Recordings',
       description: 'Browse and listen to voice recordings from V18 chatbot conversations',
       href: '/chatbotV18/admin/voice-recordings'
+    },
+    {
+      id: 'license-verification',
+      name: 'Therapist License Verification',
+      description: 'Verify therapist licenses to grant access to patient voice recordings and contact information',
+      href: '/chatbotV18/admin/license-verification'
     }
   ];
 
