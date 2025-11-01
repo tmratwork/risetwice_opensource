@@ -1058,7 +1058,7 @@ const ProviderIntakeView: React.FC = () => {
 
             {/* Combined Intake Recording (Synchronized Playback) */}
             {hasAudio && audioUrl && hasAiAudio && aiAudioUrl && (
-              <div className="mt-8 pt-6 border-t border-gray-200">
+              <div className="border-t border-gray-200 pt-4">
                 <p className="text-sm text-gray-600 mb-4">
                   Listen to both sides of the conversation simultaneously.
                   With headphones: AI in left ear, patient in right ear.
