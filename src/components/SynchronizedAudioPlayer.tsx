@@ -38,7 +38,7 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
   const [duration, setDuration] = useState(0);
   const [patientVolume, setPatientVolume] = useState(1.0);
   const [aiVolume, setAiVolume] = useState(0.7); // AI slightly quieter by default
-  const [isStereoEnabled, setIsStereoEnabled] = useState(true);
+  const [isStereoEnabled, setIsStereoEnabled] = useState(false); // Disabled by default for debugging
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
 
   // Initialize Web Audio API for stereo panning
