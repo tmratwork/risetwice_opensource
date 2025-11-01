@@ -76,6 +76,11 @@ export async function POST(request: NextRequest) {
       insurance_id: body.insuranceId || null,
       is_self_pay: body.insuranceProvider === 'Self-Pay',
       budget_per_session: body.budgetPerSession || null,
+      price_individual: body.priceIndividual || [],
+      price_couples: body.priceCouples || [],
+      sliding_scale: body.slidingScale || false,
+      unsure_payment: body.unsurePayment || false,
+      payment_other: body.paymentOther || null,
       session_preference: body.sessionPreference,
       availability: body.availability,
       status: 'pending'

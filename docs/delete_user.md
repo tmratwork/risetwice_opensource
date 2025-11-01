@@ -8,6 +8,22 @@ WHERE status = 'failed';
 
 ---
 
+o remove the combined audio files and force a fresh combination test in production, you need to:
+Delete the combined audio files from Supabase Storage
+Delete the completed jobs from the database
+Here's the SQL:
+-- First, see what combined files exist for this conversation
+SELECT id, conversation_id, speaker, status, combined_file_path, created_at
+FROM audio_combination_jobs 
+WHERE conversation_id = '674b7ee2-ec2e-43b4-bea0-b0df3085256e'
+ORDER BY created_at DESC;
+Then delete the completed jobs:
+-- Delete all jobs (both failed and completed) to force fresh combination
+DELETE FROM audio_combination_jobs 
+WHERE conversation_id = '674b7ee2-ec2e-43b4-bea0-b0df3085256e';
+
+===
+
 -- Delete test user therapist profile from S2 therapist profiles (this will cascade to related S2 tables)
 DELETE FROM s2_therapist_profiles WHERE user_id = 'wo8lLHQzNThLRQkbZIuC1AmXkpD2';
 

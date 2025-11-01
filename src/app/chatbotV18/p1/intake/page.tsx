@@ -24,6 +24,11 @@ export default function PatientIntakePage() {
     insurancePlan: '',
     insuranceId: '',
     budgetPerSession: '',
+    priceIndividual: [] as string[],
+    priceCouples: [] as string[],
+    slidingScale: false,
+    unsurePayment: false,
+    paymentOther: '',
     sessionPreference: '',
     availability: [] as string[],
   });
@@ -72,6 +77,11 @@ export default function PatientIntakePage() {
             insurancePlan: intake.insurance_plan || '',
             insuranceId: intake.insurance_id || '',
             budgetPerSession: intake.budget_per_session || '',
+            priceIndividual: intake.price_individual || [],
+            priceCouples: intake.price_couples || [],
+            slidingScale: intake.sliding_scale || false,
+            unsurePayment: intake.unsure_payment || false,
+            paymentOther: intake.payment_other || '',
             sessionPreference: intake.session_preference || '',
             availability: intake.availability || [],
           });
@@ -98,6 +108,54 @@ export default function PatientIntakePage() {
       availability: prev.availability.includes(value)
         ? prev.availability.filter(item => item !== value)
         : [...prev.availability, value]
+    }));
+  };
+
+  const handlePriceIndividualChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      priceIndividual: prev.priceIndividual.includes(value)
+        ? prev.priceIndividual.filter(item => item !== value)
+        : [...prev.priceIndividual, value],
+      unsurePayment: false // Clear unsure when selecting prices
+    }));
+  };
+
+  const handlePriceCouplesChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      priceCouples: prev.priceCouples.includes(value)
+        ? prev.priceCouples.filter(item => item !== value)
+        : [...prev.priceCouples, value],
+      unsurePayment: false // Clear unsure when selecting prices
+    }));
+  };
+
+  const handleSlidingScaleChange = () => {
+    setFormData(prev => ({
+      ...prev,
+      slidingScale: !prev.slidingScale,
+      unsurePayment: false // Clear unsure when selecting sliding scale
+    }));
+  };
+
+  const handleUnsurePaymentChange = () => {
+    setFormData(prev => ({
+      ...prev,
+      unsurePayment: !prev.unsurePayment,
+      // Clear all price selections when unsure is checked
+      priceIndividual: !prev.unsurePayment ? [] : prev.priceIndividual,
+      priceCouples: !prev.unsurePayment ? [] : prev.priceCouples,
+      slidingScale: !prev.unsurePayment ? false : prev.slidingScale,
+      paymentOther: !prev.unsurePayment ? '' : prev.paymentOther
+    }));
+  };
+
+  const handlePaymentOtherChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentOther: e.target.value,
+      unsurePayment: false // Clear unsure when typing in other
     }));
   };
 
@@ -461,26 +519,111 @@ export default function PatientIntakePage() {
               </div>
             )}
 
-            {isSelfPay && (
+            {/* Price Range Selection */}
+            <div className="space-y-4 pt-4">
+              <label className="block text-sm font-semibold text-gray-700">
+                Preferred Pricing Ranges (Optional)
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Select all that apply. $ = Less than $90, $$ = $90-$130, $$$ = More than $130
+              </p>
+
+              {/* Individual Pricing */}
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1">
-                  Budget Per Session <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="budgetPerSession"
-                  required={isSelfPay}
-                  value={formData.budgetPerSession}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
-                >
-                  <option value="">Select budget range</option>
-                  <option value="$50-$100">$50 - $100</option>
-                  <option value="$100-$150">$100 - $150</option>
-                  <option value="$150-$200">$150 - $200</option>
-                  <option value="$200+">$200+</option>
-                </select>
+                <p className="text-sm font-medium text-gray-700 mb-2">Individual</p>
+                <div className="flex gap-6">
+                  {[
+                    { value: '$', label: '$ (Less than $90)' },
+                    { value: '$$', label: '$$ ($90 - $130)' },
+                    { value: '$$$', label: '$$$ (More than $130)' }
+                  ].map(option => (
+                    <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.priceIndividual.includes(option.value)}
+                        onChange={() => handlePriceIndividualChange(option.value)}
+                        disabled={formData.unsurePayment}
+                        className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className={`text-gray-700 ${formData.unsurePayment ? 'text-gray-400' : ''}`}>
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            )}
+
+              {/* Couples Pricing */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Couples</p>
+                <div className="flex gap-6">
+                  {[
+                    { value: '$', label: '$ (Less than $90)' },
+                    { value: '$$', label: '$$ ($90 - $130)' },
+                    { value: '$$$', label: '$$$ (More than $130)' }
+                  ].map(option => (
+                    <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.priceCouples.includes(option.value)}
+                        onChange={() => handlePriceCouplesChange(option.value)}
+                        disabled={formData.unsurePayment}
+                        className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className={`text-gray-700 ${formData.unsurePayment ? 'text-gray-400' : ''}`}>
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sliding Scale */}
+              <div>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.slidingScale}
+                    onChange={handleSlidingScaleChange}
+                    disabled={formData.unsurePayment}
+                    className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <span className={`text-gray-700 font-medium ${formData.unsurePayment ? 'text-gray-400' : ''}`}>
+                    Offers a sliding scale
+                  </span>
+                </label>
+              </div>
+
+              {/* Unsure Option */}
+              <div className="border-t pt-3">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.unsurePayment}
+                    onChange={handleUnsurePaymentChange}
+                    className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400"
+                  />
+                  <span className="text-gray-700 font-medium">
+                    Unsure about insurance/payment
+                  </span>
+                </label>
+              </div>
+
+              {/* Other Option */}
+              <div className="border-t pt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Other payment preferences
+                </label>
+                <textarea
+                  value={formData.paymentOther}
+                  onChange={handlePaymentOtherChange}
+                  disabled={formData.unsurePayment}
+                  placeholder="Please describe any other payment preferences or requirements..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+                />
+              </div>
+            </div>
           </div>
 
           {/* Session Preferences Section */}
