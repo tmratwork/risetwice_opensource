@@ -87,13 +87,19 @@ export const AudioPlayerWithSilenceSkip = ({
         setAnalysisState('ready');
         onAnalysisComplete?.(analyzeData.silenceSegments?.length || 0);
       } else {
-        console.error('[audio_player] Analysis failed:', analyzeData.error);
-        setAnalysisState('error');
+        console.warn('[audio_player] ⚠️ Silence analysis failed (FFmpeg unavailable) - playing without silence skip:', analyzeData.error);
+        // Gracefully degrade - play audio without silence skipping
+        setAnalysisState('ready');
+        setSilenceSegments([]);
+        onAnalysisComplete?.(0);
       }
 
     } catch (error) {
-      console.error('[audio_player] Failed to load silence analysis:', error);
-      setAnalysisState('error');
+      console.warn('[audio_player] ⚠️ Silence analysis unavailable - playing without silence skip:', error);
+      // Gracefully degrade - play audio without silence skipping
+      setAnalysisState('ready');
+      setSilenceSegments([]);
+      onAnalysisComplete?.(0);
     }
   };
 

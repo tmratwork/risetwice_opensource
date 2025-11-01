@@ -3,8 +3,15 @@ DELETE FROM audio_combination_jobs
 WHERE conversation_id IN (
   SELECT conversation_id 
   FROM patient_intake 
-  WHERE access_code = '23337'
+  WHERE access_code = '67745'
 );
+
+===
+
+find id so files in storage can be deleted:
+SELECT conversation_id, access_code 
+FROM patient_intake 
+WHERE access_code = '67745';
 
 ===
 
