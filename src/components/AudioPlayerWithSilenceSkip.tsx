@@ -272,12 +272,6 @@ export const AudioPlayerWithSilenceSkip = ({
         </div>
       )}
 
-      {analysisState === 'error' && (
-        <div className="text-amber-600 text-sm">
-          ⚠️ Could not analyze audio - playing without silence skipping
-        </div>
-      )}
-
       {/* Audio Player */}
       <div>
         <audio
