@@ -126,15 +126,20 @@ export async function POST(request: NextRequest) {
     await fs.promises.writeFile(tempFilePath, Buffer.from(await audioData.arrayBuffer()));
 
     const audioDuration = await new Promise<number>((resolve) => {
-      ffmpeg.ffprobe(tempFilePath, (err, metadata) => {
-        if (err) {
-          console.error('[audio_transcription] ⚠️ Could not check duration with FFmpeg:', err);
-          resolve(0);
-        } else {
-          const duration = metadata?.format?.duration || 0;
-          resolve(duration);
-        }
-      });
+      try {
+        ffmpeg.ffprobe(tempFilePath, (err, metadata) => {
+          if (err) {
+            console.error('[audio_transcription] ⚠️ Could not check duration with FFmpeg:', err);
+            resolve(0);
+          } else {
+            const duration = metadata?.format?.duration || 0;
+            resolve(duration);
+          }
+        });
+      } catch (error) {
+        console.error('[audio_transcription] ⚠️ FFmpeg not available:', error);
+        resolve(0);
+      }
     });
 
     console.log(`[audio_transcription] ⏱️ Audio file duration: ${audioDuration.toFixed(2)} seconds`);
