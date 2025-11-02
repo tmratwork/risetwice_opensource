@@ -31,6 +31,8 @@ export default function PatientIntakePage() {
     paymentOther: '',
     sessionPreference: '',
     availability: [] as string[],
+    availabilityOther: false,
+    availabilityOtherText: '',
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,6 +86,8 @@ export default function PatientIntakePage() {
             paymentOther: intake.payment_other || '',
             sessionPreference: intake.session_preference || '',
             availability: intake.availability || [],
+            availabilityOther: intake.availability_other || false,
+            availabilityOtherText: intake.availability_other_text || '',
           });
         }
       } catch (error) {
@@ -108,6 +112,21 @@ export default function PatientIntakePage() {
       availability: prev.availability.includes(value)
         ? prev.availability.filter(item => item !== value)
         : [...prev.availability, value]
+    }));
+  };
+
+  const handleAvailabilityOtherChange = () => {
+    setFormData(prev => ({
+      ...prev,
+      availabilityOther: !prev.availabilityOther,
+      availabilityOtherText: !prev.availabilityOther ? prev.availabilityOtherText : ''
+    }));
+  };
+
+  const handleAvailabilityOtherTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      availabilityOtherText: e.target.value
     }));
   };
 
@@ -652,23 +671,86 @@ export default function PatientIntakePage() {
               <label className="block text-sm font-semibold text-gray-700 mb-3">
                 Scheduling Availability <span className="text-red-500">*</span>
               </label>
-              <div className="space-y-2">
-                {[
-                  { value: 'weekday_mornings', label: 'Weekday Mornings' },
-                  { value: 'weekday_afternoons', label: 'Weekday Afternoons' },
-                  { value: 'weekday_evenings', label: 'Weekday Evenings' },
-                  { value: 'weekends', label: 'Weekends' },
-                ].map(option => (
-                  <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={formData.availability.includes(option.value)}
-                      onChange={() => handleAvailabilityChange(option.value)}
-                      className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400"
+              <p className="text-xs text-gray-500 mb-4">
+                Select all time slots that work for you
+              </p>
+
+              {/* Availability Grid */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-sage-100">
+                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Day</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Morning (AM)</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Afternoon (PM)</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Evening</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { day: 'Monday', value: 'monday' },
+                      { day: 'Tuesday', value: 'tuesday' },
+                      { day: 'Wednesday', value: 'wednesday' },
+                      { day: 'Thursday', value: 'thursday' },
+                      { day: 'Friday', value: 'friday' },
+                      { day: 'Saturday', value: 'saturday' },
+                      { day: 'Sunday', value: 'sunday' },
+                    ].map(({ day, value }) => (
+                      <tr key={value} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">{day}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.availability.includes(`${value}_morning`)}
+                            onChange={() => handleAvailabilityChange(`${value}_morning`)}
+                            className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 cursor-pointer"
+                          />
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.availability.includes(`${value}_afternoon`)}
+                            onChange={() => handleAvailabilityChange(`${value}_afternoon`)}
+                            className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 cursor-pointer"
+                          />
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.availability.includes(`${value}_evening`)}
+                            onChange={() => handleAvailabilityChange(`${value}_evening`)}
+                            className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 cursor-pointer"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Other Option */}
+              <div className="mt-4 border-t pt-4">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.availabilityOther}
+                    onChange={handleAvailabilityOtherChange}
+                    className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400"
+                  />
+                  <span className="text-gray-700 font-medium">Other</span>
+                </label>
+
+                {formData.availabilityOther && (
+                  <div className="mt-3">
+                    <textarea
+                      value={formData.availabilityOtherText}
+                      onChange={handleAvailabilityOtherTextChange}
+                      placeholder="Please describe your availability in more detail..."
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
                     />
-                    <span className="text-gray-700">{option.label}</span>
-                  </label>
-                ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -677,7 +759,7 @@ export default function PatientIntakePage() {
           <div className="pt-6">
             <button
               type="submit"
-              disabled={isSubmitting || formData.availability.length === 0}
+              disabled={isSubmitting || (formData.availability.length === 0 && !formData.availabilityOther)}
               className="w-full bg-yellow-400 hover:bg-yellow-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-gray-900 font-bold py-4 px-6 rounded-xl transition-colors text-lg shadow-lg"
             >
               {isSubmitting ? 'Submitting...' : 'Next'}

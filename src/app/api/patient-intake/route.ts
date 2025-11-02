@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Validate availability is an array with at least one item
-    if (!Array.isArray(body.availability) || body.availability.length === 0) {
+    // Validate availability: either array with items OR availabilityOther is true
+    if (!Array.isArray(body.availability) || (body.availability.length === 0 && !body.availabilityOther)) {
       return NextResponse.json(
-        { error: 'At least one availability slot must be selected' },
+        { error: 'At least one availability slot must be selected or provide other availability details' },
         { status: 400 }
       );
     }
@@ -83,6 +83,8 @@ export async function POST(request: NextRequest) {
       payment_other: body.paymentOther || null,
       session_preference: body.sessionPreference,
       availability: body.availability,
+      availability_other: body.availabilityOther || false,
+      availability_other_text: body.availabilityOtherText || null,
       status: 'pending'
     };
 
