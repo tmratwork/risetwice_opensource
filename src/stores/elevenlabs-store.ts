@@ -105,6 +105,7 @@ export interface ElevenLabsStoreState {
   updateMessage: (id: string, updates: Partial<ConversationMessage>) => void;
   clearConversation: () => void;
   setConversationId: (id: string | null) => void;
+  saveMessageToSupabase: (message: ConversationMessage) => Promise<void>;
 
   // V17 Triage actions
   setTriageSession: (session: TriageSession | null) => void;
@@ -206,15 +207,23 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
 
   // Conversation actions
   addMessage: (message) => {
-    logV17('💬 Adding message', { 
-      id: message.id, 
-      role: message.role, 
+    logV17('💬 Adding message', {
+      id: message.id,
+      role: message.role,
       textLength: message.text.length,
-      specialist: message.specialist 
+      specialist: message.specialist
     });
     set((state) => ({
       conversationHistory: [...state.conversationHistory, message]
     }));
+
+    // Save final messages to Supabase (skip streaming/incomplete messages)
+    if (message.isFinal) {
+      const currentState = get();
+      currentState.saveMessageToSupabase(message).catch(error => {
+        console.error('[V17] Failed to save message to Supabase:', error);
+      });
+    }
   },
 
   updateMessage: (id, updates) => {
@@ -238,6 +247,98 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
       localStorage.setItem('currentConversationId', id);
     } else {
       localStorage.removeItem('currentConversationId');
+    }
+  },
+
+  // Save message to Supabase
+  saveMessageToSupabase: async (message) => {
+    const logPrefix = '[V17_message_persistence]';
+
+    try {
+      // Get required data from localStorage
+      let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+      const bookId = typeof localStorage !== 'undefined' ? localStorage.getItem('selectedBookId') : null;
+
+      // V17: Handle anonymous users by generating a session-based ID
+      if (!userId) {
+        // Generate or retrieve anonymous user ID for this session
+        let anonymousUserId = typeof localStorage !== 'undefined' ? localStorage.getItem('anonymousUserId') : null;
+        if (!anonymousUserId) {
+          anonymousUserId = `anonymous-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('anonymousUserId', anonymousUserId);
+          }
+          console.log(`${logPrefix} Generated anonymous user ID: ${anonymousUserId}`);
+        }
+        userId = anonymousUserId;
+      }
+
+      if (!bookId) {
+        console.warn(`${logPrefix} Missing bookId, skipping message save`);
+        return;
+      }
+
+      // Ensure we have a conversation ID
+      const currentState = get();
+      let conversationId = currentState.conversationId;
+
+      if (!conversationId) {
+        console.log(`${logPrefix} No conversation ID, creating new conversation`);
+        conversationId = await currentState.createConversation();
+        if (!conversationId) {
+          throw new Error('Failed to create conversation');
+        }
+        set({ conversationId });
+        // Sync with localStorage
+        if (typeof localStorage !== 'undefined') {
+          localStorage.setItem('currentConversationId', conversationId);
+        }
+      }
+
+      // Get current specialist from triage session
+      const storeState = get();
+      const currentSpecialist = storeState.triageSession?.currentSpecialist;
+
+      // Use V17 save-message API with specialist tracking
+      const requestData = {
+        userId,
+        bookId,
+        message,
+        conversationId,
+        specialist: currentSpecialist
+      };
+
+      logV17('💾 Saving message to database', {
+        messageId: message.id,
+        role: message.role,
+        textLength: message.text.length,
+        conversationId,
+        specialist: currentSpecialist
+      });
+
+      const response = await fetch('/api/v17/save-message', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(`Failed to save message: ${response.status} ${errorData.error || response.statusText}`);
+      }
+
+      const result = await response.json();
+      logV17('✅ Message saved to database', {
+        messageId: result.messageId,
+        conversationId: result.conversationId
+      });
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`${logPrefix} Save message failed:`, errorMessage);
+      throw error;
     }
   },
 
@@ -288,15 +389,44 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
   // V17 Session management
   createConversation: async () => {
     logV17('🆕 Creating new V17 conversation');
-    
+
     try {
-      // For now, create a simple UUID-like ID
-      // TODO: Replace with actual API call to create conversation in database
-      const conversationId = `v17-conv-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+      // Get userId from localStorage (supports both authenticated and anonymous users)
+      let userId = typeof localStorage !== 'undefined' ? localStorage.getItem('userId') : null;
+
+      // Handle anonymous users
+      if (!userId) {
+        let anonymousUserId = typeof localStorage !== 'undefined' ? localStorage.getItem('anonymousUserId') : null;
+        if (!anonymousUserId) {
+          anonymousUserId = `anonymous-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+          if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('anonymousUserId', anonymousUserId);
+          }
+          logV17('Generated anonymous user ID for conversation', { anonymousUserId });
+        }
+        userId = anonymousUserId;
+      }
+
+      if (!userId) {
+        throw new Error('No user ID available to create conversation');
+      }
+
+      // Create conversation in database via API
+      const response = await fetch('/api/v17/create-conversation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to create conversation: ${response.status}`);
+      }
+
+      const { conversationId } = await response.json();
+
       get().setConversationId(conversationId);
-      
-      logV17('✅ V17 conversation created', { conversationId });
+
+      logV17('✅ V17 conversation created in database', { conversationId });
       return conversationId;
     } catch (error) {
       logV17('❌ Failed to create V17 conversation', error);
