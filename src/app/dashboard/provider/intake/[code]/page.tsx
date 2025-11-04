@@ -119,6 +119,19 @@ const ProviderIntakeView: React.FC = () => {
   const [aiJobStatus, setAiJobStatus] = useState<string>('');
   const [aiPollingInterval, setAiPollingInterval] = useState<NodeJS.Timeout | null>(null);
 
+  // Debug: Log audio state changes
+  useEffect(() => {
+    console.log('[provider_intake] 🔍 Audio state changed:', {
+      hasAudio,
+      hasAudioUrl: !!audioUrl,
+      audioLoading,
+      hasAiAudio,
+      hasAiAudioUrl: !!aiAudioUrl,
+      aiAudioLoading,
+      bothReady: hasAudio && audioUrl && hasAiAudio && aiAudioUrl
+    });
+  }, [hasAudio, audioUrl, audioLoading, hasAiAudio, aiAudioUrl, aiAudioLoading]);
+
   // Collapsible panels state
   const [collapsedPanels, setCollapsedPanels] = useState<Record<string, boolean>>({});
 
@@ -422,7 +435,10 @@ const ProviderIntakeView: React.FC = () => {
           // Extract file path from response (for silence analysis)
           if (result.conversationId) {
             const filePath = `v18-voice-recordings/${result.conversationId}/${result.fileName || 'combined-audio.webm'}`;
+            console.log('[provider_intake] 📂 Setting audio file path:', filePath);
             setAudioFilePath(filePath);
+          } else {
+            console.warn('[provider_intake] ⚠️ No conversationId in response - audioFilePath not set');
           }
 
           // Clear polling if it exists
@@ -466,10 +482,12 @@ const ProviderIntakeView: React.FC = () => {
         const response = await fetch(`/api/provider/intake-audio?intake_id=${intakeId}`);
         const result = await response.json();
 
-        console.log('[provider_intake] 📊 Poll result:', {
+        console.log('[provider_intake] 📊 Poll result (FULL RESPONSE):', result);
+        console.log('[provider_intake] 📊 Poll result (summary):', {
           hasRecording: result.hasRecording,
           audioUrl: !!result.audioUrl,
-          jobStatus: result.jobStatus
+          jobStatus: result.jobStatus,
+          needsCombination: result.needsCombination
         });
 
         if (result.success && result.hasRecording && result.audioUrl) {
@@ -617,10 +635,12 @@ const ProviderIntakeView: React.FC = () => {
         const response = await fetch(`/api/provider/intake-audio?intake_id=${intakeId}&speaker=ai`);
         const result = await response.json();
 
-        console.log('[provider_intake] 📊 AI poll result:', {
+        console.log('[provider_intake] 📊 AI poll result (FULL RESPONSE):', result);
+        console.log('[provider_intake] 📊 AI poll result (summary):', {
           hasRecording: result.hasRecording,
           audioUrl: !!result.audioUrl,
-          jobStatus: result.jobStatus
+          jobStatus: result.jobStatus,
+          needsCombination: result.needsCombination
         });
 
         if (result.success && result.hasRecording && result.audioUrl) {
@@ -1039,9 +1059,8 @@ const ProviderIntakeView: React.FC = () => {
               </div>
             ) : (
               <>
-            {/* Patient Recording - HIDDEN FOR TESTING */}
-            {/* To re-enable: Change {false && ( to {true && ( on line below */}
-            {false && (
+            {/* Patient Recording - HIDDEN (shown only when no AI audio for fallback) */}
+            {hasAudio && audioUrl && !hasAiAudio && (
               <div>
                 <h3 className="text-xl font-bold text-gray-800 mb-4">Patient Recording</h3>
                 {audioLoading ? (
@@ -1101,8 +1120,7 @@ const ProviderIntakeView: React.FC = () => {
               </div>
             )}
 
-            {/* AI Audio Recording Section - HIDDEN FOR TESTING */}
-            {/* To re-enable: Change {false && ( to {true && ( on line below */}
+            {/* AI Audio Recording Section - HIDDEN (AI audio not recorded in V17) */}
             {false && (
               <div className="mt-8 pt-6 border-t border-gray-200">
                 <h3 className="text-xl font-bold text-gray-800 mb-4">AI Voice Recording</h3>
@@ -1157,15 +1175,25 @@ const ProviderIntakeView: React.FC = () => {
             )}
 
             {/* Combined Intake Recording (Synchronized Playback) */}
-            {hasAudio && audioUrl && hasAiAudio && aiAudioUrl && (
+            {(() => {
+              const shouldShow = hasAudio && audioUrl && hasAiAudio && aiAudioUrl;
+              console.log('[provider_intake] Combined player visibility:', {
+                hasAudio,
+                hasAudioUrl: !!audioUrl,
+                hasAiAudio,
+                hasAiAudioUrl: !!aiAudioUrl,
+                shouldShow
+              });
+              return shouldShow;
+            })() && (
               <div className="border-t border-gray-200 pt-4">
                 <p className="text-sm text-gray-600 mb-4">
                   Listen to both sides of the conversation simultaneously.
                   With headphones: AI in left ear, patient in right ear.
                 </p>
                 <SynchronizedAudioPlayer
-                  patientAudioUrl={audioUrl}
-                  aiAudioUrl={aiAudioUrl}
+                  patientAudioUrl={audioUrl!}
+                  aiAudioUrl={aiAudioUrl!}
                 />
               </div>
             )}

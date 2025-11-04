@@ -7,6 +7,52 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minutes for large audio files
 
+// Helper function to create WAV file from PCM data
+function createWavBlob(pcmData: Uint8Array, sampleRate: number, numChannels: number, bitsPerSample: number): Blob {
+  const bytesPerSample = bitsPerSample / 8;
+  const blockAlign = numChannels * bytesPerSample;
+  const byteRate = sampleRate * blockAlign;
+  const dataSize = pcmData.length;
+  const fileSize = 44 + dataSize; // WAV header is 44 bytes
+
+  // Create WAV header
+  const header = new ArrayBuffer(44);
+  const view = new DataView(header);
+
+  // Helper to write string to DataView
+  const writeString = (offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+
+  // RIFF chunk descriptor
+  writeString(0, 'RIFF');
+  view.setUint32(4, fileSize - 8, true); // File size minus RIFF header
+  writeString(8, 'WAVE');
+
+  // fmt sub-chunk
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true); // Subchunk1Size (16 for PCM)
+  view.setUint16(20, 1, true); // AudioFormat (1 for PCM)
+  view.setUint16(22, numChannels, true); // NumChannels
+  view.setUint32(24, sampleRate, true); // SampleRate
+  view.setUint32(28, byteRate, true); // ByteRate
+  view.setUint16(32, blockAlign, true); // BlockAlign
+  view.setUint16(34, bitsPerSample, true); // BitsPerSample
+
+  // data sub-chunk
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true); // Subchunk2Size
+
+  // Combine header and PCM data
+  const wavData = new Uint8Array(fileSize);
+  wavData.set(new Uint8Array(header), 0);
+  wavData.set(pcmData, 44);
+
+  return new Blob([wavData], { type: 'audio/wav' });
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { intake_id, conversation_id, speaker = 'patient' } = await request.json();
@@ -20,40 +66,47 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if combination already in progress for this speaker
-    const { data: existingJob, error: jobCheckError } = await supabaseAdmin
+    // First, check if a job already exists (for faster return on completed jobs)
+    const { data: existingCheck } = await supabaseAdmin
       .from('audio_combination_jobs')
-      .select('*')
+      .select('id, status, combined_file_path, created_at')
       .eq('conversation_id', conversation_id)
       .eq('speaker', speaker)
       .order('created_at', { ascending: false })
       .limit(1)
-      .single();
+      .maybeSingle();
 
-    if (!jobCheckError && existingJob) {
-      console.log('[audio_combination] 📋 Existing job found:', existingJob.status);
+    // If job is completed, return immediately
+    if (existingCheck?.status === 'completed' && existingCheck.combined_file_path) {
+      console.log('[audio_combination] ✅ Job already completed, returning existing result');
+      return NextResponse.json({
+        success: true,
+        status: 'completed',
+        jobId: existingCheck.id,
+        filePath: existingCheck.combined_file_path
+      });
+    }
 
-      if (existingJob.status === 'processing') {
+    // If job is processing and recent (< 2 minutes old), return it
+    if (existingCheck?.status === 'processing') {
+      const createdAt = new Date(existingCheck.created_at).getTime();
+      const age = Date.now() - createdAt;
+
+      if (age < 120000) { // Less than 2 minutes
+        console.log('[audio_combination] 📋 Job already processing (age: ${Math.round(age/1000)}s)');
         return NextResponse.json({
           success: true,
           status: 'processing',
-          jobId: existingJob.id,
+          jobId: existingCheck.id,
           message: 'Audio combination already in progress'
         });
-      }
-
-      if (existingJob.status === 'completed' && existingJob.combined_file_path) {
-        console.log('[audio_combination] ✅ Job already completed');
-        return NextResponse.json({
-          success: true,
-          status: 'completed',
-          jobId: existingJob.id,
-          filePath: existingJob.combined_file_path
-        });
+      } else {
+        console.log('[audio_combination] ⚠️ Job stuck (age: ${Math.round(age/1000)}s), will retry');
       }
     }
 
-    // Create new combination job
+    // Try to create a new job atomically
+    // The unique constraint will prevent duplicates if multiple requests arrive simultaneously
     const { data: job, error: jobError } = await supabaseAdmin
       .from('audio_combination_jobs')
       .insert({
@@ -66,7 +119,39 @@ export async function POST(request: NextRequest) {
       .select()
       .single();
 
-    if (jobError || !job) {
+    // If insert failed due to unique constraint violation, fetch the existing job
+    if (jobError) {
+      if (jobError.code === '23505') { // Unique constraint violation
+        console.log('[audio_combination] 🔄 Job already exists (race condition detected), fetching existing job...');
+
+        const { data: racedJob } = await supabaseAdmin
+          .from('audio_combination_jobs')
+          .select('id, status, combined_file_path')
+          .eq('conversation_id', conversation_id)
+          .eq('speaker', speaker)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (racedJob) {
+          if (racedJob.status === 'completed' && racedJob.combined_file_path) {
+            return NextResponse.json({
+              success: true,
+              status: 'completed',
+              jobId: racedJob.id,
+              filePath: racedJob.combined_file_path
+            });
+          }
+
+          return NextResponse.json({
+            success: true,
+            status: 'processing',
+            jobId: racedJob.id,
+            message: 'Audio combination already in progress'
+          });
+        }
+      }
+
       console.error('[audio_combination] ❌ Failed to create job:', jobError);
       return NextResponse.json(
         { error: 'Failed to create combination job' },
@@ -74,7 +159,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[audio_combination] 📝 Created job:', job.id);
+    console.log('[audio_combination] 📝 Created new job:', job.id);
 
     // Fetch audio chunks for the specified speaker
     let { data: chunks, error: chunksError } = await supabaseAdmin
@@ -175,16 +260,117 @@ export async function POST(request: NextRequest) {
 
     console.log(`[audio_combination] ✅ All chunks downloaded - ${Date.now() - startTime}ms total`);
 
-    // Concatenate blobs - WebM format supports simple concatenation
-    const combinedBlob = new Blob(allBlobs, { type: 'audio/webm;codecs=opus' });
-    console.log(`[audio_combination] 🔗 Combined blob size: ${combinedBlob.size} bytes (${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB) - ${Date.now() - startTime}ms elapsed`);
+    // Combine audio chunks
+    const isWav = speaker === 'ai';
+    const mimeType = isWav ? 'audio/wav' : 'audio/webm;codecs=opus';
+    const fileExtension = isWav ? 'wav' : 'webm';
 
-    // Upload directly without FFmpeg re-encoding (WebM chunks can be concatenated)
+    let combinedBlob: Blob;
+
+    if (isWav) {
+      // For WAV files, we need to strip headers and recombine with a single header
+      console.log('[audio_combination] 🔧 Processing WAV chunks - stripping headers');
+
+      const pcmDataChunks: Uint8Array[] = [];
+      let totalPcmBytes = 0;
+
+      // Extract PCM data from each WAV chunk by parsing the header properly
+      for (let i = 0; i < allBlobs.length; i++) {
+        const wavBlob = allBlobs[i];
+        const arrayBuffer = await wavBlob.arrayBuffer();
+        const wavData = new Uint8Array(arrayBuffer);
+
+        // Parse WAV header to find data chunk offset
+        // WAV format: RIFF header (12 bytes) + fmt chunk + data chunk
+        let dataOffset = 12; // Start after RIFF header
+        let dataChunkSize = 0;
+        let foundDataChunk = false;
+
+        console.log(`[audio_combination] Chunk ${i}: Total file size ${wavData.length} bytes`);
+
+        // Search for the "data" chunk
+        while (dataOffset < wavData.length - 8) {
+          const chunkId = String.fromCharCode(
+            wavData[dataOffset],
+            wavData[dataOffset + 1],
+            wavData[dataOffset + 2],
+            wavData[dataOffset + 3]
+          );
+          const chunkSize =
+            wavData[dataOffset + 4] |
+            (wavData[dataOffset + 5] << 8) |
+            (wavData[dataOffset + 6] << 16) |
+            (wavData[dataOffset + 7] << 24);
+
+          console.log(`[audio_combination] Chunk ${i}: Found chunk "${chunkId}" at offset ${dataOffset}, size ${chunkSize} bytes`);
+
+          if (chunkId === 'data') {
+            // Found data chunk - skip 8 bytes (chunk ID + size) to get to actual data
+            dataOffset += 8;
+            dataChunkSize = chunkSize;
+            foundDataChunk = true;
+            console.log(`[audio_combination] Chunk ${i}: ✅ Found data chunk at offset ${dataOffset - 8}, data size ${dataChunkSize} bytes`);
+            break;
+          }
+
+          // Move to next chunk (skip chunk ID, size field, and chunk data)
+          dataOffset += 8 + chunkSize;
+        }
+
+        if (!foundDataChunk) {
+          console.error(`[audio_combination] ❌ Chunk ${i}: Failed to find data chunk! File may be corrupted.`);
+          throw new Error(`WAV chunk ${i} missing data chunk`);
+        }
+
+        // Extract PCM data using the data chunk size (not just slice to end)
+        const pcmData = wavData.slice(dataOffset, dataOffset + dataChunkSize);
+
+        // Verify sample alignment (16-bit mono = 2 bytes per sample)
+        if (pcmData.length % 2 !== 0) {
+          console.warn(`[audio_combination] ⚠️ Chunk ${i}: Odd number of bytes (${pcmData.length}), trimming 1 byte for alignment`);
+          // Trim last byte to maintain sample alignment
+          pcmDataChunks.push(pcmData.slice(0, -1));
+          totalPcmBytes += pcmData.length - 1;
+        } else {
+          pcmDataChunks.push(pcmData);
+          totalPcmBytes += pcmData.length;
+        }
+
+        console.log(`[audio_combination] Chunk ${i}: ✅ Extracted ${pcmData.length} bytes of PCM data`);
+      }
+
+      console.log(`[audio_combination] 📊 Summary: ${pcmDataChunks.length} chunks, total ${totalPcmBytes} PCM bytes`);
+      console.log(`[audio_combination] 📊 Chunk sizes: ${pcmDataChunks.map(c => c.length).join(', ')} bytes`);
+
+      // Concatenate all PCM data
+      const combinedPcm = new Uint8Array(totalPcmBytes);
+      let offset = 0;
+      for (let i = 0; i < pcmDataChunks.length; i++) {
+        const pcmChunk = pcmDataChunks[i];
+        console.log(`[audio_combination] Concatenating chunk ${i}: ${pcmChunk.length} bytes at offset ${offset}`);
+        combinedPcm.set(pcmChunk, offset);
+        offset += pcmChunk.length;
+      }
+
+      console.log(`[audio_combination] ✅ All PCM data concatenated: ${combinedPcm.length} bytes`);
+
+      // Create new WAV file with single header
+      // ElevenLabs audio: 48kHz, mono, 16-bit PCM
+      combinedBlob = createWavBlob(combinedPcm, 48000, 1, 16);
+
+      console.log(`[audio_combination] 🔗 Combined WAV: ${allBlobs.length} chunks, ${totalPcmBytes} PCM bytes, ${combinedBlob.size} total bytes (header + data) - ${Date.now() - startTime}ms elapsed`);
+    } else {
+      // For WebM, simple concatenation works
+      combinedBlob = new Blob(allBlobs, { type: mimeType });
+      console.log(`[audio_combination] 🔗 Combined ${speaker} blob (${fileExtension}): ${combinedBlob.size} bytes (${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB) - ${Date.now() - startTime}ms elapsed`);
+    }
+
+    // Upload combined file
     let combinedPath = '';
 
     try {
       const filePrefix = speaker === 'ai' ? 'combined-ai-' : 'combined-';
-      const combinedFileName = `${filePrefix}${Date.now()}.webm`;
+      const combinedFileName = `${filePrefix}${Date.now()}.${fileExtension}`;
       combinedPath = `v18-voice-recordings/${conversation_id}/${combinedFileName}`;
 
       console.log(`[audio_combination] 📤 Starting upload: ${(combinedBlob.size / 1024 / 1024).toFixed(2)} MB - ${Date.now() - startTime}ms elapsed`);

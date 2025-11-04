@@ -140,6 +140,20 @@ export function useElevenLabsConversation() {
     onAudio: (audio: unknown) => {
       logV17('🔊 Agent audio received - clearing thinking state', { hasAudio: !!audio });
 
+      // Log audio event structure to understand the format
+      console.log('[ai_audio_capture] 🎵 Audio event received:', {
+        type: typeof audio,
+        isNull: audio === null,
+        isUndefined: audio === undefined,
+        keys: audio ? Object.keys(audio as object) : [],
+        firstChars: typeof audio === 'string' ? (audio as string).substring(0, 50) : 'N/A',
+        sample: typeof audio === 'string' ? (audio as string).charCodeAt(0) + ',' + (audio as string).charCodeAt(1) + ',' + (audio as string).charCodeAt(2) : 'N/A'
+      });
+
+      // Broadcast AI audio event for voice recording hook
+      const audioEvent = new CustomEvent('elevenlabs-ai-audio', { detail: audio });
+      window.dispatchEvent(audioEvent);
+
       // ✅ Use getState() for store access in callbacks
       useElevenLabsStore.getState().setIsThinking(false); // Clear thinking when agent starts generating audio
     },
@@ -234,11 +248,16 @@ export function useElevenLabsConversation() {
       if (constraints.audio) {
         // Track the stream for mute control
         activeStreamsRef.current.push(stream);
-        logV17('🎤 Added stream to tracking', { 
-          streamId: stream.id, 
-          totalTracked: activeStreamsRef.current.length 
+        logV17('🎤 Added stream to tracking', {
+          streamId: stream.id,
+          totalTracked: activeStreamsRef.current.length
         });
-        
+
+        // Expose stream globally for voice recording hook
+        const windowWithStream = window as Window & { v17AudioStream?: MediaStream };
+        windowWithStream.v17AudioStream = stream;
+        logV17('🎤 Exposed stream globally for voice recording', { streamId: stream.id });
+
         // Apply current mute state to this stream
         stream.getAudioTracks().forEach((track, index) => {
           track.enabled = !isMicrophoneMutedRef.current;
@@ -247,11 +266,16 @@ export function useElevenLabsConversation() {
             muted: isMicrophoneMutedRef.current
           });
         });
-        
+
         // Cleanup when stream ends
         stream.addEventListener('ended', () => {
           logV17('🎤 Stream ended, removing from tracking', { streamId: stream.id });
           activeStreamsRef.current = activeStreamsRef.current.filter(s => s !== stream);
+          // Clear global reference
+          const windowWithStream = window as Window & { v17AudioStream?: MediaStream };
+          if (windowWithStream.v17AudioStream === stream) {
+            delete windowWithStream.v17AudioStream;
+          }
         });
       }
       

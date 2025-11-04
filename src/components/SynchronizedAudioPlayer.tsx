@@ -238,10 +238,34 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
     const aiAudio = aiAudioRef.current;
 
     const updateDuration = () => {
+      console.log('[sync_player] 📏 updateDuration called:', {
+        hasPatient: !!patientAudio,
+        hasAi: !!aiAudio,
+        patientDuration: patientAudio?.duration,
+        aiDuration: aiAudio?.duration
+      });
+
       if (patientAudio && aiAudio) {
-        // Use the longer of the two durations
-        const maxDuration = Math.max(patientAudio.duration, aiAudio.duration);
+        // Use the longer of the two durations, ignoring invalid values
+        const patientDur = isFinite(patientAudio.duration) ? patientAudio.duration : 0;
+        const aiDur = isFinite(aiAudio.duration) ? aiAudio.duration : 0;
+        const maxDuration = Math.max(patientDur, aiDur);
+
+        console.log('[sync_player] 📏 Duration calculation:', {
+          patientDuration: patientAudio.duration,
+          aiDuration: aiAudio.duration,
+          patientValid: isFinite(patientAudio.duration),
+          aiValid: isFinite(aiAudio.duration),
+          patientDur,
+          aiDur,
+          maxDuration,
+          mathMaxResult: Math.max(patientDur, aiDur)
+        });
+
         setDuration(maxDuration);
+        console.log('[sync_player] ✅ Duration state set to:', maxDuration);
+      } else {
+        console.warn('[sync_player] ⚠️ Cannot update duration - missing audio elements');
       }
     };
 

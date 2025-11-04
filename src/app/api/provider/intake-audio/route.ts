@@ -5,8 +5,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function GET(request: NextRequest) {
+  // Disable Next.js caching to prevent stale database reads
+  const { unstable_noStore } = await import('next/cache');
+  unstable_noStore();
   try {
     const searchParams = request.nextUrl.searchParams;
     const intakeId = searchParams.get('intake_id');
@@ -89,52 +93,35 @@ export async function GET(request: NextRequest) {
 
     console.log('[provider_audio] 🎤 Using conversation_id:', conversationId);
 
-    // Check for combined audio file
-    const { data: files, error: listError } = await supabaseAdmin.storage
-      .from('audio-recordings')
-      .list(`v18-voice-recordings/${conversationId}`, {
-        limit: 100,
-        sortBy: { column: 'created_at', order: 'desc' }
-      });
+    // STEP 1: Check database for existing combination job FIRST (source of truth)
+    // Always get the MOST RECENT job to handle any duplicate race conditions
+    console.log('[provider_audio] 📋 Checking database for MOST RECENT combination job...');
+    const { data: existingJob, error: jobCheckError } = await supabaseAdmin
+      .from('audio_combination_jobs')
+      .select('id, status, combined_file_path, created_at, completed_at')
+      .eq('conversation_id', conversationId)
+      .eq('speaker', speaker)
+      .order('created_at', { ascending: false }) // Most recent first
+      .limit(1)
+      .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when no rows
 
-    console.log('[provider_audio] 📁 Storage list result:', {
-      fileCount: files?.length,
-      files: files?.map(f => f.name),
-      error: listError
+    console.log('[provider_audio] 📋 Job check result:', {
+      found: !!existingJob,
+      status: existingJob?.status,
+      jobId: existingJob?.id,
+      combinedFilePath: existingJob?.combined_file_path,
+      createdAt: existingJob?.created_at,
+      completedAt: existingJob?.completed_at,
+      error: jobCheckError
     });
 
-    if (listError) {
-      console.error('[provider_audio] ❌ Failed to list audio files:', listError);
-      return NextResponse.json(
-        { error: 'Failed to fetch audio files' },
-        { status: 500 }
-      );
-    }
+    // If job exists and is completed, return the URL immediately
+    if (existingJob && existingJob.status === 'completed' && existingJob.combined_file_path) {
+      console.log('[provider_audio] ✅ Found completed job - generating signed URL');
 
-    // Find combined audio file for the specified speaker
-    const combinedFile = files?.find(file => {
-      if (speaker === 'ai') {
-        return file.name.startsWith('combined-ai-');
-      } else {
-        // Patient: match 'combined-' but NOT 'combined-ai-'
-        return file.name.startsWith('combined-') && !file.name.startsWith('combined-ai-');
-      }
-    });
-
-    console.log('[provider_audio] 🔍 Combined file search:', {
-      found: !!combinedFile,
-      fileName: combinedFile?.name
-    });
-
-    if (combinedFile) {
-      const combinedPath = `v18-voice-recordings/${conversationId}/${combinedFile.name}`;
-
-      console.log('[provider_audio] 📥 Generating signed URL for:', combinedPath);
-
-      // Generate signed URL for combined audio (valid for 1 hour)
       const { data: urlData, error: urlError } = await supabaseAdmin.storage
         .from('audio-recordings')
-        .createSignedUrl(combinedPath, 3600);
+        .createSignedUrl(existingJob.combined_file_path, 3600);
 
       if (urlError) {
         console.error('[provider_audio] ❌ Failed to generate signed URL:', urlError);
@@ -144,18 +131,35 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      console.log('[provider_audio] ✅ Returning combined audio URL');
+      const fileName = existingJob.combined_file_path.split('/').pop() || 'combined-audio';
+      console.log('[provider_audio] ✅ Returning completed audio URL from database');
       return NextResponse.json({
         success: true,
         hasRecording: true,
         audioUrl: urlData.signedUrl,
         conversationId: conversationId,
-        fileName: combinedFile.name
+        fileName: fileName
       });
     }
 
-    // No combined file exists - check if we have chunks to combine
-    console.log(`[provider_audio] 📦 No combined file - checking for ${speaker} chunks...`);
+    // If job exists but is still processing, return status
+    if (existingJob && existingJob.status === 'processing') {
+      console.log('[provider_audio] ⏳ Job still processing');
+      return NextResponse.json({
+        success: true,
+        hasRecording: true,
+        needsCombination: true,
+        jobId: existingJob.id,
+        jobStatus: existingJob.status,
+        conversationId: conversationId,
+        message: 'Audio combination in progress'
+      });
+    }
+
+    // If job failed, we'll trigger a new one below
+
+    // STEP 2: No completed job found - check if we have chunks to combine
+    console.log(`[provider_audio] 📦 No completed job - checking for ${speaker} chunks...`);
 
     // Fetch chunks for the specified speaker
     let { data: chunks, error: chunksError } = await supabaseAdmin
@@ -194,71 +198,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check if combination job already exists for this speaker
-    const { data: existingJob, error: jobCheckError } = await supabaseAdmin
-      .from('audio_combination_jobs')
-      .select('*')
-      .eq('conversation_id', conversationId)
-      .eq('speaker', speaker)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    console.log('[provider_audio] 📋 Existing job check:', {
-      found: !!existingJob,
-      status: existingJob?.status,
-      jobId: existingJob?.id,
-      error: jobCheckError
-    });
-
-    if (!jobCheckError && existingJob) {
-      // If job failed, trigger a new combination attempt
-      if (existingJob.status === 'failed') {
-        console.log(`[provider_audio] 🔄 Previous job failed - triggering retry...`);
-
-        // Trigger new combination in background (don't wait for completion)
-        fetch(`${request.nextUrl.origin}/api/provider/combine-intake-audio`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            intake_id: intakeId,
-            conversation_id: conversationId,
-            speaker: speaker
-          })
-        }).catch(err => {
-          console.error('[provider_audio] ❌ Failed to trigger retry:', err);
-        });
-
-        // Return status indicating retry is in progress
-        return NextResponse.json({
-          success: true,
-          hasRecording: true,
-          needsCombination: true,
-          jobId: existingJob.id,
-          jobStatus: 'processing', // Show as processing for retry
-          chunkCount: chunks.length,
-          conversationId: conversationId,
-          message: 'Retrying audio combination'
-        });
-      }
-
-      // Job exists and is not failed - return its status
-      return NextResponse.json({
-        success: true,
-        hasRecording: true,
-        needsCombination: true,
-        jobId: existingJob.id,
-        jobStatus: existingJob.status,
-        chunkCount: chunks.length,
-        conversationId: conversationId,
-        combinedFilePath: existingJob.combined_file_path,
-        message: existingJob.status === 'completed'
-          ? 'Audio is ready'
-          : 'Audio combination in progress'
-      });
-    }
-
-    // No job exists - trigger combination in background (don't wait for completion)
+    // STEP 3: No existing job - trigger new combination in background
     console.log(`[provider_audio] 🚀 Triggering ${speaker} audio combination in background...`);
 
     // Fire and forget - don't await

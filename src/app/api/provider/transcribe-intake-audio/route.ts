@@ -133,7 +133,8 @@ export async function POST(request: NextRequest) {
             resolve(0);
           } else {
             const duration = metadata?.format?.duration || 0;
-            resolve(duration);
+            const numDuration = typeof duration === 'number' ? duration : 0;
+            resolve(numDuration);
           }
         });
       } catch (error) {
@@ -142,7 +143,8 @@ export async function POST(request: NextRequest) {
       }
     });
 
-    console.log(`[audio_transcription] ⏱️ Audio file duration: ${audioDuration.toFixed(2)} seconds`);
+    const durationValue = typeof audioDuration === 'number' ? audioDuration : 0;
+    console.log(`[audio_transcription] ⏱️ Audio file duration: ${durationValue.toFixed(2)} seconds`);
 
     // Clean up temp file
     try {
@@ -152,8 +154,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Warn if duration is suspiciously short
-    if (audioDuration > 0 && audioDuration < 20) {
-      console.warn(`[audio_transcription] ⚠️ WARNING: Audio file is only ${audioDuration.toFixed(2)} seconds - this may be incomplete!`);
+    if (durationValue > 0 && durationValue < 20) {
+      console.warn(`[audio_transcription] ⚠️ WARNING: Audio file is only ${durationValue.toFixed(2)} seconds - this may be incomplete!`);
     }
 
     // Convert blob to file for OpenAI API

@@ -8,6 +8,7 @@ import { useAuth } from '@/contexts/auth-context';
 import { useElevenLabsStore } from '@/stores/elevenlabs-store';
 import { useElevenLabsConversation } from '@/hooksV17/use-elevenlabs-conversation';
 import { useChatState } from '@/contexts/chat-state-context';
+import { useVoiceRecording } from '@/hooksV17/use-voice-recording';
 import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
 import { DemoButtons } from './components/DemoButtons';
@@ -88,6 +89,9 @@ export default function ChatBotV17Page() {
     conversationInstance,
     isPreparing
   } = useElevenLabsConversation();
+
+  // Enable background voice recording (uploads audio chunks to cloud storage)
+  useVoiceRecording();
 
   // Track if cleanup has already been initiated to prevent double cleanup
   const cleanupInitiatedRef = useRef(false);

@@ -67,9 +67,16 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await audioFile.arrayBuffer();
     const fileBuffer = new Uint8Array(arrayBuffer);
 
-    // Create unique filename for chunk with speaker subdirectory
-    const chunkFileName = `chunk-${String(chunkIndex).padStart(3, '0')}.webm`;
-    const storagePath = `v18-voice-recordings/${conversationId}/${speaker}/${chunkFileName}`; // NEW: Separate by speaker
+    // Detect file extension from uploaded file (AI uses .wav, patient uses .webm)
+    const fileExtension = audioFile.name.split('.').pop() || 'webm';
+    const chunkFileName = `chunk-${String(chunkIndex).padStart(3, '0')}.${fileExtension}`;
+    const storagePath = `v18-voice-recordings/${conversationId}/${speaker}/${chunkFileName}`;
+
+    console.log(`${logPrefix} File details:`, {
+      originalName: audioFile.name,
+      detectedExtension: fileExtension,
+      generatedFileName: chunkFileName
+    });
 
     console.log(`${logPrefix} Uploading chunk to Supabase Storage: ${storagePath}`);
 
