@@ -17,7 +17,7 @@ import FilterTags, { FilterTag } from './components/therapist-matching/FilterTag
 import TherapistList from './components/therapist-matching/TherapistList';
 import { Therapist } from './components/therapist-matching/TherapistCard';
 import DetailedTherapistView, { DetailedTherapist } from './components/therapist-matching/DetailedTherapistView';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 
 // Type for pending demo data
 interface PendingDemo {
@@ -37,6 +37,7 @@ export default function ChatBotV17Page() {
   const { user } = useAuth();
   const { setSelectedTherapist: setChatStateTherapist } = useChatState();
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   // Check if in provider mode
   const isProviderMode = searchParams.get('provider') === 'true';
@@ -416,6 +417,38 @@ export default function ChatBotV17Page() {
     }
   }, []);
 
+  // Check if user has completed intake form
+  const checkIntakeStatus = useCallback(async (): Promise<boolean> => {
+    try {
+      // Check localStorage first (fast)
+      const localAccessCode = localStorage.getItem('v17_patient_access_code');
+      if (localAccessCode) {
+        console.log('[V17] Intake already completed (found in localStorage)');
+        return true;
+      }
+
+      // Check database if user is authenticated
+      if (user?.uid) {
+        console.log('[V17] Checking intake status for user:', user.uid);
+        const response = await fetch(`/api/patient-intake/get?userId=${user.uid}`);
+        const result = await response.json();
+
+        if (response.ok && result.success && result.hasData) {
+          console.log('[V17] Intake found in database');
+          // Cache the access code in localStorage for next time
+          localStorage.setItem('v17_patient_access_code', result.data.access_code);
+          return true;
+        }
+      }
+
+      console.log('[V17] No intake found');
+      return false;
+    } catch (error) {
+      console.error('[V17] Error checking intake status:', error);
+      return false; // Assume no intake on error
+    }
+  }, [user?.uid]);
+
   // Handle back to matching from detailed view
   const handleBackToMatchingFromDetail = useCallback(() => {
     console.log('[V17] Returning to matching from detailed view');
@@ -438,16 +471,27 @@ export default function ChatBotV17Page() {
       console.error('[V17] Error ending session:', error);
     }
 
-    // Reset UI state
+    // Clear conversation history
+    store.clearConversation();
+
+    // Check if user needs to complete intake form
+    const hasCompletedIntake = await checkIntakeStatus();
+
+    if (!hasCompletedIntake) {
+      // User needs to complete intake - redirect to intake page
+      console.log('[V17] Redirecting to intake page (required after first session)');
+      router.push('/chatbotV17/intake?returnTo=therapistMatching');
+      return; // Don't show matching page
+    }
+
+    // User has completed intake - show matching page
+    console.log('[V17] Returning to therapist matching page');
     setShowMatching(true);
     setShowDetailedView(false);
     setDetailedTherapistData(null);
     setSelectedTherapist(null);
     setChatStateTherapist(null);
-
-    // Clear conversation history
-    store.clearConversation();
-  }, [store, isConnected, endSession, setChatStateTherapist]);
+  }, [store, isConnected, endSession, setChatStateTherapist, checkIntakeStatus, router]);
 
   // Register/unregister handler using custom events
   useEffect(() => {

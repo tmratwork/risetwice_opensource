@@ -1,0 +1,790 @@
+// src/app/chatbotV17/intake/page.tsx
+"use client";
+
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAuth } from '@/contexts/auth-context';
+
+export default function V17PatientIntakePage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const { user } = useAuth();
+
+  const [formData, setFormData] = useState({
+    fullLegalName: '',
+    preferredName: '',
+    pronouns: '',
+    dateOfBirth: '',
+    gender: '',
+    email: user?.email || '',
+    phone: '',
+    state: '',
+    city: '',
+    zipCode: '',
+    insuranceProvider: '',
+    insurancePlan: '',
+    insuranceId: '',
+    budgetPerSession: '',
+    priceIndividual: [] as string[],
+    priceCouples: [] as string[],
+    slidingScale: false,
+    unsurePayment: false,
+    paymentOther: '',
+    sessionPreference: '',
+    availability: [] as string[],
+    availabilityOther: false,
+    availabilityOtherText: '',
+  });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [accessCode, setAccessCode] = useState<string | null>(null);
+  const [showSuccessScreen, setShowSuccessScreen] = useState(false);
+
+  // Check if user is signed in - REQUIRED for V17 intake
+  useEffect(() => {
+    if (!isLoading && !user) {
+      console.log('[V17] User not signed in - redirecting to main page');
+      alert('You must be signed in to complete the intake form. Please sign in first.');
+      router.push('/chatbotV17');
+    }
+  }, [user, isLoading, router]);
+
+  // Fetch existing intake data when component mounts
+  useEffect(() => {
+    const fetchExistingIntake = async () => {
+      // Only fetch if user is authenticated or has an email
+      if (!user?.uid && !user?.email) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        const params = new URLSearchParams();
+        if (user?.uid) {
+          params.append('userId', user.uid);
+        } else if (user?.email) {
+          params.append('email', user.email);
+        }
+
+        const response = await fetch(`/api/patient-intake/get?${params.toString()}`);
+        const result = await response.json();
+
+        if (response.ok && result.success && result.hasData) {
+          const intake = result.data;
+
+          // Pre-populate form with existing data (don't show success screen)
+          setFormData({
+            fullLegalName: intake.full_legal_name || '',
+            preferredName: intake.preferred_name || '',
+            pronouns: intake.pronouns || '',
+            dateOfBirth: intake.date_of_birth || '',
+            gender: intake.gender || '',
+            email: intake.email || user?.email || '',
+            phone: intake.phone || '',
+            state: intake.state || '',
+            city: intake.city || '',
+            zipCode: intake.zip_code || '',
+            insuranceProvider: intake.insurance_provider || '',
+            insurancePlan: intake.insurance_plan || '',
+            insuranceId: intake.insurance_id || '',
+            budgetPerSession: intake.budget_per_session || '',
+            priceIndividual: intake.price_individual || [],
+            priceCouples: intake.price_couples || [],
+            slidingScale: intake.sliding_scale || false,
+            unsurePayment: intake.unsure_payment || false,
+            paymentOther: intake.payment_other || '',
+            sessionPreference: intake.session_preference || '',
+            availability: intake.availability || [],
+            availabilityOther: intake.availability_other || false,
+            availabilityOtherText: intake.availability_other_text || '',
+          });
+        }
+      } catch (error) {
+        console.error('Failed to fetch existing intake data:', error);
+        // Continue with empty form on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchExistingIntake();
+  }, [user?.uid, user?.email]);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleAvailabilityChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      availability: prev.availability.includes(value)
+        ? prev.availability.filter(item => item !== value)
+        : [...prev.availability, value]
+    }));
+  };
+
+  const handleAvailabilityOtherChange = () => {
+    setFormData(prev => ({
+      ...prev,
+      availabilityOther: !prev.availabilityOther,
+      availabilityOtherText: !prev.availabilityOther ? prev.availabilityOtherText : ''
+    }));
+  };
+
+  const handleAvailabilityOtherTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      availabilityOtherText: e.target.value
+    }));
+  };
+
+  const handlePriceIndividualChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      priceIndividual: prev.priceIndividual.includes(value)
+        ? prev.priceIndividual.filter(item => item !== value)
+        : [...prev.priceIndividual, value],
+      unsurePayment: false // Clear unsure when selecting prices
+    }));
+  };
+
+  const handlePriceCouplesChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      priceCouples: prev.priceCouples.includes(value)
+        ? prev.priceCouples.filter(item => item !== value)
+        : [...prev.priceCouples, value],
+      unsurePayment: false // Clear unsure when selecting prices
+    }));
+  };
+
+  const handleSlidingScaleChange = () => {
+    setFormData(prev => ({
+      ...prev,
+      slidingScale: !prev.slidingScale,
+      unsurePayment: false // Clear unsure when selecting sliding scale
+    }));
+  };
+
+  const handleUnsurePaymentChange = () => {
+    setFormData(prev => ({
+      ...prev,
+      unsurePayment: !prev.unsurePayment,
+      // Clear all price selections when unsure is checked
+      priceIndividual: !prev.unsurePayment ? [] : prev.priceIndividual,
+      priceCouples: !prev.unsurePayment ? [] : prev.priceCouples,
+      slidingScale: !prev.unsurePayment ? false : prev.slidingScale,
+      paymentOther: !prev.unsurePayment ? '' : prev.paymentOther
+    }));
+  };
+
+  const handlePaymentOtherChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setFormData(prev => ({
+      ...prev,
+      paymentOther: e.target.value,
+      unsurePayment: false // Clear unsure when typing in other
+    }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      // Submit to API endpoint
+      const response = await fetch('/api/patient-intake', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...formData,
+          userId: user?.uid || null,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to submit form');
+      }
+
+      // Success! Store access code and show success screen
+      setAccessCode(result.accessCode);
+      setShowSuccessScreen(true);
+
+      // Use the conversation_id generated by the server
+      const conversationId = result.conversationId;
+
+      // Store intake ID, access code, and conversation_id in localStorage for V17
+      localStorage.setItem('v17_patient_intake_id', result.intakeId);
+      localStorage.setItem('v17_patient_access_code', result.accessCode);
+      localStorage.setItem('v17_patient_conversation_id', conversationId);
+
+      console.log('[V17] Intake submitted - conversation ID:', conversationId);
+    } catch (error) {
+      console.error('Failed to submit intake form:', error);
+      alert('Failed to submit form. Please try again. Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const isSelfPay = formData.insuranceProvider === 'Self-Pay';
+
+  // Show access code success modal after submission (only when showSuccessScreen is true)
+  if (showSuccessScreen && accessCode) {
+    return (
+      <div className="w-full px-6 pt-20 pb-24">
+        <div className="w-full max-w-3xl mx-auto">
+          <div className="bg-white rounded-2xl p-8 shadow-lg">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+
+              <p className="text-gray-600 mb-6">
+                Your information has been saved.
+              </p>
+
+              <div className="bg-sage-100 border-2 border-sage-400 rounded-xl p-6 mb-6">
+                <p className="text-sm font-semibold text-gray-700 mb-2">Access Code for Your Provider:</p>
+                <div className="text-5xl font-bold text-gray-900 tracking-widest mb-2">
+                  {accessCode}
+                </div>
+                <p className="text-sm text-gray-600">
+                  Providers can use this code to access your intake information
+                </p>
+              </div>
+
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+                <p className="text-sm text-yellow-800">
+                  <strong>Important:</strong> Please save this code, you may need to share it with your provider.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  const returnTo = searchParams.get('returnTo');
+                  if (returnTo === 'therapistMatching') {
+                    console.log('[V17] Returning to therapist matching after intake');
+                    router.push('/chatbotV17');
+                  } else {
+                    router.push('/chatbotV17');
+                  }
+                }}
+                className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-4 px-6 rounded-xl transition-colors text-lg shadow-lg"
+              >
+                Continue to Therapist Matching
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching data
+  if (isLoading) {
+    return (
+      <div className="w-full px-6 pt-20 pb-24">
+        <div className="w-full max-w-3xl mx-auto">
+          <h1 className="text-4xl font-bold text-center mb-2 text-gray-800 dark:text-gray-100">
+            Your Details
+          </h1>
+          <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
+            Help us find the perfect therapist match for you
+          </p>
+          <div className="bg-white rounded-2xl p-8 shadow-lg">
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sage-500"></div>
+              <span className="ml-3 text-gray-600">Loading your information...</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full px-6 pt-20 pb-24">
+      <div className="w-full max-w-3xl mx-auto">
+        {/* Title */}
+        <h1 className="text-4xl font-bold text-center mb-2 text-gray-800 dark:text-gray-100">
+          Your Details
+        </h1>
+        <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
+          Help us find the perfect therapist match for you
+        </p>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl p-8 shadow-lg space-y-6">
+
+          {/* Personal Information Section */}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800 border-b pb-2">Personal Information</h2>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Full Legal Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="fullLegalName"
+                required
+                value={formData.fullLegalName}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Preferred Name
+                </label>
+                <input
+                  type="text"
+                  name="preferredName"
+                  value={formData.preferredName}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Pronouns
+                </label>
+                <select
+                  name="pronouns"
+                  value={formData.pronouns}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                >
+                  <option value="">Select pronouns</option>
+                  <option value="he/him">He/Him</option>
+                  <option value="she/her">She/Her</option>
+                  <option value="they/them">They/Them</option>
+                  <option value="other">Other</option>
+                  <option value="prefer-not-to-say">Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Date of Birth <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  name="dateOfBirth"
+                  required
+                  value={formData.dateOfBirth}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Gender
+                </label>
+                <select
+                  name="gender"
+                  value={formData.gender}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                >
+                  <option value="">Select gender</option>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="non-binary">Non-binary</option>
+                  <option value="other">Other</option>
+                  <option value="prefer-not-to-say">Prefer not to say</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information Section */}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800 border-b pb-2">Contact Information</h2>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="email"
+                required
+                value={formData.email}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Phone <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                name="phone"
+                required
+                value={formData.phone}
+                onChange={handleInputChange}
+                placeholder="(555) 555-5555"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+              />
+            </div>
+          </div>
+
+          {/* Location Section */}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800 border-b pb-2">Location</h2>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                State <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="state"
+                required
+                value={formData.state}
+                onChange={handleInputChange}
+                placeholder="e.g., California"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  City <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="city"
+                  required
+                  value={formData.city}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-1">
+                  Zip Code <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="zipCode"
+                  required
+                  value={formData.zipCode}
+                  onChange={handleInputChange}
+                  placeholder="12345"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Insurance Section */}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800 border-b pb-2">Insurance & Payment</h2>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Insurance Provider <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="insuranceProvider"
+                required
+                value={formData.insuranceProvider}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+              >
+                <option value="">Select insurance provider</option>
+                <option value="Aetna">Aetna</option>
+                <option value="Anthem">Anthem</option>
+                <option value="Blue Cross Blue Shield">Blue Cross Blue Shield</option>
+                <option value="Cigna">Cigna</option>
+                <option value="Humana">Humana</option>
+                <option value="Kaiser Permanente">Kaiser Permanente</option>
+                <option value="UnitedHealthcare">UnitedHealthcare</option>
+                <option value="Self-Pay">Self-Pay</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+
+            {!isSelfPay && formData.insuranceProvider && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Insurance Plan
+                  </label>
+                  <input
+                    type="text"
+                    name="insurancePlan"
+                    value={formData.insurancePlan}
+                    onChange={handleInputChange}
+                    placeholder="e.g., PPO, HMO"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1">
+                    Insurance ID
+                  </label>
+                  <input
+                    type="text"
+                    name="insuranceId"
+                    value={formData.insuranceId}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Price Range Selection */}
+            <div className="space-y-4 pt-4">
+              <label className="block text-sm font-semibold text-gray-700">
+                Preferred Pricing Ranges
+              </label>
+              <p className="text-xs text-gray-500 mb-3">
+                Select all that apply. $ = Less than $90, $$ = $90-$130, $$$ = More than $130
+              </p>
+
+              {/* Individual Pricing */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Individual</p>
+                <div className="flex gap-6">
+                  {[
+                    { value: '$', label: '$ (Less than $90)' },
+                    { value: '$$', label: '$$ ($90 - $130)' },
+                    { value: '$$$', label: '$$$ (More than $130)' }
+                  ].map(option => (
+                    <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.priceIndividual.includes(option.value)}
+                        onChange={() => handlePriceIndividualChange(option.value)}
+                        disabled={formData.unsurePayment}
+                        className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className={`text-gray-700 ${formData.unsurePayment ? 'text-gray-400' : ''}`}>
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Couples Pricing */}
+              <div>
+                <p className="text-sm font-medium text-gray-700 mb-2">Couples</p>
+                <div className="flex gap-6">
+                  {[
+                    { value: '$', label: '$ (Less than $90)' },
+                    { value: '$$', label: '$$ ($90 - $130)' },
+                    { value: '$$$', label: '$$$ (More than $130)' }
+                  ].map(option => (
+                    <label key={option.value} className="flex items-center space-x-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.priceCouples.includes(option.value)}
+                        onChange={() => handlePriceCouplesChange(option.value)}
+                        disabled={formData.unsurePayment}
+                        className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                      />
+                      <span className={`text-gray-700 ${formData.unsurePayment ? 'text-gray-400' : ''}`}>
+                        {option.label}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sliding Scale */}
+              <div>
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.slidingScale}
+                    onChange={handleSlidingScaleChange}
+                    disabled={formData.unsurePayment}
+                    className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  />
+                  <span className={`text-gray-700 font-medium ${formData.unsurePayment ? 'text-gray-400' : ''}`}>
+                    Offers a sliding scale
+                  </span>
+                </label>
+              </div>
+
+              {/* Unsure Option */}
+              <div className="border-t pt-3">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.unsurePayment}
+                    onChange={handleUnsurePaymentChange}
+                    className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400"
+                  />
+                  <span className="text-gray-700 font-medium">
+                    Unsure about insurance/payment
+                  </span>
+                </label>
+              </div>
+
+              {/* Other Option */}
+              <div className="border-t pt-3">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Other payment preferences
+                </label>
+                <textarea
+                  value={formData.paymentOther}
+                  onChange={handlePaymentOtherChange}
+                  disabled={formData.unsurePayment}
+                  placeholder="Please describe any other payment preferences or requirements..."
+                  rows={3}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Session Preferences Section */}
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold text-gray-800 border-b pb-2">Session Preferences</h2>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                Session Preference <span className="text-red-500">*</span>
+              </label>
+              <select
+                name="sessionPreference"
+                required
+                value={formData.sessionPreference}
+                onChange={handleInputChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+              >
+                <option value="">Select preference</option>
+                <option value="In-person">In-person only</option>
+                <option value="Virtual">Virtual only</option>
+                <option value="Both">Both in-person and virtual</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                Scheduling Availability <span className="text-red-500">*</span>
+              </label>
+              <p className="text-xs text-gray-500 mb-4">
+                Select all time slots that work for you
+              </p>
+
+              {/* Availability Grid */}
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="bg-sage-100">
+                      <th className="border border-gray-300 px-4 py-2 text-left text-sm font-semibold text-gray-700">Day</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Morning (AM)</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Afternoon (PM)</th>
+                      <th className="border border-gray-300 px-4 py-2 text-center text-sm font-semibold text-gray-700">Evening</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[
+                      { day: 'Monday', value: 'monday' },
+                      { day: 'Tuesday', value: 'tuesday' },
+                      { day: 'Wednesday', value: 'wednesday' },
+                      { day: 'Thursday', value: 'thursday' },
+                      { day: 'Friday', value: 'friday' },
+                      { day: 'Saturday', value: 'saturday' },
+                      { day: 'Sunday', value: 'sunday' },
+                    ].map(({ day, value }) => (
+                      <tr key={value} className="hover:bg-gray-50">
+                        <td className="border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700">{day}</td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.availability.includes(`${value}_morning`)}
+                            onChange={() => handleAvailabilityChange(`${value}_morning`)}
+                            className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 cursor-pointer"
+                          />
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.availability.includes(`${value}_afternoon`)}
+                            onChange={() => handleAvailabilityChange(`${value}_afternoon`)}
+                            className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 cursor-pointer"
+                          />
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            checked={formData.availability.includes(`${value}_evening`)}
+                            onChange={() => handleAvailabilityChange(`${value}_evening`)}
+                            className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400 cursor-pointer"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Other Option */}
+              <div className="mt-4 border-t pt-4">
+                <label className="flex items-center space-x-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formData.availabilityOther}
+                    onChange={handleAvailabilityOtherChange}
+                    className="w-5 h-5 text-sage-500 border-gray-300 rounded focus:ring-sage-400"
+                  />
+                  <span className="text-gray-700 font-medium">Other</span>
+                </label>
+
+                {formData.availabilityOther && (
+                  <div className="mt-3">
+                    <textarea
+                      value={formData.availabilityOtherText}
+                      onChange={handleAvailabilityOtherTextChange}
+                      placeholder="Please describe your availability in more detail..."
+                      rows={3}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-sage-400 focus:border-transparent"
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <div className="pt-6">
+            <button
+              type="submit"
+              disabled={isSubmitting || (formData.availability.length === 0 && !formData.availabilityOther)}
+              className="w-full bg-yellow-400 hover:bg-yellow-500 disabled:bg-gray-300 disabled:cursor-not-allowed text-gray-900 font-bold py-4 px-6 rounded-xl transition-colors text-lg shadow-lg"
+            >
+              {isSubmitting ? 'Submitting...' : 'Next'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
