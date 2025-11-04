@@ -45,6 +45,7 @@ export async function GET(request: NextRequest) {
     }
 
     if (!data || data.length === 0) {
+      console.log('[patient-intake/get] No intake records found for user:', userId || email);
       return NextResponse.json(
         { success: true, hasData: false, data: null },
         { status: 200 }
@@ -52,6 +53,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Return the most recent intake
+    console.log('[patient-intake/get] ✅ Returning most recent intake:', {
+      userId: userId || email,
+      accessCode: data[0].access_code,
+      conversationId: data[0].conversation_id,
+      createdAt: data[0].created_at
+    });
+
     return NextResponse.json(
       {
         success: true,

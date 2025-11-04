@@ -427,9 +427,43 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
       get().setConversationId(conversationId);
 
       logV17('✅ V17 conversation created in database', { conversationId });
+
+      // Generate access code for this conversation (creates new patient_intake record)
+      logV17('🔑 Generating access code for conversation', { conversationId, userId });
+      try {
+        const accessCodeResponse = await fetch('/api/v17/generate-access-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ conversationId, userId })
+        });
+
+        if (!accessCodeResponse.ok) {
+          const errorData = await accessCodeResponse.json();
+          logV17('⚠️ Failed to generate access code (non-critical)', {
+            conversationId,
+            status: accessCodeResponse.status,
+            error: errorData
+          });
+          console.error('[V17] Access code generation error:', errorData);
+        } else {
+          const { accessCode } = await accessCodeResponse.json();
+          logV17('✅ Access code generated and stored in patient_intake', { conversationId, accessCode });
+          console.log('[V17] 🎉 NEW ACCESS CODE:', accessCode); // Always visible
+        }
+      } catch (error) {
+        logV17('⚠️ Access code generation exception', { conversationId, error });
+        console.error('[V17] Access code generation exception:', error);
+      }
+
       return conversationId;
     } catch (error) {
-      logV17('❌ Failed to create V17 conversation', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logV17('❌ Failed to create V17 conversation', { error: errorMessage });
+      console.error('[V17] ❌ createConversation failed:', error);
+      console.error('[V17] Error details:', {
+        message: errorMessage,
+        stack: error instanceof Error ? error.stack : undefined
+      });
       throw error;
     }
   },

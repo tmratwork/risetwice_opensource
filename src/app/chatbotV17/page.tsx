@@ -253,10 +253,9 @@ export default function ChatBotV17Page() {
           console.log(`[V17] 👋 No custom opening statement for ${therapist.fullName}, using default`);
         }
 
-        // Create conversation if needed
-        if (!store.conversationId) {
-          await store.createConversation();
-        }
+        // ALWAYS create a NEW conversation for each AI Preview (each gets unique access code)
+        console.log('[V17] Creating NEW conversation for AI Preview');
+        await store.createConversation();
 
         // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice + custom opening statement
         await startSession('ai_preview', voiceId, generatedTherapistPrompt, therapist.openingStatement);
@@ -471,8 +470,10 @@ export default function ChatBotV17Page() {
       console.error('[V17] Error ending session:', error);
     }
 
-    // Clear conversation history
+    // Clear conversation history AND conversationId (so next session creates new conversation with new access code)
     store.clearConversation();
+    store.setConversationId(null);
+    console.log('[V17] Cleared conversationId - next session will create NEW conversation');
 
     // Check if user needs to complete intake form
     const hasCompletedIntake = await checkIntakeStatus();

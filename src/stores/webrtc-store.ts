@@ -3085,6 +3085,31 @@ export const useWebRTCStore = create<WebRTCStoreState>((set, get) => {
         }
 
         console.log(`${logPrefix} Successfully created conversation: ${result.conversationId}`);
+
+        // Generate access code for this conversation (creates new patient_intake record)
+        console.log(`${logPrefix} 🔑 Generating access code for conversation: ${result.conversationId}, user: ${userId}`);
+        try {
+          const accessCodeResponse = await fetch('/api/v17/generate-access-code', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationId: result.conversationId, userId })
+          });
+
+          if (!accessCodeResponse.ok) {
+            const errorData = await accessCodeResponse.json();
+            console.error(`${logPrefix} ⚠️ Failed to generate access code`, {
+              status: accessCodeResponse.status,
+              error: errorData
+            });
+          } else {
+            const { accessCode } = await accessCodeResponse.json();
+            console.log(`${logPrefix} ✅ Access code generated and stored in patient_intake:`, accessCode);
+            console.log(`${logPrefix} 🎉 NEW ACCESS CODE:`, accessCode); // Always visible
+          }
+        } catch (error) {
+          console.error(`${logPrefix} ⚠️ Access code generation exception:`, error);
+        }
+
         return result.conversationId;
       } catch (error) {
         console.error(`${logPrefix} Error creating conversation:`, error);

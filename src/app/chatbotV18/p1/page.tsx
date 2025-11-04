@@ -28,7 +28,7 @@ export default function PatientIntakeLanding() {
     router.push('/chatbotV18/p1/messages');
   };
 
-  // Fetch most recent access code on mount
+  // Fetch most recent access code on mount and when page becomes visible
   useEffect(() => {
     const fetchAccessCode = async () => {
       if (!user?.uid && !user?.email) {
@@ -37,6 +37,7 @@ export default function PatientIntakeLanding() {
       }
 
       try {
+        console.log('[V18/p1] Fetching most recent access code for user:', user.uid || user.email);
         const params = new URLSearchParams();
         if (user?.uid) {
           params.append('userId', user.uid);
@@ -48,16 +49,30 @@ export default function PatientIntakeLanding() {
         const result = await response.json();
 
         if (response.ok && result.success && result.hasData && result.data.access_code) {
+          console.log('[V18/p1] ✅ Access code loaded:', result.data.access_code);
           setAccessCode(result.data.access_code);
+        } else {
+          console.log('[V18/p1] No access code found for user');
         }
       } catch (error) {
-        console.error('Failed to fetch access code:', error);
+        console.error('[V18/p1] Failed to fetch access code:', error);
       } finally {
         setLoading(false);
       }
     };
 
     fetchAccessCode();
+
+    // Also refetch when user navigates back to this page
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        console.log('[V18/p1] Page visible - refetching access code');
+        fetchAccessCode();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [user?.uid, user?.email]);
 
   // Fetch unread message count

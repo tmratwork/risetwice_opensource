@@ -65,40 +65,46 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get voice transcript - REQUIRED before generating summary
+    // Get voice transcript from messages table (messages are saved in real-time during conversation)
     let voiceTranscript = null;
     if (intake.conversation_id) {
-      const { data: transcriptData, error: transcriptError } = await supabaseAdmin
-        .from('patient_intake_transcripts')
-        .select('transcript_text, status')
-        .eq('intake_id', intakeId)
-        .single();
+      console.log('[intake_summary] Fetching messages for conversation:', intake.conversation_id);
 
-      if (transcriptError) {
-        console.log('[intake_summary] No transcript found yet, returning pending status');
+      // Fetch all messages for this conversation
+      const { data: messages, error: messagesError } = await supabaseAdmin
+        .from('messages')
+        .select('id, role, content, created_at')
+        .eq('conversation_id', intake.conversation_id)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) {
+        console.error('[intake_summary] Error fetching messages:', messagesError);
         return NextResponse.json({
           success: true,
           status: 'pending_transcript',
-          message: 'Waiting for audio transcription to complete before generating summary'
+          message: 'Waiting for conversation messages to be saved'
         });
       }
 
-      if (transcriptData.status === 'processing') {
-        console.log('[intake_summary] Transcript still processing');
+      if (!messages || messages.length === 0) {
+        console.log('[intake_summary] No messages found yet, returning pending status');
         return NextResponse.json({
           success: true,
           status: 'pending_transcript',
-          message: 'Audio transcription in progress. Summary will be generated once transcription completes.'
+          message: 'Waiting for conversation to complete before generating summary'
         });
       }
 
-      if (transcriptData.status === 'failed') {
-        console.log('[intake_summary] Transcript failed, generating summary without it');
-        voiceTranscript = null; // Continue without transcript
-      } else if (transcriptData.status === 'completed') {
-        voiceTranscript = transcriptData.transcript_text;
-        console.log('[intake_summary] Using transcript for summary generation:', voiceTranscript.length, 'characters');
-      }
+      // Format messages into a readable transcript
+      voiceTranscript = messages
+        .map((msg) => {
+          const speaker = msg.role === 'user' ? 'Patient' : 'AI';
+          const timestamp = new Date(msg.created_at).toLocaleTimeString();
+          return `[${timestamp}] ${speaker}: ${msg.content}`;
+        })
+        .join('\n\n');
+
+      console.log('[intake_summary] ✅ Using messages as transcript for summary generation:', messages.length, 'messages,', voiceTranscript.length, 'characters');
     }
 
     // Generate AI summary

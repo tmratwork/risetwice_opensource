@@ -721,26 +721,32 @@ const ProviderIntakeView: React.FC = () => {
     const MAX_RETRIES = 40; // 40 retries * 3 seconds = 2 minutes max wait
 
     try {
-      const response = await fetch(`/api/provider/intake-transcript?intake_id=${intakeId}`);
+      // Fetch messages directly from database instead of transcribing audio
+      const response = await fetch(`/api/provider/intake-messages?intake_id=${intakeId}`);
       const result = await response.json();
 
       if (result.success && result.transcript) {
         setTranscript(result.transcript);
-        setTranscriptStatus(result.status);
-      } else if (result.status === 'processing' || result.status === 'not_found') {
+        setTranscriptStatus('ready');
+        console.log(`[intake-messages] Loaded ${result.messageCount} messages from database`);
+      } else if (result.status === 'not_found') {
         if (retryCount >= MAX_RETRIES) {
-          console.warn('[transcript] Max retries reached - stopping polling');
-          setTranscriptStatus('timeout');
+          console.warn('[intake-messages] Max retries reached - no messages found');
+          setTranscriptStatus('not_found');
           return;
         }
 
-        // Keep polling if transcript is processing or not yet available
-        setTranscriptStatus(result.status === 'processing' ? 'processing' : 'pending');
+        // Keep polling if messages not yet available
+        setTranscriptStatus('pending');
         // Poll again in 3 seconds
         setTimeout(() => fetchTranscript(intakeId, retryCount + 1), 3000);
+      } else {
+        console.error('[intake-messages] Error fetching messages:', result.error);
+        setTranscriptStatus('error');
       }
     } catch (error) {
-      console.error('Error fetching transcript:', error);
+      console.error('[intake-messages] Error fetching messages:', error);
+      setTranscriptStatus('error');
     }
   };
 
@@ -918,9 +924,36 @@ const ProviderIntakeView: React.FC = () => {
             >
               {!showFullTranscript ? (
                 <div>
-                  <p className="text-gray-700 mb-4 line-clamp-3">
-                    {transcript}
-                  </p>
+                  <div className="space-y-4 mb-4">
+                    {(() => {
+                      const firstMessage = transcript.split('\n\n')[0];
+                      const match = firstMessage.match(/^\[(.*?)\] (.*?): (.*)$/);
+                      if (match) {
+                        const [, time, speaker, content] = match;
+                        const isPatient = speaker === 'Patient';
+                        return (
+                          <div className={`flex ${isPatient ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] ${isPatient ? 'items-end' : 'items-start'} flex flex-col`}>
+                              <div className="flex items-baseline gap-2 mb-1 px-1">
+                                <span className="text-xs text-gray-500">{time}</span>
+                                <span className={`text-xs font-medium ${isPatient ? 'text-blue-600' : 'text-green-600'}`}>
+                                  {speaker}
+                                </span>
+                              </div>
+                              <div className={`rounded-2xl px-4 py-3 ${
+                                isPatient
+                                  ? 'bg-blue-500 text-white rounded-tr-sm'
+                                  : 'bg-gray-200 text-gray-900 rounded-tl-sm'
+                              }`}>
+                                <p className="text-sm leading-relaxed line-clamp-3">{content}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return <p className="text-gray-700">{firstMessage}</p>;
+                    })()}
+                  </div>
                   <button
                     onClick={() => setShowFullTranscript(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -930,8 +963,36 @@ const ProviderIntakeView: React.FC = () => {
                 </div>
               ) : (
                 <div>
-                  <div className="text-gray-700 mb-4 whitespace-pre-wrap max-h-96 overflow-y-auto border border-gray-200 rounded p-4">
-                    {transcript}
+                  <div className="mb-4 max-h-[600px] overflow-y-auto px-2">
+                    <div className="space-y-4">
+                      {transcript.split('\n\n').map((line, idx) => {
+                        const match = line.match(/^\[(.*?)\] (.*?): (.*)$/);
+                        if (match) {
+                          const [, time, speaker, content] = match;
+                          const isPatient = speaker === 'Patient';
+                          return (
+                            <div key={idx} className={`flex ${isPatient ? 'justify-end' : 'justify-start'}`}>
+                              <div className={`max-w-[80%] ${isPatient ? 'items-end' : 'items-start'} flex flex-col`}>
+                                <div className="flex items-baseline gap-2 mb-1 px-1">
+                                  <span className="text-xs text-gray-500">{time}</span>
+                                  <span className={`text-xs font-medium ${isPatient ? 'text-blue-600' : 'text-green-600'}`}>
+                                    {speaker}
+                                  </span>
+                                </div>
+                                <div className={`rounded-2xl px-4 py-3 ${
+                                  isPatient
+                                    ? 'bg-blue-500 text-white rounded-tr-sm'
+                                    : 'bg-gray-200 text-gray-900 rounded-tl-sm'
+                                }`}>
+                                  <p className="text-sm leading-relaxed">{content}</p>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+                        return <p key={idx} className="mb-4">{line}</p>;
+                      })}
+                    </div>
                   </div>
                   <button
                     onClick={() => setShowFullTranscript(false)}
