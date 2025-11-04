@@ -299,3 +299,8 @@ img {
     transform: rotate(360deg);
   }
 }
+
+/* Force sage green background for intake pages */
+html, body {
+  background-color: #e7ece9 !important;
+}

@@ -5,6 +5,7 @@ import { Toaster } from 'sonner';
 import { AuthProvider, useAuth } from '@/contexts/auth-context';
 import { ChatStateProvider } from '@/contexts/chat-state-context';
 import { ClientHeader } from '@/components/client-header';
+import { ForceLightMode } from '@/components/force-light-mode';
 import { MobileFooterNavV18 } from '../chatbotV18/components/MobileFooterNavV18';
 import SearchProgressToast from './components/SearchProgressToast';
 // V17 uses V16 CSS styles for identical appearance
@@ -86,6 +87,7 @@ export default function ChatBotV17Layout({
   return (
     <AuthProvider>
       <ChatStateProvider>
+        <ForceLightMode />
         <div className="v16-layout-root">
           <AuthUserIdSync />
           <ElevenLabsMonitoringInit />
