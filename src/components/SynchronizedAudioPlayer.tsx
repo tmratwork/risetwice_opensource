@@ -271,19 +271,37 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       }
     };
 
+    // Try updating duration immediately if metadata is already loaded
+    const tryImmediateUpdate = () => {
+      if (patientAudio && aiAudio) {
+        // Check if either audio element already has duration loaded
+        if (patientAudio.readyState >= 1 || aiAudio.readyState >= 1) {
+          console.log('[sync_player] 📏 Metadata already available, updating immediately');
+          updateDuration();
+        }
+      }
+    };
+
     if (patientAudio) {
       patientAudio.addEventListener('loadedmetadata', updateDuration);
+      patientAudio.addEventListener('durationchange', updateDuration);
     }
     if (aiAudio) {
       aiAudio.addEventListener('loadedmetadata', updateDuration);
+      aiAudio.addEventListener('durationchange', updateDuration);
     }
+
+    // Try immediate update in case metadata is already loaded
+    tryImmediateUpdate();
 
     return () => {
       if (patientAudio) {
         patientAudio.removeEventListener('loadedmetadata', updateDuration);
+        patientAudio.removeEventListener('durationchange', updateDuration);
       }
       if (aiAudio) {
         aiAudio.removeEventListener('loadedmetadata', updateDuration);
+        aiAudio.removeEventListener('durationchange', updateDuration);
       }
     };
   }, [patientAudioUrl, aiAudioUrl]);
@@ -427,22 +445,24 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
         </button>
 
         <div className="text-gray-700 font-medium">
-          {formatTime(currentTime)} / {formatTime(duration)}
+          Currently playing: {formatTime(currentTime)}
         </div>
       </div>
 
-      {/* Progress bar */}
-      <input
-        type="range"
-        min="0"
-        max={duration || 0}
-        value={currentTime}
-        onChange={handleSeek}
-        className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4"
-        style={{
-          background: `linear-gradient(to right, #2563eb 0%, #2563eb ${(currentTime / duration) * 100}%, #e5e7eb ${(currentTime / duration) * 100}%, #e5e7eb 100%)`
-        }}
-      />
+      {/* Progress bar - only show for V17 audio (ElevenLabs has proper duration metadata) */}
+      {isV17Audio && (
+        <input
+          type="range"
+          min="0"
+          max={duration || 0}
+          value={currentTime}
+          onChange={handleSeek}
+          className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer mb-4"
+          style={{
+            background: `linear-gradient(to right, #2563eb 0%, #2563eb ${(currentTime / duration) * 100}%, #e5e7eb ${(currentTime / duration) * 100}%, #e5e7eb 100%)`
+          }}
+        />
+      )}
 
       {/* Playback speed control */}
       <div className="pt-4 border-t border-gray-200">
