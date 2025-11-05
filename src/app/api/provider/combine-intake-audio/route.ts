@@ -66,46 +66,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // First, check if a job already exists (for faster return on completed jobs)
-    const { data: existingCheck } = await supabaseAdmin
-      .from('audio_combination_jobs')
-      .select('id, status, combined_file_path, created_at')
-      .eq('conversation_id', conversation_id)
-      .eq('speaker', speaker)
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    // If job is completed, return immediately
-    if (existingCheck?.status === 'completed' && existingCheck.combined_file_path) {
-      console.log('[audio_combination] ✅ Job already completed, returning existing result');
-      return NextResponse.json({
-        success: true,
-        status: 'completed',
-        jobId: existingCheck.id,
-        filePath: existingCheck.combined_file_path
-      });
-    }
-
-    // If job is processing and recent (< 2 minutes old), return it
-    if (existingCheck?.status === 'processing') {
-      const createdAt = new Date(existingCheck.created_at).getTime();
-      const age = Date.now() - createdAt;
-
-      if (age < 120000) { // Less than 2 minutes
-        console.log('[audio_combination] 📋 Job already processing (age: ${Math.round(age/1000)}s)');
-        return NextResponse.json({
-          success: true,
-          status: 'processing',
-          jobId: existingCheck.id,
-          message: 'Audio combination already in progress'
-        });
-      } else {
-        console.log('[audio_combination] ⚠️ Job stuck (age: ${Math.round(age/1000)}s), will retry');
-      }
-    }
-
-    // Try to create a new job atomically
+    // Try to create a new job atomically FIRST
     // The unique constraint will prevent duplicates if multiple requests arrive simultaneously
     const { data: job, error: jobError } = await supabaseAdmin
       .from('audio_combination_jobs')
@@ -260,10 +221,13 @@ export async function POST(request: NextRequest) {
 
     console.log(`[audio_combination] ✅ All chunks downloaded - ${Date.now() - startTime}ms total`);
 
-    // Combine audio chunks
-    const isWav = speaker === 'ai';
+    // Combine audio chunks - determine format from actual chunk MIME type
+    const firstChunkMimeType = chunks[0]?.mime_type || 'audio/webm;codecs=opus';
+    const isWav = firstChunkMimeType.includes('wav');
     const mimeType = isWav ? 'audio/wav' : 'audio/webm;codecs=opus';
     const fileExtension = isWav ? 'wav' : 'webm';
+
+    console.log(`[audio_combination] 🎵 Detected format: ${isWav ? 'WAV' : 'WebM'} (from MIME type: ${firstChunkMimeType})`);
 
     let combinedBlob: Blob;
 

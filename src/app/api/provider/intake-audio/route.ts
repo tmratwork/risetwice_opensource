@@ -142,18 +142,47 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // If job exists but is still processing, return status
+    // If job exists but is still processing, check if it's stale
     if (existingJob && existingJob.status === 'processing') {
-      console.log('[provider_audio] ⏳ Job still processing');
-      return NextResponse.json({
-        success: true,
-        hasRecording: true,
-        needsCombination: true,
-        jobId: existingJob.id,
-        jobStatus: existingJob.status,
-        conversationId: conversationId,
-        message: 'Audio combination in progress'
+      // Check if job is stale (processing for more than 2 minutes)
+      const now = new Date();
+      const jobCreated = new Date(existingJob.created_at);
+      const jobAge = now.getTime() - jobCreated.getTime();
+      const STALE_THRESHOLD = 2 * 60 * 1000; // 2 minutes (combination should complete in seconds)
+
+      console.log('[provider_audio] ⏱️ Job age check:', {
+        now: now.toISOString(),
+        jobCreated: jobCreated.toISOString(),
+        ageMs: jobAge,
+        ageSeconds: Math.floor(jobAge / 1000),
+        ageMinutes: Math.floor(jobAge / 60000),
+        thresholdMs: STALE_THRESHOLD,
+        isStale: jobAge > STALE_THRESHOLD
       });
+
+      if (jobAge > STALE_THRESHOLD) {
+        console.log('[provider_audio] ⚠️ Job is STALE (processing for', Math.floor(jobAge / 60000), 'minutes) - marking as failed and will retry');
+
+        // Mark stale job as failed
+        await supabaseAdmin
+          .from('audio_combination_jobs')
+          .update({ status: 'failed', completed_at: new Date().toISOString() })
+          .eq('id', existingJob.id);
+
+        console.log('[provider_audio] ✅ Marked stale job as failed, continuing to trigger new combination...');
+        // Fall through to trigger new combination below
+      } else {
+        console.log('[provider_audio] ⏳ Job still processing (age:', Math.floor(jobAge / 1000), 'seconds)');
+        return NextResponse.json({
+          success: true,
+          hasRecording: true,
+          needsCombination: true,
+          jobId: existingJob.id,
+          jobStatus: existingJob.status,
+          conversationId: conversationId,
+          message: 'Audio combination in progress'
+        });
+      }
     }
 
     // If job failed, we'll trigger a new one below
