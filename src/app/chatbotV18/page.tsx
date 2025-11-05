@@ -319,6 +319,22 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     // console.log('[V16] 📚 CRITICAL: Set selectedBookId for message persistence:', specificBookId);
   }, []);
 
+  // V18 Patient Intake: Initialize conversation ID from patient intake localStorage
+  // When user completes intake form, it stores patient_conversation_id in localStorage
+  // We need to load this into the webRTC store so messages can be saved with correct conversation_id
+  useEffect(() => {
+    const patientConversationId = localStorage.getItem('patient_conversation_id');
+    if (patientConversationId) {
+      console.log('[V18] 🔗 Loading patient intake conversation ID:', patientConversationId);
+
+      // Call store method directly instead of using hook
+      useWebRTCStore.getState().setConversationId(patientConversationId);
+
+      // Also sync to currentConversationId for compatibility
+      localStorage.setItem('currentConversationId', patientConversationId);
+      console.log('[V18] ✅ Conversation ID initialized for message persistence');
+    }
+  }, []); // Run once on mount
 
   // Initialize Smart Send state from localStorage after component mounts
   useEffect(() => {
@@ -451,10 +467,13 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               // Clear pending flag
               pendingSendRef.current = false;
 
-              // Mark the transcript bubble as final
+              // Mark the transcript bubble as final and save to database
               const transcriptWithFinal = newConversation.map(msg => {
                 if (msg.role === "user" && !msg.isFinal && msg.text === data) {
-                  return { ...msg, isFinal: true, status: "final" as const };
+                  const finalUserMessage = { ...msg, isFinal: true, status: "final" as const };
+                  // Save user message to database
+                  addConversationMessage(finalUserMessage);
+                  return finalUserMessage;
                 }
                 return msg;
               });
@@ -1194,10 +1213,13 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       !(msg.role === "user" && !msg.isFinal && msg.text === "Tap ↑ to send")
     );
 
-    // Mark the transcript bubble as final
+    // Mark the transcript bubble as final and save to database
     const updatedConversation = filteredConversation.map(msg => {
       if (msg.role === "user" && !msg.isFinal && msg.text === transcriptToSend) {
-        return { ...msg, isFinal: true, status: "final" as const };
+        const finalUserMessage = { ...msg, isFinal: true, status: "final" as const };
+        // Save user message to database
+        addConversationMessage(finalUserMessage);
+        return finalUserMessage;
       }
       return msg;
     });

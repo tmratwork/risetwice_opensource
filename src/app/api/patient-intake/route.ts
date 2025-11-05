@@ -106,6 +106,20 @@ export async function POST(request: NextRequest) {
     // Generate a fresh conversation_id for the upcoming voice session
     const conversationId = crypto.randomUUID();
 
+    // Create conversation record in conversations table (required for message foreign key)
+    const { error: conversationError } = await supabase
+      .from('conversations')
+      .insert({
+        id: conversationId,
+        human_id: body.userId || null,
+        is_active: true
+      });
+
+    if (conversationError) {
+      console.error('Failed to create conversation:', conversationError);
+      // Don't fail the entire request - continue without conversation
+    }
+
     // Update the intake record with conversation_id
     await supabase
       .from('patient_intake')
