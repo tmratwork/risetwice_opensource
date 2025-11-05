@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     let finalPatientUserId = patientUserId;
     if (!finalPatientUserId || finalPatientUserId === '') {
       const { data: intakeData } = await supabase
-        .from('patient_intake')
+        .from('intake_sessions')
         .select('user_id')
         .eq('id', intakeId)
         .single();

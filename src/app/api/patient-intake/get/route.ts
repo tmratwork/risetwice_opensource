@@ -29,49 +29,64 @@ export async function GET(request: NextRequest) {
     // Create Supabase client with service role key for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Build query - search by userId first, then email as fallback
-    // IMPORTANT: Filter out V17-created records that have null form data
-    // Only return records that have actual intake information
-    let query = supabase
-      .from('patient_intake')
-      .select('*')
-      .not('full_legal_name', 'is', null)  // Filter out records without form data
-      .order('created_at', { ascending: false })
-      .limit(1);
+    // Build query - join patient_details with most recent intake_session
+    // Search by userId or email (from patient_details)
+    let patientDetailsQuery = supabase
+      .from('patient_details')
+      .select('*');
 
     if (userId) {
-      query = query.eq('user_id', userId);
+      patientDetailsQuery = patientDetailsQuery.eq('user_id', userId);
       if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
         console.log('[patient_intake] [SERVER] 🔍 Querying by user_id:', userId);
       }
     } else if (email) {
-      query = query.eq('email', email);
+      patientDetailsQuery = patientDetailsQuery.eq('email', email);
       if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
         console.log('[patient_intake] [SERVER] 🔍 Querying by email:', email);
       }
     }
 
-    const { data, error } = await query;
+    const { data: patientDetails, error: patientDetailsError } = await patientDetailsQuery.single();
 
-    if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
-      console.log('[patient_intake] [SERVER] 📊 Query result:', {
-        dataLength: data?.length,
-        hasError: !!error,
-        errorMessage: error?.message
-      });
-    }
+    if (patientDetailsError) {
+      if (patientDetailsError.code === 'PGRST116') {
+        // No patient_details found - user hasn't filled out form yet
+        if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+          console.log('[patient_intake] [SERVER] ℹ️ No patient details found for user:', userId || email);
+        }
+        return NextResponse.json(
+          { success: true, hasData: false, data: null },
+          { status: 200 }
+        );
+      }
 
-    if (error) {
-      console.error('[patient_intake] [SERVER] ❌ Supabase error:', error);
+      console.error('[patient_intake] [SERVER] ❌ Supabase error:', patientDetailsError);
       return NextResponse.json(
-        { error: 'Failed to fetch intake data', details: error.message },
+        { error: 'Failed to fetch patient details', details: patientDetailsError.message },
         { status: 500 }
       );
     }
 
-    if (!data || data.length === 0) {
+    // Fetch most recent intake_session for this patient
+    const { data: intakeSessions, error: sessionsError } = await supabase
+      .from('intake_sessions')
+      .select('*')
+      .eq('patient_details_id', patientDetails.id)
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (sessionsError) {
+      console.error('[patient_intake] [SERVER] ❌ Failed to fetch intake sessions:', sessionsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch intake sessions', details: sessionsError.message },
+        { status: 500 }
+      );
+    }
+
+    if (!intakeSessions || intakeSessions.length === 0) {
       if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
-        console.log('[patient_intake] [SERVER] ℹ️ No intake records found for user:', userId || email);
+        console.log('[patient_intake] [SERVER] ℹ️ No intake sessions found for patient');
       }
       return NextResponse.json(
         { success: true, hasData: false, data: null },
@@ -79,16 +94,53 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Return the most recent intake
+    const mostRecentSession = intakeSessions[0];
+
+    // Combine patient_details + intake_session into response format
+    const responseData = {
+      id: mostRecentSession.id,
+      user_id: patientDetails.user_id,
+      access_code: mostRecentSession.access_code,
+      conversation_id: mostRecentSession.conversation_id,
+      elevenlabs_conversation_id: mostRecentSession.elevenlabs_conversation_id,
+      status: mostRecentSession.status,
+      created_at: mostRecentSession.created_at,
+      updated_at: patientDetails.updated_at,
+      // Patient details
+      full_legal_name: patientDetails.full_legal_name,
+      preferred_name: patientDetails.preferred_name,
+      pronouns: patientDetails.preferred_pronouns,
+      date_of_birth: patientDetails.dob,
+      gender: patientDetails.gender,
+      email: patientDetails.email,
+      phone: patientDetails.phone,
+      city: patientDetails.address_city,
+      state: patientDetails.address_state,
+      zip_code: patientDetails.address_zip,
+      insurance_provider: patientDetails.insurance_company,
+      insurance_plan: patientDetails.group_id,
+      insurance_id: patientDetails.subscriber_id,
+      budget_per_session: patientDetails.budget_per_session,
+      price_individual: patientDetails.price_individual,
+      price_couples: patientDetails.price_couples,
+      sliding_scale: patientDetails.sliding_scale,
+      unsure_payment: patientDetails.unsure_payment,
+      payment_other: patientDetails.payment_other,
+      session_preference: patientDetails.session_preference,
+      availability: patientDetails.availability,
+      availability_other: patientDetails.availability_other,
+      availability_other_text: patientDetails.availability_other_text
+    };
+
     if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
-      console.log('[patient_intake] [SERVER] ✅ Returning most recent intake:', {
+      console.log('[patient_intake] [SERVER] ✅ Returning patient details + most recent session:', {
         userId: userId || email,
-        accessCode: data[0].access_code,
-        conversationId: data[0].conversation_id,
-        createdAt: data[0].created_at,
-        fullLegalName: data[0].full_legal_name,
-        phone: data[0].phone,
-        state: data[0].state
+        accessCode: responseData.access_code,
+        conversationId: responseData.conversation_id,
+        createdAt: responseData.created_at,
+        fullLegalName: responseData.full_legal_name,
+        phone: responseData.phone,
+        state: responseData.state
       });
     }
 
@@ -96,7 +148,7 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         hasData: true,
-        data: data[0]
+        data: responseData
       },
       { status: 200 }
     );

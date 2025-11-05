@@ -26,9 +26,9 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Get patient intake to find conversation_id
+    // Get intake_session to find conversation_id
     const { data: intake, error: intakeError } = await supabaseAdmin
-      .from('patient_intake')
+      .from('intake_sessions')
       .select('id, user_id, conversation_id')
       .eq('id', intakeId)
       .single();
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
         // Update intake with found conversation_id
         await supabaseAdmin
-          .from('patient_intake')
+          .from('intake_sessions')
           .update({ conversation_id: conversationId })
           .eq('id', intakeId);
 

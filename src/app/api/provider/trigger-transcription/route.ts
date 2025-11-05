@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 
     // Get intake data
     const { data: intake, error: intakeError } = await supabaseAdmin
-      .from('patient_intake')
+      .from('intake_sessions')
       .select('id, conversation_id')
       .eq('id', intake_id)
       .single();

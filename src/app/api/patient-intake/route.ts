@@ -56,62 +56,66 @@ export async function POST(request: NextRequest) {
     }
 
     const accessCode = accessCodeData as string;
+    const userId = body.userId || null;
 
-    // Prepare data for insertion
-    const intakeData = {
-      user_id: body.userId || null,
-      access_code: accessCode,
-      full_legal_name: body.fullLegalName,
-      preferred_name: body.preferredName || null,
-      pronouns: body.pronouns || null,
-      date_of_birth: body.dateOfBirth,
-      gender: body.gender || null,
-      email: body.email,
-      phone: body.phone,
-      state: body.state,
-      city: body.city,
-      zip_code: body.zipCode,
-      insurance_provider: body.insuranceProvider,
-      insurance_plan: body.insurancePlan || null,
-      insurance_id: body.insuranceId || null,
-      is_self_pay: body.insuranceProvider === 'Self-Pay',
-      budget_per_session: body.budgetPerSession || null,
-      price_individual: body.priceIndividual || [],
-      price_couples: body.priceCouples || [],
-      sliding_scale: body.slidingScale || false,
-      unsure_payment: body.unsurePayment || false,
-      payment_other: body.paymentOther || null,
-      session_preference: body.sessionPreference,
-      availability: body.availability,
-      availability_other: body.availabilityOther || false,
-      availability_other_text: body.availabilityOtherText || null,
-      status: 'pending'
-    };
+    // Step 1: Upsert patient_details (create or update if authenticated user)
+    let patientDetailsId = null;
 
-    // Insert into database
-    const { data, error } = await supabase
-      .from('patient_intake')
-      .insert(intakeData)
-      .select()
-      .single();
+    if (userId) {
+      const patientDetailsData = {
+        user_id: userId,
+        full_legal_name: body.fullLegalName,
+        preferred_name: body.preferredName || null,
+        preferred_pronouns: body.pronouns || null,
+        dob: body.dateOfBirth,
+        gender: body.gender || null,
+        email: body.email,
+        phone: body.phone,
+        address_city: body.city,
+        address_state: body.state,
+        address_zip: body.zipCode,
+        insurance_company: body.insuranceProvider,
+        group_id: body.insurancePlan || null,
+        subscriber_id: body.insuranceId || null,
+        budget_per_session: body.budgetPerSession || null,
+        price_individual: body.priceIndividual || [],
+        price_couples: body.priceCouples || [],
+        sliding_scale: body.slidingScale || false,
+        unsure_payment: body.unsurePayment || false,
+        payment_other: body.paymentOther || null,
+        session_preference: body.sessionPreference,
+        availability: body.availability,
+        availability_other: body.availabilityOther || false,
+        availability_other_text: body.availabilityOtherText || null,
+        updated_at: new Date().toISOString()
+      };
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return NextResponse.json(
-        { error: 'Failed to save intake form', details: error.message },
-        { status: 500 }
-      );
+      const { data: patientDetails, error: patientDetailsError } = await supabase
+        .from('patient_details')
+        .upsert(patientDetailsData, { onConflict: 'user_id' })
+        .select()
+        .single();
+
+      if (patientDetailsError) {
+        console.error('Failed to save patient details:', patientDetailsError);
+        return NextResponse.json(
+          { error: 'Failed to save patient details', details: patientDetailsError.message },
+          { status: 500 }
+        );
+      }
+
+      patientDetailsId = patientDetails.id;
     }
 
-    // Generate a fresh conversation_id for the upcoming voice session
+    // Step 2: Generate conversation_id for the voice session
     const conversationId = crypto.randomUUID();
 
-    // Create conversation record in conversations table (required for message foreign key)
+    // Step 3: Create conversation record in conversations table
     const { error: conversationError } = await supabase
       .from('conversations')
       .insert({
         id: conversationId,
-        human_id: body.userId || null,
+        human_id: userId,
         is_active: true
       });
 
@@ -120,18 +124,35 @@ export async function POST(request: NextRequest) {
       // Don't fail the entire request - continue without conversation
     }
 
-    // Update the intake record with conversation_id
-    await supabase
-      .from('patient_intake')
-      .update({ conversation_id: conversationId })
-      .eq('id', data.id);
+    // Step 4: Create intake_session record
+    const intakeSessionData = {
+      patient_details_id: patientDetailsId,
+      user_id: userId,
+      access_code: accessCode,
+      conversation_id: conversationId,
+      status: 'pending'
+    };
+
+    const { data: intakeSession, error: intakeSessionError } = await supabase
+      .from('intake_sessions')
+      .insert(intakeSessionData)
+      .select()
+      .single();
+
+    if (intakeSessionError) {
+      console.error('Failed to create intake session:', intakeSessionError);
+      return NextResponse.json(
+        { error: 'Failed to create intake session', details: intakeSessionError.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(
       {
         success: true,
         message: 'Intake form submitted successfully',
-        intakeId: data.id,
-        accessCode: data.access_code,
+        intakeId: intakeSession.id,
+        accessCode: intakeSession.access_code,
         conversationId: conversationId
       },
       { status: 201 }

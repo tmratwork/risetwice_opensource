@@ -21,9 +21,9 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // 1. Get conversation_id from patient_intake table
+    // 1. Get conversation_id from intake_sessions table
     const { data: intake, error: intakeError } = await supabase
-      .from('patient_intake')
+      .from('intake_sessions')
       .select('conversation_id')
       .eq('id', intakeId)
       .single();

@@ -24,22 +24,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Check if patient_intake record exists first
-    console.log('[elevenlabs_conv_id] 🔍 Checking if patient_intake record exists...');
+    // Check if intake_session record exists first
+    console.log('[elevenlabs_conv_id] 🔍 Checking if intake_session record exists...');
     const { data: existingRecord, error: checkError } = await supabaseAdmin
-      .from('patient_intake')
+      .from('intake_sessions')
       .select('id, access_code, conversation_id')
       .eq('conversation_id', internal_conversation_id)
       .single();
 
     if (checkError || !existingRecord) {
-      console.error('[elevenlabs_conv_id] ❌ No patient_intake record found:', {
+      console.error('[elevenlabs_conv_id] ❌ No intake_session record found:', {
         internal_conversation_id,
         error: checkError?.message
       });
       return NextResponse.json(
         {
-          error: 'No patient_intake record found for this conversation_id',
+          error: 'No intake_session record found for this conversation_id',
           details: checkError?.message,
           internal_conversation_id
         },
@@ -47,16 +47,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('[elevenlabs_conv_id] ✅ Found patient_intake record:', {
+    console.log('[elevenlabs_conv_id] ✅ Found intake_session record:', {
       id: existingRecord.id,
       access_code: existingRecord.access_code,
       conversation_id: existingRecord.conversation_id
     });
 
-    // Update the patient_intake table with the ElevenLabs conversation ID
+    // Update the intake_sessions table with the ElevenLabs conversation ID
     console.log('[elevenlabs_conv_id] 💾 Updating with ElevenLabs conversation ID...');
     const { data, error } = await supabaseAdmin
-      .from('patient_intake')
+      .from('intake_sessions')
       .update({
         elevenlabs_conversation_id: elevenlabs_conversation_id
       })

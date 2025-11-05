@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
 
     // No summary exists - generate one
     const { data: intake, error: intakeError } = await supabaseAdmin
-      .from('patient_intake')
+      .from('intake_sessions')
       .select('*')
       .eq('id', intakeId)
       .single();

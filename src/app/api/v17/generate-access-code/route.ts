@@ -43,10 +43,10 @@ export async function POST(req: Request) {
 
     const accessCode = accessCodeData as string;
 
-    // ALWAYS create NEW patient_intake record - never update existing ones
+    // ALWAYS create NEW intake_session record - never update existing ones
     // Each conversation gets its own record with unique access code
     const { error: insertError } = await supabaseAdmin
-      .from('patient_intake')
+      .from('intake_sessions')
       .insert({
         user_id: userId,
         access_code: accessCode,
@@ -55,14 +55,14 @@ export async function POST(req: Request) {
       });
 
     if (insertError) {
-      console.error(`${logPrefix} Failed to create patient_intake:`, insertError);
+      console.error(`${logPrefix} Failed to create intake_session:`, insertError);
       return NextResponse.json({
-        error: 'Failed to create patient intake',
+        error: 'Failed to create intake session',
         details: insertError.message
       }, { status: 500 });
     }
 
-    console.log(`${logPrefix} ✅ Created NEW patient_intake record:`, {
+    console.log(`${logPrefix} ✅ Created NEW intake_session record:`, {
       conversationId,
       accessCode,
       userId

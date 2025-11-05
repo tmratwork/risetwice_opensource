@@ -41,19 +41,33 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Find patient intake by access code (use actual code without 'a' prefix)
-    const { data: intake, error: intakeError } = await supabase
-      .from('patient_intake')
+    // Find intake_session by access code (use actual code without 'a' prefix)
+    const { data: intakeSession, error: sessionError } = await supabase
+      .from('intake_sessions')
       .select('*')
       .eq('access_code', actualAccessCode)
       .single();
 
-    if (intakeError || !intake) {
-      console.error('Access code not found:', intakeError);
+    if (sessionError || !intakeSession) {
+      console.error('Access code not found:', sessionError);
       return NextResponse.json(
         { error: 'Invalid access code', valid: false },
         { status: 404 }
       );
+    }
+
+    // Fetch patient_details if patient_details_id exists
+    let patientDetails = null;
+    if (intakeSession.patient_details_id) {
+      const { data, error } = await supabase
+        .from('patient_details')
+        .select('*')
+        .eq('id', intakeSession.patient_details_id)
+        .single();
+
+      if (!error && data) {
+        patientDetails = data;
+      }
     }
 
     // Log provider access for audit trail
@@ -62,7 +76,7 @@ export async function POST(request: NextRequest) {
         .from('provider_intake_views')
         .insert({
           provider_user_id: providerUserId,
-          intake_id: intake.id,
+          intake_id: intakeSession.id,
           access_code: accessCode,
           ip_address: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown'
         });
@@ -73,35 +87,36 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Combine intake_session + patient_details into response
     return NextResponse.json({
       success: true,
       valid: true,
-      intakeId: intake.id,
+      intakeId: intakeSession.id,
       intake: {
-        id: intake.id,
-        fullLegalName: intake.full_legal_name,
-        preferredName: intake.preferred_name,
-        pronouns: intake.pronouns,
-        dateOfBirth: intake.date_of_birth,
-        gender: intake.gender,
-        email: intake.email,
-        phone: intake.phone,
-        state: intake.state,
-        city: intake.city,
-        zipCode: intake.zip_code,
-        insuranceProvider: intake.insurance_provider,
-        insurancePlan: intake.insurance_plan,
-        insuranceId: intake.insurance_id,
-        isSelfPay: intake.is_self_pay,
-        budgetPerSession: intake.budget_per_session,
-        sessionPreference: intake.session_preference,
-        availability: intake.availability,
-        status: intake.status,
-        createdAt: intake.created_at,
-        updatedAt: intake.updated_at,
-        conversationId: intake.conversation_id,
-        elevenLabsConversationId: intake.elevenlabs_conversation_id,
-        userId: intake.user_id
+        id: intakeSession.id,
+        fullLegalName: patientDetails?.full_legal_name || null,
+        preferredName: patientDetails?.preferred_name || null,
+        pronouns: patientDetails?.preferred_pronouns || null,
+        dateOfBirth: patientDetails?.dob || null,
+        gender: null,
+        email: patientDetails?.email || null,
+        phone: patientDetails?.phone || null,
+        state: patientDetails?.address_state || null,
+        city: patientDetails?.address_city || null,
+        zipCode: patientDetails?.address_zip || null,
+        insuranceProvider: patientDetails?.insurance_company || null,
+        insurancePlan: patientDetails?.group_id || null,
+        insuranceId: patientDetails?.subscriber_id || null,
+        isSelfPay: patientDetails?.insurance_company === 'Self-Pay',
+        budgetPerSession: null,
+        sessionPreference: null,
+        availability: [],
+        status: intakeSession.status,
+        createdAt: intakeSession.created_at,
+        updatedAt: patientDetails?.updated_at || null,
+        conversationId: intakeSession.conversation_id,
+        elevenLabsConversationId: intakeSession.elevenlabs_conversation_id,
+        userId: intakeSession.user_id
       }
     });
 
