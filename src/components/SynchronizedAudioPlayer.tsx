@@ -17,11 +17,13 @@ let globalAiGain: GainNode | null = null;
 interface SynchronizedAudioPlayerProps {
   patientAudioUrl: string;
   aiAudioUrl: string;
+  isV17Audio?: boolean; // V17 audio is mono (single track from ElevenLabs)
 }
 
 export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = ({
   patientAudioUrl,
-  aiAudioUrl
+  aiAudioUrl,
+  isV17Audio = false
 }) => {
   const patientAudioRef = useRef<HTMLAudioElement>(null);
   const aiAudioRef = useRef<HTMLAudioElement>(null);
@@ -379,25 +381,27 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
       <audio ref={patientAudioRef} src={patientAudioUrl} preload="metadata" crossOrigin="anonymous" />
       <audio ref={aiAudioRef} src={aiAudioUrl} preload="metadata" crossOrigin="anonymous" />
 
-      {/* Stereo mode info */}
-      <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-blue-800">
-            {isStereoEnabled ? 'Stereo Mode: AI (Left Ear) • Patient (Right Ear)' : 'Mono Mode: Both Centered'}
-          </span>
-          <button
-            onClick={() => setIsStereoEnabled(!isStereoEnabled)}
-            className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
-          >
-            {isStereoEnabled ? 'Switch to Mono' : 'Switch to Stereo'}
-          </button>
+      {/* Stereo mode info - hide for V17 (mono audio from ElevenLabs) */}
+      {!isV17Audio && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-blue-800">
+              {isStereoEnabled ? 'Stereo Mode: AI (Left Ear) • Patient (Right Ear)' : 'Mono Mode: Both Centered'}
+            </span>
+            <button
+              onClick={() => setIsStereoEnabled(!isStereoEnabled)}
+              className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              {isStereoEnabled ? 'Switch to Mono' : 'Switch to Stereo'}
+            </button>
+          </div>
+          {isStereoEnabled && (
+            <p className="text-xs text-blue-700 mt-2">
+              Best experienced with headphones. AI voice will play in your left ear, patient voice in your right ear.
+            </p>
+          )}
         </div>
-        {isStereoEnabled && (
-          <p className="text-xs text-blue-700 mt-2">
-            Best experienced with headphones. AI voice will play in your left ear, patient voice in your right ear.
-          </p>
-        )}
-      </div>
+      )}
 
       {/* Play/Pause button */}
       <div className="flex items-center gap-4 mb-4">
@@ -490,38 +494,40 @@ export const SynchronizedAudioPlayer: React.FC<SynchronizedAudioPlayerProps> = (
         />
       </div>
 
-      {/* Volume controls */}
-      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            AI Volume (Left Ear)
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={aiVolume}
-            onChange={(e) => setAiVolume(parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
+      {/* Volume controls - only show in stereo mode for V18 (not for V17 mono audio) */}
+      {!isV17Audio && isStereoEnabled && (
+        <div className="grid grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              AI Volume (Left Ear)
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={aiVolume}
+              onChange={(e) => setAiVolume(parseFloat(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
 
-        <div>
-          <label className="text-sm font-medium text-gray-700 mb-2 block">
-            Patient Volume (Right Ear)
-          </label>
-          <input
-            type="range"
-            min="0"
-            max="1"
-            step="0.01"
-            value={patientVolume}
-            onChange={(e) => setPatientVolume(parseFloat(e.target.value))}
-            className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-          />
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Patient Volume (Right Ear)
+            </label>
+            <input
+              type="range"
+              min="0"
+              max="1"
+              step="0.01"
+              value={patientVolume}
+              onChange={(e) => setPatientVolume(parseFloat(e.target.value))}
+              className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+            />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -1315,11 +1315,12 @@ const ProviderIntakeView: React.FC = () => {
               <div className="border-t border-gray-200 pt-4">
                 <p className="text-sm text-gray-600 mb-4">
                   Listen to both sides of the conversation simultaneously.
-                  With headphones: AI in left ear, patient in right ear.
+                  {!intakeData?.elevenLabsConversationId && ' With headphones: AI in left ear, patient in right ear.'}
                 </p>
                 <SynchronizedAudioPlayer
                   patientAudioUrl={audioUrl!}
                   aiAudioUrl={aiAudioUrl!}
+                  isV17Audio={!!intakeData?.elevenLabsConversationId}
                 />
               </div>
             )}
