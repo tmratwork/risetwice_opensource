@@ -43,19 +43,6 @@ export async function POST(request: NextRequest) {
     // Create Supabase client with service role key for admin access
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Generate unique 5-digit access code
-    const { data: accessCodeData, error: accessCodeError } = await supabase
-      .rpc('generate_unique_access_code');
-
-    if (accessCodeError) {
-      console.error('Failed to generate access code:', accessCodeError);
-      return NextResponse.json(
-        { error: 'Failed to generate access code', details: accessCodeError.message },
-        { status: 500 }
-      );
-    }
-
-    const accessCode = accessCodeData as string;
     const userId = body.userId || null;
 
     // Step 1: Upsert patient_details (create or update if authenticated user)
