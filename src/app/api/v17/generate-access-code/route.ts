@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing conversationId or userId' }, { status: 400 });
     }
 
-    console.log(`${logPrefix} Creating NEW patient_intake record for conversation: ${conversationId}, user: ${userId}`);
+    console.log(`${logPrefix} Creating NEW intake_session for conversation: ${conversationId}, user: ${userId}`);
 
     // Generate unique 5-digit access code
     const { data: accessCodeData, error: accessCodeError } = await supabaseAdmin
@@ -43,11 +43,35 @@ export async function POST(req: Request) {
 
     const accessCode = accessCodeData as string;
 
+    // Check if patient_details exists for this user (returning user)
+    let patientDetailsId = null;
+    const { data: patientDetails, error: patientDetailsError } = await supabaseAdmin
+      .from('patient_details')
+      .select('id')
+      .eq('user_id', userId)
+      .single();
+
+    if (patientDetailsError) {
+      if (patientDetailsError.code === 'PGRST116') {
+        // No patient_details found - first-time user, will link later when they fill intake form
+        console.log(`${logPrefix} No patient_details found - first-time user`);
+      } else {
+        // Unexpected error querying patient_details
+        console.error(`${logPrefix} Error checking patient_details:`, patientDetailsError);
+        // Continue without patient_details_id (non-critical)
+      }
+    } else {
+      // Returning user - link to existing patient_details
+      patientDetailsId = patientDetails.id;
+      console.log(`${logPrefix} Found existing patient_details - returning user, id: ${patientDetailsId}`);
+    }
+
     // ALWAYS create NEW intake_session record - never update existing ones
     // Each conversation gets its own record with unique access code
     const { error: insertError } = await supabaseAdmin
       .from('intake_sessions')
       .insert({
+        patient_details_id: patientDetailsId, // NULL for first-time users, set for returning users
         user_id: userId,
         access_code: accessCode,
         conversation_id: conversationId,
@@ -65,7 +89,9 @@ export async function POST(req: Request) {
     console.log(`${logPrefix} ✅ Created NEW intake_session record:`, {
       conversationId,
       accessCode,
-      userId
+      userId,
+      patientDetailsId: patientDetailsId || 'NULL (first-time user)',
+      isReturningUser: !!patientDetailsId
     });
 
     return NextResponse.json({

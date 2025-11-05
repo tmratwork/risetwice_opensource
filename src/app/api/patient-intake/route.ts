@@ -107,44 +107,114 @@ export async function POST(request: NextRequest) {
       patientDetailsId = patientDetails.id;
     }
 
-    // Step 2: Generate conversation_id for the voice session
-    const conversationId = crypto.randomUUID();
-
-    // Step 3: Create conversation record in conversations table
-    const { error: conversationError } = await supabase
-      .from('conversations')
-      .insert({
-        id: conversationId,
-        human_id: userId,
-        is_active: true
-      });
-
-    if (conversationError) {
-      console.error('Failed to create conversation:', conversationError);
-      // Don't fail the entire request - continue without conversation
-    }
-
-    // Step 4: Create intake_session record
-    const intakeSessionData = {
-      patient_details_id: patientDetailsId,
-      user_id: userId,
-      access_code: accessCode,
-      conversation_id: conversationId,
-      status: 'pending'
-    };
-
-    const { data: intakeSession, error: intakeSessionError } = await supabase
+    // Step 2: Check if user has existing intake_session without patient_details_id
+    // (This happens for V17 first-time users who got access code before filling form)
+    const { data: existingSession, error: existingSessionError } = await supabase
       .from('intake_sessions')
-      .insert(intakeSessionData)
-      .select()
+      .select('*')
+      .eq('user_id', userId)
+      .is('patient_details_id', null)
+      .order('created_at', { ascending: false })
+      .limit(1)
       .single();
 
-    if (intakeSessionError) {
-      console.error('Failed to create intake session:', intakeSessionError);
-      return NextResponse.json(
-        { error: 'Failed to create intake session', details: intakeSessionError.message },
-        { status: 500 }
-      );
+    let intakeSession;
+    let conversationId;
+
+    if (existingSession && !existingSessionError) {
+      // V17 first-time user - update existing session to link patient_details
+      console.log('[patient_intake] Found existing session without patient_details - linking now:', existingSession.id);
+
+      const { data: updatedSession, error: updateError } = await supabase
+        .from('intake_sessions')
+        .update({
+          patient_details_id: patientDetailsId,
+          status: 'pending'
+        })
+        .eq('id', existingSession.id)
+        .select()
+        .single();
+
+      if (updateError) {
+        console.error('Failed to update existing intake session:', updateError);
+        return NextResponse.json(
+          { error: 'Failed to update intake session', details: updateError.message },
+          { status: 500 }
+        );
+      }
+
+      intakeSession = updatedSession;
+      conversationId = existingSession.conversation_id;
+
+      console.log('[patient_intake] ✅ Linked existing session to patient_details:', {
+        sessionId: intakeSession.id,
+        accessCode: intakeSession.access_code,
+        conversationId
+      });
+    } else {
+      // No existing session OR returning user - create new session with new access code
+      console.log('[patient_intake] Creating new intake_session (no unlinked session found)');
+
+      // Generate conversation_id for the voice session
+      conversationId = crypto.randomUUID();
+
+      // Create conversation record in conversations table
+      const { error: conversationError } = await supabase
+        .from('conversations')
+        .insert({
+          id: conversationId,
+          human_id: userId,
+          is_active: true
+        });
+
+      if (conversationError) {
+        console.error('Failed to create conversation:', conversationError);
+        // Don't fail the entire request - continue without conversation
+      }
+
+      // Generate unique access code for new session
+      const { data: accessCodeData, error: accessCodeError } = await supabase
+        .rpc('generate_unique_access_code');
+
+      if (accessCodeError) {
+        console.error('Failed to generate access code:', accessCodeError);
+        return NextResponse.json(
+          { error: 'Failed to generate access code', details: accessCodeError.message },
+          { status: 500 }
+        );
+      }
+
+      const accessCode = accessCodeData as string;
+
+      // Create new intake_session record
+      const intakeSessionData = {
+        patient_details_id: patientDetailsId,
+        user_id: userId,
+        access_code: accessCode,
+        conversation_id: conversationId,
+        status: 'pending'
+      };
+
+      const { data: newSession, error: intakeSessionError } = await supabase
+        .from('intake_sessions')
+        .insert(intakeSessionData)
+        .select()
+        .single();
+
+      if (intakeSessionError) {
+        console.error('Failed to create intake session:', intakeSessionError);
+        return NextResponse.json(
+          { error: 'Failed to create intake session', details: intakeSessionError.message },
+          { status: 500 }
+        );
+      }
+
+      intakeSession = newSession;
+      console.log('[patient_intake] ✅ Created new intake_session:', {
+        sessionId: intakeSession.id,
+        accessCode: intakeSession.access_code,
+        conversationId
+      });
     }
 
     return NextResponse.json(
