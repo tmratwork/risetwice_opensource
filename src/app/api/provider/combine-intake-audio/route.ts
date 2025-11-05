@@ -396,19 +396,8 @@ export async function POST(request: NextRequest) {
     const totalTime = Date.now() - startTime;
     console.log(`[audio_combination] ✅ Job completed successfully - Total time: ${totalTime}ms (${(totalTime / 1000).toFixed(1)}s)`);
 
-    // Trigger transcription in background (don't wait for completion)
-    console.log('[audio_combination] 🎤 Triggering audio transcription in background...');
-    fetch(`${request.nextUrl.origin}/api/provider/transcribe-intake-audio`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        intake_id,
-        conversation_id,
-        combined_audio_path: combinedPath
-      })
-    }).catch(err => {
-      console.error('[audio_combination] ❌ Failed to trigger transcription:', err);
-    });
+    // V18 already has transcripts in v16_messages table, no need to create transcription job
+    // Transcription trigger removed - V18 stores conversation text directly in real-time
 
     return NextResponse.json({
       success: true,

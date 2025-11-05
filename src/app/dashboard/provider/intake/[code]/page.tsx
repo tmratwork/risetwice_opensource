@@ -105,7 +105,7 @@ const ProviderIntakeView: React.FC = () => {
   const [chunkCount, setChunkCount] = useState<number>(0);
   const [needsCombination, setNeedsCombination] = useState(false);
   const [jobStatus, setJobStatus] = useState<string>('');
-  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
   const [transcript, setTranscript] = useState<string | null>(null);
   const [transcriptStatus, setTranscriptStatus] = useState<string>('');
   const [showFullTranscript, setShowFullTranscript] = useState(false);
@@ -118,7 +118,7 @@ const ProviderIntakeView: React.FC = () => {
   const [aiChunkCount, setAiChunkCount] = useState<number>(0);
   const [aiNeedsCombination, setAiNeedsCombination] = useState(false);
   const [aiJobStatus, setAiJobStatus] = useState<string>('');
-  const [aiPollingInterval, setAiPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const aiPollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // ElevenLabs direct audio fetch state
   const [elevenLabsAudioUrl, setElevenLabsAudioUrl] = useState<string | null>(null);
@@ -462,10 +462,10 @@ const ProviderIntakeView: React.FC = () => {
           }
 
           // Clear polling if it exists
-          if (pollingInterval) {
+          if (pollingIntervalRef.current) {
             console.log('[provider_intake] 🛑 Clearing polling interval');
-            clearInterval(pollingInterval);
-            setPollingInterval(null);
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
           }
         } else if (result.needsCombination) {
           console.log('[provider_intake] ⏳ Audio needs combination, status:', result.jobStatus);
@@ -475,7 +475,7 @@ const ProviderIntakeView: React.FC = () => {
           setJobStatus(result.jobStatus || 'processing');
 
           // Start polling if status is processing and not already polling
-          if (result.jobStatus === 'processing' && !pollingInterval) {
+          if (result.jobStatus === 'processing' && !pollingIntervalRef.current) {
             console.log('[provider_intake] 🔄 Starting polling for audio combination');
             startPolling(intakeId);
           }
@@ -492,10 +492,29 @@ const ProviderIntakeView: React.FC = () => {
   };
 
   const startPolling = (intakeId: string) => {
-    // Store interval reference locally to avoid closure issues
-    let localInterval: NodeJS.Timeout | null = null;
+    const startTime = Date.now();
+    const TIMEOUT_MS = 120000; // 2 minutes
 
     const pollAudio = async () => {
+      // Check if 2 minutes have elapsed
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= TIMEOUT_MS) {
+        console.log('[provider_intake] ⏱️ Polling timeout reached (2 minutes) - stopping polling');
+
+        // Clear interval
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+          console.log('[provider_intake] ✅ Interval cleared due to timeout');
+        }
+
+        // Update status to show timeout
+        setJobStatus('timeout');
+        setNeedsCombination(false);
+
+        return;
+      }
+
       console.log('[provider_intake] 🔍 Polling audio status...');
 
       try {
@@ -513,18 +532,11 @@ const ProviderIntakeView: React.FC = () => {
         if (result.success && result.hasRecording && result.audioUrl) {
           console.log('[provider_intake] 🛑 Audio ready - stopping polling');
 
-          // Clear local interval
-          if (localInterval) {
-            clearInterval(localInterval);
-            localInterval = null;
-            console.log('[provider_intake] ✅ Local interval cleared');
-          }
-
-          // Clear state interval
-          if (pollingInterval) {
-            clearInterval(pollingInterval);
-            setPollingInterval(null);
-            console.log('[provider_intake] ✅ State interval cleared');
+          // Clear interval
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+            console.log('[provider_intake] ✅ Interval cleared');
           }
 
           // Update state
@@ -545,18 +557,11 @@ const ProviderIntakeView: React.FC = () => {
         if (result.jobStatus === 'failed') {
           console.log('[provider_intake] 🛑 Job failed - stopping polling');
 
-          // Clear local interval
-          if (localInterval) {
-            clearInterval(localInterval);
-            localInterval = null;
-            console.log('[provider_intake] ✅ Local interval cleared');
-          }
-
-          // Clear state interval
-          if (pollingInterval) {
-            clearInterval(pollingInterval);
-            setPollingInterval(null);
-            console.log('[provider_intake] ✅ State interval cleared');
+          // Clear interval
+          if (pollingIntervalRef.current) {
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+            console.log('[provider_intake] ✅ Interval cleared');
           }
 
           // Update status
@@ -579,23 +584,24 @@ const ProviderIntakeView: React.FC = () => {
     pollAudio();
 
     // Poll every 2 seconds
-    localInterval = setInterval(pollAudio, 2000);
-    setPollingInterval(localInterval);
+    pollingIntervalRef.current = setInterval(pollAudio, 2000);
   };
 
   // Cleanup polling on unmount
   React.useEffect(() => {
     return () => {
-      if (pollingInterval) {
+      if (pollingIntervalRef.current) {
         console.log('[provider_intake] 🧹 Cleaning up polling on unmount');
-        clearInterval(pollingInterval);
+        clearInterval(pollingIntervalRef.current);
+        pollingIntervalRef.current = null;
       }
-      if (aiPollingInterval) {
+      if (aiPollingIntervalRef.current) {
         console.log('[provider_intake] 🧹 Cleaning up AI polling on unmount');
-        clearInterval(aiPollingInterval);
+        clearInterval(aiPollingIntervalRef.current);
+        aiPollingIntervalRef.current = null;
       }
     };
-  }, [pollingInterval, aiPollingInterval]);
+  }, []);
 
   const fetchAiAudioRecording = async (intakeId: string) => {
     try {
@@ -615,10 +621,10 @@ const ProviderIntakeView: React.FC = () => {
           // File path is available in result if needed in future
 
           // Clear polling if it exists
-          if (aiPollingInterval) {
+          if (aiPollingIntervalRef.current) {
             console.log('[provider_intake] 🛑 Clearing AI polling interval');
-            clearInterval(aiPollingInterval);
-            setAiPollingInterval(null);
+            clearInterval(aiPollingIntervalRef.current);
+            aiPollingIntervalRef.current = null;
           }
         } else if (result.needsCombination) {
           console.log('[provider_intake] ⏳ AI audio needs combination, status:', result.jobStatus);
@@ -628,7 +634,7 @@ const ProviderIntakeView: React.FC = () => {
           setAiJobStatus(result.jobStatus || 'processing');
 
           // Start polling if status is processing and not already polling
-          if (result.jobStatus === 'processing' && !aiPollingInterval) {
+          if (result.jobStatus === 'processing' && !aiPollingIntervalRef.current) {
             console.log('[provider_intake] 🔄 Starting polling for AI audio combination');
             startAiPolling(intakeId);
           }
@@ -645,10 +651,29 @@ const ProviderIntakeView: React.FC = () => {
   };
 
   const startAiPolling = (intakeId: string) => {
-    // Store interval reference locally to avoid closure issues
-    let localInterval: NodeJS.Timeout | null = null;
+    const startTime = Date.now();
+    const TIMEOUT_MS = 120000; // 2 minutes
 
     const pollAiAudio = async () => {
+      // Check if 2 minutes have elapsed
+      const elapsed = Date.now() - startTime;
+      if (elapsed >= TIMEOUT_MS) {
+        console.log('[provider_intake] ⏱️ AI polling timeout reached (2 minutes) - stopping polling');
+
+        // Clear interval
+        if (aiPollingIntervalRef.current) {
+          clearInterval(aiPollingIntervalRef.current);
+          aiPollingIntervalRef.current = null;
+          console.log('[provider_intake] ✅ AI interval cleared due to timeout');
+        }
+
+        // Update status to show timeout
+        setAiJobStatus('timeout');
+        setAiNeedsCombination(false);
+
+        return;
+      }
+
       console.log('[provider_intake] 🔍 Polling AI audio status...');
 
       try {
@@ -666,18 +691,11 @@ const ProviderIntakeView: React.FC = () => {
         if (result.success && result.hasRecording && result.audioUrl) {
           console.log('[provider_intake] 🛑 AI audio ready - stopping polling');
 
-          // Clear local interval
-          if (localInterval) {
-            clearInterval(localInterval);
-            localInterval = null;
-            console.log('[provider_intake] ✅ Local AI interval cleared');
-          }
-
-          // Clear state interval
-          if (aiPollingInterval) {
-            clearInterval(aiPollingInterval);
-            setAiPollingInterval(null);
-            console.log('[provider_intake] ✅ State AI interval cleared');
+          // Clear interval
+          if (aiPollingIntervalRef.current) {
+            clearInterval(aiPollingIntervalRef.current);
+            aiPollingIntervalRef.current = null;
+            console.log('[provider_intake] ✅ AI interval cleared');
           }
 
           // Update state
@@ -694,18 +712,11 @@ const ProviderIntakeView: React.FC = () => {
         if (result.jobStatus === 'failed') {
           console.log('[provider_intake] 🛑 AI job failed - stopping polling');
 
-          // Clear local interval
-          if (localInterval) {
-            clearInterval(localInterval);
-            localInterval = null;
-            console.log('[provider_intake] ✅ Local AI interval cleared');
-          }
-
-          // Clear state interval
-          if (aiPollingInterval) {
-            clearInterval(aiPollingInterval);
-            setAiPollingInterval(null);
-            console.log('[provider_intake] ✅ State AI interval cleared');
+          // Clear interval
+          if (aiPollingIntervalRef.current) {
+            clearInterval(aiPollingIntervalRef.current);
+            aiPollingIntervalRef.current = null;
+            console.log('[provider_intake] ✅ AI interval cleared');
           }
 
           // Update status
@@ -728,8 +739,7 @@ const ProviderIntakeView: React.FC = () => {
     pollAiAudio();
 
     // Poll every 2 seconds
-    localInterval = setInterval(pollAiAudio, 2000);
-    setAiPollingInterval(localInterval);
+    aiPollingIntervalRef.current = setInterval(pollAiAudio, 2000);
   };
 
   // Transfer ElevenLabs audio to Supabase Storage if needed (V17 only)
