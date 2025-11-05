@@ -100,6 +100,7 @@ export async function POST(request: NextRequest) {
         createdAt: intake.created_at,
         updatedAt: intake.updated_at,
         conversationId: intake.conversation_id,
+        elevenLabsConversationId: intake.elevenlabs_conversation_id,
         userId: intake.user_id
       }
     });

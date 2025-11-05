@@ -8,7 +8,6 @@ import { useAuth } from '@/contexts/auth-context';
 import { useElevenLabsStore } from '@/stores/elevenlabs-store';
 import { useElevenLabsConversation } from '@/hooksV17/use-elevenlabs-conversation';
 import { useChatState } from '@/contexts/chat-state-context';
-import { useVoiceRecording } from '@/hooksV17/use-voice-recording';
 import { AudioOrbV15 } from './components/AudioOrbV15';
 import { SignInDialog } from './components/SignInDialog';
 import { DemoButtons } from './components/DemoButtons';
@@ -90,8 +89,8 @@ export default function ChatBotV17Page() {
     isPreparing
   } = useElevenLabsConversation();
 
-  // Enable background voice recording (uploads audio chunks to cloud storage)
-  useVoiceRecording();
+  // V17 Note: ElevenLabs handles audio recording - no need for chunk uploads
+  // Audio is retrieved via ElevenLabs API using elevenlabs_conversation_id
 
   // Track if cleanup has already been initiated to prevent double cleanup
   const cleanupInitiatedRef = useRef(false);
@@ -259,10 +258,12 @@ export default function ChatBotV17Page() {
 
         // ALWAYS create a NEW conversation for each AI Preview (each gets unique access code)
         console.log('[V17] Creating NEW conversation for AI Preview');
-        await store.createConversation();
+        const internalConversationId = await store.createConversation();
+        console.log('[V17] ✅ Internal conversation ID created:', internalConversationId);
 
         // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice + custom opening statement
-        await startSession('ai_preview', voiceId, generatedTherapistPrompt, therapist.openingStatement);
+        // Pass the internal conversation ID so it can be saved with the ElevenLabs conversation ID
+        await startSession('ai_preview', voiceId, generatedTherapistPrompt, therapist.openingStatement, internalConversationId);
 
         console.log(`[V17] ✅ AI preview started with comprehensive prompt for: ${therapist.fullName}`);
       } else {

@@ -33,6 +33,7 @@ interface IntakeData {
   status: string;
   createdAt: string;
   conversationId: string | null;
+  elevenLabsConversationId: string | null;
   userId: string;
 }
 
@@ -118,6 +119,11 @@ const ProviderIntakeView: React.FC = () => {
   const [aiNeedsCombination, setAiNeedsCombination] = useState(false);
   const [aiJobStatus, setAiJobStatus] = useState<string>('');
   const [aiPollingInterval, setAiPollingInterval] = useState<NodeJS.Timeout | null>(null);
+
+  // ElevenLabs direct audio fetch state
+  const [elevenLabsAudioUrl, setElevenLabsAudioUrl] = useState<string | null>(null);
+  const [elevenLabsAudioLoading, setElevenLabsAudioLoading] = useState(false);
+  const [elevenLabsAudioError, setElevenLabsAudioError] = useState<string | null>(null);
 
   // Debug: Log audio state changes
   useEffect(() => {
@@ -392,13 +398,27 @@ const ProviderIntakeView: React.FC = () => {
         setIntakeData(result.intake);
         setLoading(false);
 
-        // Fetch patient audio recording
-        fetchAudioRecording(result.intake.id);
+        // V17 uses ElevenLabs conversation ID and doesn't use chunk-based audio
+        // V18 uses chunk-based audio system
+        const isV17 = !!result.intake.elevenLabsConversationId;
 
-        // Fetch AI audio recording
-        fetchAiAudioRecording(result.intake.id);
+        if (isV17) {
+          console.log('[provider_intake] 🎯 V17 intake detected (has ElevenLabs conversation ID) - checking cached audio');
 
-        // Fetch transcript
+          // Check if ElevenLabs audio is already cached in Supabase Storage
+          // If not, transfer it automatically in the background
+          transferElevenLabsAudioIfNeeded(result.intake.conversationId, result.intake.elevenLabsConversationId);
+        } else {
+          console.log('[provider_intake] 🎯 V18 intake detected (no ElevenLabs conversation ID) - fetching chunk audio');
+
+          // Fetch patient audio recording (V18 only)
+          fetchAudioRecording(result.intake.id);
+
+          // Fetch AI audio recording (V18 only)
+          fetchAiAudioRecording(result.intake.id);
+        }
+
+        // Fetch transcript (both V17 and V18)
         fetchTranscript(result.intake.id);
 
         // Fetch AI summary (will wait for transcript)
@@ -710,6 +730,112 @@ const ProviderIntakeView: React.FC = () => {
     // Poll every 2 seconds
     localInterval = setInterval(pollAiAudio, 2000);
     setAiPollingInterval(localInterval);
+  };
+
+  // Transfer ElevenLabs audio to Supabase Storage if needed (V17 only)
+  const transferElevenLabsAudioIfNeeded = async (conversationId: string | null, elevenLabsConversationId: string) => {
+    if (!conversationId || !elevenLabsConversationId) {
+      console.log('[transfer_audio] ⚠️ Missing IDs, skipping transfer');
+      return;
+    }
+
+    try {
+      console.log('[transfer_audio] 🔍 Checking if audio needs transfer...');
+      setAudioLoading(true);
+
+      const response = await fetch('/api/provider/transfer-elevenlabs-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          elevenlabs_conversation_id: elevenLabsConversationId
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        if (result.cached) {
+          console.log('[transfer_audio] ✅ Audio already cached in Supabase Storage - showing player');
+        } else {
+          console.log('[transfer_audio] ✅ Audio transferred from ElevenLabs to Supabase Storage - showing player');
+        }
+
+        // V17: Set AI audio URL (ElevenLabs is the AI speaking)
+        // Also set patient audio to the same URL since V17 records the full conversation
+        setAiAudioUrl(result.audioUrl);
+        setHasAiAudio(true);
+        setAiAudioLoading(false);
+
+        setAudioUrl(result.audioUrl);
+        setHasAudio(true);
+        setAudioLoading(false);
+      } else {
+        console.error('[transfer_audio] ❌ Transfer failed:', result.error);
+        setAudioLoading(false);
+        setAiAudioLoading(false);
+      }
+    } catch (error) {
+      console.error('[transfer_audio] ❌ Error transferring audio:', error);
+      setAudioLoading(false);
+    }
+  };
+
+  // Fetch audio from Supabase Storage (with ElevenLabs fallback)
+  // This function is called by the button click
+  const fetchElevenLabsAudio = async () => {
+    // Check if we have an ElevenLabs conversation ID (conv_XXXXX format)
+    if (!intakeData?.elevenLabsConversationId || !intakeData?.conversationId) {
+      setElevenLabsAudioError('No ElevenLabs conversation ID found. This conversation may have been created before the ElevenLabs ID tracking feature was added.');
+      return;
+    }
+
+    setElevenLabsAudioLoading(true);
+    setElevenLabsAudioError(null);
+
+    try {
+      console.log('[elevenlabs_fetch] 🔍 Fetching audio (cached or from ElevenLabs)...');
+      console.log('[elevenlabs_fetch] ElevenLabs conversation ID:', intakeData.elevenLabsConversationId);
+      console.log('[elevenlabs_fetch] Internal conversation ID:', intakeData.conversationId);
+
+      // Use transfer API which checks Supabase Storage first, then ElevenLabs
+      const response = await fetch('/api/provider/transfer-elevenlabs-audio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          conversation_id: intakeData.conversationId,
+          elevenlabs_conversation_id: intakeData.elevenLabsConversationId
+        })
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        // Provide helpful error message
+        let errorMsg = result.error || 'Failed to fetch audio';
+        if (result.details) {
+          errorMsg += `\n\nDetails: ${result.details}`;
+        }
+        throw new Error(errorMsg);
+      }
+
+      if (result.cached) {
+        console.log('[elevenlabs_fetch] ✅ Playing from Supabase Storage (cached)');
+      } else {
+        console.log('[elevenlabs_fetch] ✅ Fetched from ElevenLabs and cached to Supabase Storage');
+      }
+
+      console.log('[elevenlabs_fetch] 🎵 Audio URL:', result.audioUrl);
+
+      // Set the audio URL directly (no need to convert base64 - it's already in storage)
+      setElevenLabsAudioUrl(result.audioUrl);
+
+    } catch (error) {
+      console.error('[elevenlabs_fetch] ❌ Error:', error);
+      setElevenLabsAudioError(error instanceof Error ? error.message : 'Unknown error');
+    } finally {
+      setElevenLabsAudioLoading(false);
+    }
   };
 
   const fetchSummary = async (intakeId: string) => {
@@ -1195,6 +1321,57 @@ const ProviderIntakeView: React.FC = () => {
                   patientAudioUrl={audioUrl!}
                   aiAudioUrl={aiAudioUrl!}
                 />
+              </div>
+            )}
+
+            {/* ElevenLabs Direct Audio Fetch (for comparison) */}
+            {/* Only show button if audio is NOT already loaded (V17 auto-loads, so this becomes a fallback) */}
+            {intakeData?.conversationId && !hasAiAudio && (
+              <div className="border-t border-gray-200 pt-6 mt-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-2">Load Audio from ElevenLabs</h3>
+                <p className="text-sm text-gray-600 mb-4">
+                  Audio from this conversation is stored in ElevenLabs. Click to load it.
+                </p>
+
+                <button
+                  onClick={fetchElevenLabsAudio}
+                  disabled={elevenLabsAudioLoading}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {elevenLabsAudioLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Fetching from ElevenLabs...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Fetch Audio from ElevenLabs API
+                    </>
+                  )}
+                </button>
+
+                {elevenLabsAudioError && (
+                  <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+                    <p className="text-red-800 font-medium mb-1">Error</p>
+                    <p className="text-red-700 text-sm">{elevenLabsAudioError}</p>
+                  </div>
+                )}
+
+                {elevenLabsAudioUrl && (
+                  <div className="mt-4 bg-purple-50 border border-purple-200 rounded-lg p-4">
+                    <p className="text-purple-800 font-medium mb-3">✅ Audio fetched from ElevenLabs</p>
+                    <audio controls className="w-full">
+                      <source src={elevenLabsAudioUrl} />
+                      Your browser does not support the audio element.
+                    </audio>
+                    <p className="text-purple-700 text-xs mt-2">
+                      This is the complete conversation audio as provided by ElevenLabs. Compare with the combined chunks above to identify any differences.
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -72,6 +72,28 @@ export function useElevenLabsConversation() {
       // ✅ Use getState() for store access in callbacks
       const state = useElevenLabsStore.getState();
 
+      // Try to get ElevenLabs conversation ID before disconnect (backup method)
+      try {
+        if (conversation) {
+          const conv = conversation as { getId?: () => string };
+          let elevenLabsConvId: string | null = null;
+
+          if (typeof conv.getId === 'function') {
+            elevenLabsConvId = conv.getId();
+            window.console.log('[elevenlabs_conv_id] 🎯 Called getId() on disconnect, result:', elevenLabsConvId);
+          }
+
+          if (elevenLabsConvId && typeof elevenLabsConvId === 'string') {
+            window.console.log('[elevenlabs_conv_id] ✅ Found ID on disconnect (backup):', elevenLabsConvId);
+            localStorage.setItem('elevenlabs_conversation_id', elevenLabsConvId);
+          } else {
+            window.console.log('[elevenlabs_conv_id] ❌ No ID found on disconnect (expected - should have been captured at start)');
+          }
+        }
+      } catch (err) {
+        window.console.error('[elevenlabs_conv_id] Error on disconnect:', err);
+      }
+
       logV17('🔌 Disconnected from ElevenLabs agent', {
         agentId: currentAgentId,
         specialist: state.triageSession?.currentSpecialist
@@ -456,7 +478,7 @@ export function useElevenLabsConversation() {
   // }, [conversation, store.isConnected]);
 
   // Start session with specific specialist agent (with optional demo parameters and custom first message)
-  const startSession = useCallback(async (specialistType: string = 'triage', demoVoiceId?: string, demoPromptAppend?: string, customFirstMessage?: string) => {
+  const startSession = useCallback(async (specialistType: string = 'triage', demoVoiceId?: string, demoPromptAppend?: string, customFirstMessage?: string, internalConversationId?: string) => {
     try {
       setIsPreparing(true);
 
@@ -526,7 +548,8 @@ export function useElevenLabsConversation() {
 
       // 3. Start conversation with agent using WebRTC if available (v0.6.1+ feature)
       // Include custom first message override if provided
-      await conversation.startSession({
+      // ✅ IMPORTANT: startSession() returns the ElevenLabs conversation ID!
+      const elevenLabsConversationId = await conversation.startSession({
         agentId: agent.agent_id,
         connectionType: 'webrtc', // Use WebRTC for better audio quality
         userId: user?.uid || undefined, // Optional user tracking
@@ -539,10 +562,67 @@ export function useElevenLabsConversation() {
         })
       });
 
+      // ✅ Capture and store the ElevenLabs conversation ID immediately
+      if (elevenLabsConversationId && typeof elevenLabsConversationId === 'string') {
+        window.console.log('[elevenlabs_conv_id] ✅ Got ElevenLabs conversation ID from startSession():', elevenLabsConversationId);
+
+        // Store in localStorage
+        localStorage.setItem('elevenlabs_conversation_id', elevenLabsConversationId);
+
+        // Use passed internal conversation ID or fall back to store (should always have passed ID now)
+        const conversationIdToSave = internalConversationId || store.conversationId;
+
+        // Broadcast event for other components
+        window.dispatchEvent(new CustomEvent('elevenlabs-conversation-id', {
+          detail: {
+            conversationId: elevenLabsConversationId,
+            internalConversationId: conversationIdToSave
+          }
+        }));
+
+        // Save to database immediately if we have an internal conversation ID
+        if (conversationIdToSave) {
+          window.console.log('[elevenlabs_conv_id] 📝 Attempting to save to database...', {
+            internal_conversation_id: conversationIdToSave,
+            elevenlabs_conversation_id: elevenLabsConversationId,
+            source: internalConversationId ? 'passed_parameter' : 'store_state'
+          });
+
+          try {
+            const saveResponse = await fetch('/api/v17/save-elevenlabs-conversation-id', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                internal_conversation_id: conversationIdToSave,
+                elevenlabs_conversation_id: elevenLabsConversationId,
+                user_id: user?.uid
+              })
+            });
+
+            window.console.log('[elevenlabs_conv_id] 📡 API response status:', saveResponse.status);
+
+            if (saveResponse.ok) {
+              const result = await saveResponse.json();
+              window.console.log('[elevenlabs_conv_id] ✅ Saved to database successfully:', result);
+            } else {
+              const errorText = await saveResponse.text();
+              window.console.error('[elevenlabs_conv_id] ❌ Failed to save to database (HTTP', saveResponse.status, '):', errorText);
+            }
+          } catch (err) {
+            window.console.error('[elevenlabs_conv_id] ❌ Error calling save API:', err);
+          }
+        } else {
+          window.console.warn('[elevenlabs_conv_id] ⚠️ No internal conversation ID available (neither passed nor in store)');
+        }
+      } else {
+        window.console.warn('[elevenlabs_conv_id] ⚠️ startSession() did not return a conversation ID:', elevenLabsConversationId);
+      }
+
       logV17('✅ ElevenLabs session started successfully', {
         agentId: agent.agent_id,
         specialistType,
-        usedCustomFirstMessage: !!customFirstMessage
+        usedCustomFirstMessage: !!customFirstMessage,
+        elevenLabsConversationId
       });
 
       return agent.agent_id;
