@@ -43,8 +43,16 @@ export default function PatientIntakePage() {
   // Fetch existing intake data when component mounts
   useEffect(() => {
     const fetchExistingIntake = async () => {
+      if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+        console.log('[patient_intake] 🔍 Fetching existing intake data');
+        console.log('[patient_intake] User context:', { uid: user?.uid, email: user?.email });
+      }
+
       // Only fetch if user is authenticated or has an email
       if (!user?.uid && !user?.email) {
+        if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+          console.log('[patient_intake] ⚠️ No user context - skipping fetch');
+        }
         setIsLoading(false);
         return;
       }
@@ -57,11 +65,36 @@ export default function PatientIntakePage() {
           params.append('email', user.email);
         }
 
-        const response = await fetch(`/api/patient-intake/get?${params.toString()}`);
+        const url = `/api/patient-intake/get?${params.toString()}`;
+        if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+          console.log('[patient_intake] 📡 Fetching from:', url);
+        }
+
+        const response = await fetch(url);
         const result = await response.json();
+
+        if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+          console.log('[patient_intake] 📥 API Response:', {
+            status: response.status,
+            ok: response.ok,
+            success: result.success,
+            hasData: result.hasData,
+            dataKeys: result.data ? Object.keys(result.data) : null
+          });
+        }
 
         if (response.ok && result.success && result.hasData) {
           const intake = result.data;
+
+          if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+            console.log('[patient_intake] ✅ Found existing intake data:', {
+              fullLegalName: intake.full_legal_name,
+              email: intake.email,
+              phone: intake.phone,
+              state: intake.state,
+              availabilityLength: intake.availability?.length
+            });
+          }
 
           // Pre-populate form with existing data (don't show success screen)
           setFormData({
@@ -89,12 +122,23 @@ export default function PatientIntakePage() {
             availabilityOther: intake.availability_other || false,
             availabilityOtherText: intake.availability_other_text || '',
           });
+
+          if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+            console.log('[patient_intake] ✅ Form data populated successfully');
+          }
+        } else {
+          if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+            console.log('[patient_intake] ℹ️ No existing data found - using empty form');
+          }
         }
       } catch (error) {
-        console.error('Failed to fetch existing intake data:', error);
+        console.error('[patient_intake] ❌ Failed to fetch existing intake data:', error);
         // Continue with empty form on error
       } finally {
         setIsLoading(false);
+        if (process.env.NEXT_PUBLIC_ENABLE_PATIENT_INTAKE_LOGS === 'true') {
+          console.log('[patient_intake] ✅ Loading complete');
+        }
       }
     };
 

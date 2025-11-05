@@ -1325,9 +1325,9 @@ const ProviderIntakeView: React.FC = () => {
               </div>
             )}
 
-            {/* ElevenLabs Direct Audio Fetch (for comparison) */}
-            {/* Only show button if audio is NOT already loaded (V17 auto-loads, so this becomes a fallback) */}
-            {intakeData?.conversationId && !hasAiAudio && (
+            {/* ElevenLabs Direct Audio Fetch (for V17 ElevenLabs intakes only) */}
+            {/* Only show button if: 1) Has ElevenLabs conversation ID (V17), AND 2) Audio not loaded yet */}
+            {intakeData?.elevenLabsConversationId && !hasAiAudio && (
               <div className="border-t border-gray-200 pt-6 mt-6">
                 <h3 className="text-xl font-bold text-gray-800 mb-2">Load Audio from ElevenLabs</h3>
                 <p className="text-sm text-gray-600 mb-4">
