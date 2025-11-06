@@ -125,11 +125,6 @@ const ProviderDashboard: React.FC = () => {
 
             {/* New Patient Matches */}
             <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border p-6 relative flex flex-col">
-              <div className="absolute top-4 right-4">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200">
-                  0
-                </span>
-              </div>
               <div className="flex items-center mb-4">
                 <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900 rounded-full flex items-center justify-center">
                   <svg className="w-6 h-6 text-teal-600 dark:text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,14 +132,14 @@ const ProviderDashboard: React.FC = () => {
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold ml-3" style={{ color: 'var(--text-primary)' }}>
-                  New Patient Matches
+                  Patient Matches
                 </h3>
               </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-4 flex-grow">
-                View new patient intake recordings matched to your profile.
+                View patient intake recordings you&apos;ve accessed.
               </p>
               <button
-                onClick={() => alert('No new patient matches available')}
+                onClick={() => router.push('/dashboard/provider/patient-matches')}
                 className="inline-flex items-center px-4 py-2 bg-teal-600 text-white text-sm font-medium rounded-lg hover:bg-teal-700 transition-colors"
               >
                 View Matches
@@ -180,7 +175,52 @@ const ProviderDashboard: React.FC = () => {
                       alert('Please enter an access code');
                       return;
                     }
-                    router.push(`/dashboard/provider/intake/${accessCode}`);
+
+                    // First validate the code
+                    try {
+                      const response = await fetch('/api/provider/validate-intake-code', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          accessCode: accessCode.trim(),
+                          providerUserId: user?.uid
+                        })
+                      });
+
+                      const result = await response.json();
+
+                      if (!result.success || !result.valid) {
+                        alert(result.error || 'Invalid access code');
+                        return;
+                      }
+
+                      // Code is valid - save it to the list
+                      const saveResponse = await fetch('/api/provider/save-access-code', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          accessCode: accessCode.trim(),
+                          providerUserId: user?.uid,
+                          intakeId: result.intakeId
+                        })
+                      });
+
+                      const saveResult = await saveResponse.json();
+                      if (!saveResult.success) {
+                        console.error('Failed to save access code:', saveResult.error);
+                        // Don't block navigation if save fails
+                      }
+
+                      // Navigate to the intake page
+                      router.push(`/dashboard/provider/intake/${accessCode.trim()}`);
+                    } catch (error) {
+                      console.error('Error validating access code:', error);
+                      alert('Failed to validate access code. Please try again.');
+                    }
                   }}
                   disabled={!accessCode.trim()}
                   className="px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
