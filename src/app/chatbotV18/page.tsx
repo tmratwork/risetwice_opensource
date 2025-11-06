@@ -132,6 +132,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
   const [cancelButtonPressed, setCancelButtonPressed] = useState(false);
   const [uploadButtonPressed, setUploadButtonPressed] = useState(false);
 
+  // V18 Voice Mode: Upload/processing state
+  const [isUploading, setIsUploading] = useState(false);
+
   // Feedback modal state
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [feedbackMessageId, setFeedbackMessageId] = useState<string | null>(null);
@@ -1186,6 +1189,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       return;
     }
 
+    // Start uploading state (shows spinner)
+    setIsUploading(true);
+
     // Flash green feedback
     setUploadButtonPressed(true);
     setTimeout(() => setUploadButtonPressed(false), 150);
@@ -1246,6 +1252,9 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
     if (success) {
       console.log('[V18] Message sent successfully');
 
+      // Reset uploading state
+      setIsUploading(false);
+
       // V18 UI: Hide audio controls and mute microphone
       setShowAudioControls(false);
       // Only toggle mute if currently unmuted
@@ -1254,6 +1263,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
       }
     } else {
       console.error('[V18] Failed to send message');
+      // Reset uploading state on failure
+      setIsUploading(false);
     }
   }, [isConnected, sendMessage, isMuted, toggleMute]);
 
@@ -1840,32 +1851,34 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
             {/* Left spacer for centering */}
             <div style={{ flex: 1 }} />
 
-            {/* Cancel Button */}
-            <button
-              type="button"
-              onClick={handleCancelRecording}
-              className="cancel-button"
-              style={{
-                marginLeft: '16px',
-                backgroundColor: cancelButtonPressed ? '#ef4444' : '#e5e7eb',
-                border: cancelButtonPressed ? '2px solid #dc2626' : '2px solid #9ca3af',
-                borderRadius: '50%',
-                width: '48px',
-                height: '48px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
-                color: cancelButtonPressed ? '#ffffff' : '#374151',
-                transition: 'all 0.15s ease'
-              }}
-              aria-label="Cancel voice transcript"
-            >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </button>
+            {/* Cancel Button - Hidden when uploading */}
+            {!isUploading && (
+              <button
+                type="button"
+                onClick={handleCancelRecording}
+                className="cancel-button"
+                style={{
+                  marginLeft: '16px',
+                  backgroundColor: cancelButtonPressed ? '#ef4444' : '#e5e7eb',
+                  border: cancelButtonPressed ? '2px solid #dc2626' : '2px solid #9ca3af',
+                  borderRadius: '50%',
+                  width: '48px',
+                  height: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
+                  color: cancelButtonPressed ? '#ffffff' : '#374151',
+                  transition: 'all 0.15s ease'
+                }}
+                aria-label="Cancel voice transcript"
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </button>
+            )}
 
             {/* Audio Wave Animation */}
             <div className="audio-wave-container" style={{ marginLeft: '16px', marginRight: '16px', width: '200px' }}>
@@ -1877,6 +1890,7 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
               type="button"
               onClick={handleSendRecording}
               className="upload-button-new"
+              disabled={isUploading}
               style={{
                 backgroundColor: uploadButtonPressed ? '#7ca995' : (pendingTranscript ? '#9dbbac' : '#ffffff'),
                 border: uploadButtonPressed ? '2px solid #6b9985' : (pendingTranscript ? '2px solid #7ca995' : '2px solid #9dbbac'),
@@ -1886,16 +1900,43 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                cursor: 'pointer',
+                cursor: isUploading ? 'default' : 'pointer',
                 boxShadow: '0 3px 8px rgba(0, 0, 0, 0.2)',
                 color: uploadButtonPressed ? '#ffffff' : (pendingTranscript ? '#ffffff' : '#9dbbac'),
                 transition: 'all 0.15s ease'
               }}
-              aria-label="Send message"
+              aria-label={isUploading ? "Processing message" : "Send message"}
             >
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              {isUploading ? (
+                // Circular spinner
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                  style={{
+                    animation: 'spin 1s linear infinite'
+                  }}
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeDasharray="56.5"
+                    strokeDashoffset="14"
+                    opacity="0.8"
+                  />
+                </svg>
+              ) : (
+                // Up arrow
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                  <path d="M12 19V5M5 12l7-7 7 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
             </button>
 
             {/* Right spacer for centering */}
@@ -1914,6 +1955,8 @@ const ChatBotV16Component = memo(function ChatBotV16Component({
                   currentMuteState: isMuted,
                   showAudioControls: showAudioControls
                 });
+                // Reset uploading state for new recording
+                setIsUploading(false);
                 setShowAudioControls(true);
                 console.log('[V18] Set showAudioControls to true');
                 // Only toggle mute if currently muted
