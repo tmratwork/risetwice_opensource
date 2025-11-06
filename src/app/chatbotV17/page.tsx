@@ -726,7 +726,7 @@ export default function ChatBotV17Page() {
             <div className="mt-0 mb-6">
               <div className="w-full h-px bg-gray-300 mb-6"></div>
               <div className="border border-green-700 rounded-lg text-sm text-gray-700 text-center px-6 py-4 leading-relaxed" style={{ backgroundColor: 'var(--bg-primary)' }}>
-                Our therapy match software is currently being pilot tested and we are building live, in public. Some of the profiles listed are for demonstration purposes only during this initial testing phase.
+                Therapists can review your conversations with their AI Previews to assess whether they would be a good fit for you. Our therapy match software is currently being pilot tested and we are building live, in public. Some of the profiles listed are for demonstration purposes only during this initial testing phase.
               </div>
               <div className="w-full h-px bg-gray-300 mt-6"></div>
             </div>
