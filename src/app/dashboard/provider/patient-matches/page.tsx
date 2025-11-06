@@ -105,7 +105,7 @@ const PatientMatchesPage: React.FC = () => {
               <h1 className="text-3xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>
                 Patient Matches
               </h1>
-              <p className="text-gray-600">Access codes you've entered</p>
+              <p className="text-gray-600">Access codes you&apos;ve entered</p>
             </div>
           </div>
 
