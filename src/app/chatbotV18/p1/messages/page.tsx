@@ -30,6 +30,7 @@ const PatientMessagesPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [expandedIntakes, setExpandedIntakes] = useState<Set<string>>(new Set());
 
   // Recording state
   const [recordingForConvo, setRecordingForConvo] = useState<string | null>(null);
@@ -224,6 +225,18 @@ const PatientMessagesPage: React.FC = () => {
     return date.toLocaleDateString();
   };
 
+  const toggleIntakeExpand = (intakeId: string) => {
+    setExpandedIntakes(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(intakeId)) {
+        newSet.delete(intakeId);
+      } else {
+        newSet.add(intakeId);
+      }
+      return newSet;
+    });
+  };
+
   if (authLoading || loading) {
     return (
       <>
@@ -263,7 +276,7 @@ const PatientMessagesPage: React.FC = () => {
   return (
     <>
       <Header />
-      <div className="min-h-screen" style={{ backgroundColor: '#c1d7ca', paddingTop: '80px', paddingBottom: '80px' }}>
+      <div className="fixed inset-0 overflow-y-auto" style={{ backgroundColor: '#c1d7ca', paddingTop: '80px', paddingBottom: '80px' }}>
         <div className="max-w-4xl mx-auto px-4 py-8">
           {/* Header */}
           <div className="mb-6 flex items-center justify-between">
@@ -300,19 +313,38 @@ const PatientMessagesPage: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-6">
-              {conversations.map((convo) => (
-                <div key={convo.intakeId} className="bg-white rounded-lg shadow-sm border p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-gray-800">
-                      Intake #{convo.accessCode}
-                    </h3>
-                    <span className="text-sm text-gray-600">
-                      {convo.messages.length} message{convo.messages.length !== 1 ? 's' : ''}
-                    </span>
-                  </div>
+              {conversations.map((convo) => {
+                const isExpanded = expandedIntakes.has(convo.intakeId);
+                return (
+                  <div key={convo.intakeId} className="bg-white rounded-lg shadow-sm border">
+                    {/* Collapsible Header */}
+                    <button
+                      onClick={() => toggleIntakeExpand(convo.intakeId)}
+                      className="w-full flex items-center justify-between p-6 hover:bg-gray-50 transition-colors"
+                    >
+                      <h3 className="text-lg font-semibold text-gray-800">
+                        Intake #{convo.accessCode}
+                      </h3>
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm text-gray-600">
+                          {convo.messages.length} message{convo.messages.length !== 1 ? 's' : ''}
+                        </span>
+                        <svg
+                          className={`w-5 h-5 text-gray-600 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </button>
 
-                  {/* Message Thread */}
-                  <div className="space-y-4 mb-6">
+                    {/* Collapsible Content */}
+                    {isExpanded && (
+                      <div className="px-6 pb-6">
+                        {/* Message Thread */}
+                        <div className="space-y-4 mb-6">
                     {convo.messages.map((msg) => (
                       <div
                         key={msg.id}
@@ -349,62 +381,65 @@ const PatientMessagesPage: React.FC = () => {
                         <p className="text-xs text-gray-600 mt-1">Duration: {formatTime(msg.durationSeconds)}</p>
                       </div>
                     ))}
-                  </div>
+                        </div>
 
-                  {/* Reply Section */}
-                  {recordingForConvo !== convo.intakeId ? (
-                    <button
-                      onClick={() => startRecording(convo.intakeId)}
-                      className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
-                    >
-                      <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                      </svg>
-                      Record Reply
-                    </button>
-                  ) : (
-                    <div className="space-y-3">
-                      {!recordedAudioUrl ? (
-                        <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg">
-                          <div className="flex items-center gap-2">
-                            <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-                            <span className="text-gray-800 font-medium">Recording: {formatTime(recordingTime)}</span>
-                          </div>
+                        {/* Reply Section */}
+                        {recordingForConvo !== convo.intakeId ? (
                           <button
-                            onClick={stopRecording}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                            onClick={() => startRecording(convo.intakeId)}
+                            className="w-full px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center justify-center gap-2"
                           >
-                            Stop
+                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
+                            </svg>
+                            Record Reply
                           </button>
-                        </div>
-                      ) : (
-                        <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                          <p className="text-green-800 font-medium mb-2">Preview ({formatTime(recordingTime)})</p>
-                          <audio controls className="w-full mb-3">
-                            <source src={recordedAudioUrl} type={recordedAudioBlob?.type} />
-                          </audio>
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => uploadReply(convo)}
-                              disabled={isUploading}
-                              className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
-                            >
-                              {isUploading ? 'Sending...' : 'Send Reply'}
-                            </button>
-                            <button
-                              onClick={cancelRecording}
-                              disabled={isUploading}
-                              className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
-                            >
-                              Cancel
-                            </button>
+                        ) : (
+                          <div className="space-y-3">
+                            {!recordedAudioUrl ? (
+                              <div className="flex items-center justify-between p-4 bg-red-50 border border-red-200 rounded-lg">
+                                <div className="flex items-center gap-2">
+                                  <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
+                                  <span className="text-gray-800 font-medium">Recording: {formatTime(recordingTime)}</span>
+                                </div>
+                                <button
+                                  onClick={stopRecording}
+                                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                                >
+                                  Stop
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                                <p className="text-green-800 font-medium mb-2">Preview ({formatTime(recordingTime)})</p>
+                                <audio controls className="w-full mb-3">
+                                  <source src={recordedAudioUrl} type={recordedAudioBlob?.type} />
+                                </audio>
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() => uploadReply(convo)}
+                                    disabled={isUploading}
+                                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                  >
+                                    {isUploading ? 'Sending...' : 'Send Reply'}
+                                  </button>
+                                  <button
+                                    onClick={cancelRecording}
+                                    disabled={isUploading}
+                                    className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 disabled:opacity-50"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
