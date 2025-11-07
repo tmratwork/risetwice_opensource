@@ -93,7 +93,7 @@ export default function FinishedPage() {
   };
 
   return (
-    <div className="w-full h-full flex items-center justify-center p-6 bg-sage-200 dark:bg-[#131314]">
+    <div className="w-full h-full flex items-center justify-center p-6">
       <div className="w-full max-w-2xl">
         {/* Finished Title */}
         <h1 className="text-5xl font-bold text-center mb-8 text-gray-800 dark:text-gray-100">
