@@ -848,27 +848,38 @@ const ProviderIntakeView: React.FC = () => {
     }
   };
 
-  const fetchSummary = async (intakeId: string) => {
+  const fetchSummary = async (intakeId: string, retryCount = 0) => {
+    const MAX_RETRIES = 40; // 40 retries * 3 seconds = 2 minutes max wait
+
     try {
+      console.log(`[intake_summary] 🔍 Polling summary (retry ${retryCount}/${MAX_RETRIES})`);
       const response = await fetch(`/api/provider/intake-summary?intake_id=${intakeId}`);
       const result = await response.json();
 
       if (result.success && result.summary) {
         // Summary exists in database - use it
+        console.log('[intake_summary] ✅ Summary loaded successfully');
         setSummary(result.summary);
         setSummaryLoading(false);
       } else if (result.status === 'pending_transcript') {
+        // Check if max retries reached
+        if (retryCount >= MAX_RETRIES) {
+          console.warn('[intake_summary] ⏱️ Max retries reached - stopping polling');
+          setSummaryLoading(false);
+          return;
+        }
+
         // Summary waiting for transcript - keep loading state and poll
-        console.log('Summary pending transcript:', result.message);
-        // Poll again in 3 seconds
-        setTimeout(() => fetchSummary(intakeId), 3000);
+        console.log(`[intake_summary] ⏳ Summary pending transcript: ${result.message}`);
+        // Poll again in 3 seconds with incremented retry count
+        setTimeout(() => fetchSummary(intakeId, retryCount + 1), 3000);
       } else if (!result.success) {
         // API error - stop loading
-        console.error('Failed to fetch summary:', result.error);
+        console.error('[intake_summary] ❌ Failed to fetch summary:', result.error);
         setSummaryLoading(false);
       }
     } catch (error) {
-      console.error('Error fetching summary:', error);
+      console.error('[intake_summary] ❌ Error fetching summary:', error);
       setSummaryLoading(false);
     }
   };

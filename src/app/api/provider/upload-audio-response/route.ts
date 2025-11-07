@@ -92,6 +92,56 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Send notifications to patient (email and SMS)
+    // Note: We send these asynchronously and don't block the response
+    // Failures in notification sending won't affect the upload success
+    if (finalPatientUserId) {
+      // Use generic therapist name (provider name not available without firebase-admin)
+      const therapistName = 'A therapist';
+
+      // Send email notification (non-blocking, but with proper logging)
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/patient/notify-therapist-message-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientUserId: finalPatientUserId,
+          therapistName,
+        }),
+      })
+        .then(async (response) => {
+          const result = await response.json();
+          if (response.ok) {
+            console.log('✅ Email notification sent successfully:', result);
+          } else {
+            console.error('❌ Email notification failed:', result);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Failed to send email notification (network error):', error);
+        });
+
+      // Send SMS notification (non-blocking, but with proper logging)
+      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/patient/notify-therapist-message-sms`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          patientUserId: finalPatientUserId,
+          therapistName,
+        }),
+      })
+        .then(async (response) => {
+          const result = await response.json();
+          if (response.ok) {
+            console.log('✅ SMS notification sent successfully:', result);
+          } else {
+            console.error('❌ SMS notification failed:', result);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Failed to send SMS notification (network error):', error);
+        });
+    }
+
     return NextResponse.json({
       success: true,
       recording: {

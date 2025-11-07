@@ -19,35 +19,39 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Get the most recent intake record for this user
-    const { data: intakeData, error: fetchError } = await supabase
+    // Get user's phone from patient_details (single source of truth)
+    const { data: patientDetails, error: detailsError } = await supabase
+      .from('patient_details')
+      .select('phone')
+      .eq('user_id', userId)
+      .single();
+
+    if (detailsError && detailsError.code !== 'PGRST116') {
+      console.error('Supabase fetch error (patient_details):', detailsError);
+      return NextResponse.json(
+        { error: 'Failed to fetch patient details', details: detailsError.message },
+        { status: 500 }
+      );
+    }
+
+    // Get notification preferences from most recent intake record
+    const { data: intakeData } = await supabase
       .from('patient_intake')
-      .select('phone, notification_phone, email_notifications, sms_notifications')
+      .select('notification_phone, email_notifications, sms_notifications')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
 
-    if (fetchError) {
-      console.error('Supabase fetch error:', fetchError);
-      return NextResponse.json(
-        { error: 'Failed to fetch intake record', details: fetchError.message },
-        { status: 500 }
-      );
-    }
+    // Return notification_phone if set, otherwise fall back to patient_details phone
+    const phone = intakeData?.notification_phone || patientDetails?.phone || '';
+    const emailNotifications = intakeData?.email_notifications ?? false;
+    const smsNotifications = intakeData?.sms_notifications ?? false;
 
-    if (!intakeData) {
-      return NextResponse.json(
-        { error: 'No intake record found for this user' },
-        { status: 404 }
-      );
-    }
-
-    // Return notification_phone if available, otherwise fall back to phone
     return NextResponse.json({
-      phone: intakeData.notification_phone || intakeData.phone || '',
-      emailNotifications: intakeData.email_notifications ?? true,
-      smsNotifications: intakeData.sms_notifications ?? true,
+      phone,
+      emailNotifications,
+      smsNotifications,
     });
 
   } catch (error) {

@@ -10,8 +10,8 @@ export default function FinishedPage() {
   const router = useRouter();
 
   const [preferences, setPreferences] = useState({
-    emailNotifications: true,
-    smsNotifications: true,
+    emailNotifications: false,
+    smsNotifications: false,
     phone: '',
   });
 
@@ -33,8 +33,8 @@ export default function FinishedPage() {
         if (response.ok) {
           const data = await response.json();
           setPreferences({
-            emailNotifications: data.emailNotifications ?? true,
-            smsNotifications: data.smsNotifications ?? true,
+            emailNotifications: data.emailNotifications ?? false,
+            smsNotifications: data.smsNotifications ?? false,
             phone: data.phone || '',
           });
         }
