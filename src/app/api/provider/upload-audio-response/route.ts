@@ -3,6 +3,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendEmailNotification } from '@/app/api/patient/notify-therapist-message-email/route';
+import { sendSMSNotification } from '@/app/api/patient/notify-therapist-message-sms/route';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -93,53 +95,42 @@ export async function POST(request: NextRequest) {
     }
 
     // Send notifications to patient (email and SMS)
-    // Note: We send these asynchronously and don't block the response
-    // Failures in notification sending won't affect the upload success
+    // Use direct function imports for reliability (no HTTP round-trip)
+    // Wait for completion to ensure notifications are sent before serverless termination
     if (finalPatientUserId) {
-      // Use generic therapist name (provider name not available without firebase-admin)
       const therapistName = 'A therapist';
 
-      // Send email notification (non-blocking, but with proper logging)
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/patient/notify-therapist-message-email`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patientUserId: finalPatientUserId,
-          therapistName,
-        }),
-      })
-        .then(async (response) => {
-          const result = await response.json();
-          if (response.ok) {
-            console.log('✅ Email notification sent successfully:', result);
-          } else {
-            console.error('❌ Email notification failed:', result);
-          }
-        })
-        .catch(error => {
-          console.error('❌ Failed to send email notification (network error):', error);
-        });
+      console.log('[upload-audio] 📬 Sending notifications to patient:', {
+        patientUserId: finalPatientUserId,
+        therapistName
+      });
 
-      // Send SMS notification (non-blocking, but with proper logging)
-      fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/patient/notify-therapist-message-sms`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          patientUserId: finalPatientUserId,
-          therapistName,
-        }),
-      })
-        .then(async (response) => {
-          const result = await response.json();
-          if (response.ok) {
-            console.log('✅ SMS notification sent successfully:', result);
-          } else {
-            console.error('❌ SMS notification failed:', result);
-          }
-        })
-        .catch(error => {
-          console.error('❌ Failed to send SMS notification (network error):', error);
-        });
+      // Use Promise.allSettled to send both notifications and handle failures gracefully
+      const [emailResult, smsResult] = await Promise.allSettled([
+        sendEmailNotification(finalPatientUserId, therapistName),
+        sendSMSNotification(finalPatientUserId, therapistName)
+      ]);
+
+      // Log results but don't fail the upload
+      if (emailResult.status === 'fulfilled') {
+        if (emailResult.value.skipped) {
+          console.log('[upload-audio] ⚠️ Email notification skipped:', emailResult.value.reason);
+        } else {
+          console.log('[upload-audio] ✅ Email notification sent:', emailResult.value);
+        }
+      } else {
+        console.error('[upload-audio] ❌ Email notification failed:', emailResult.reason);
+      }
+
+      if (smsResult.status === 'fulfilled') {
+        if (smsResult.value.skipped) {
+          console.log('[upload-audio] ⚠️ SMS notification skipped:', smsResult.value.reason);
+        } else {
+          console.log('[upload-audio] ✅ SMS notification sent:', smsResult.value);
+        }
+      } else {
+        console.error('[upload-audio] ❌ SMS notification failed:', smsResult.reason);
+      }
     }
 
     return NextResponse.json({

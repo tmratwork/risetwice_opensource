@@ -7,13 +7,12 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-export async function POST(request: NextRequest) {
+// Extract core notification logic into standalone function
+export async function sendEmailNotification(
+  patientUserId: string,
+  therapistName: string
+): Promise<{ success: boolean; emailId?: string; skipped?: boolean; reason?: string; error?: string }> {
   try {
-    const {
-      patientUserId,
-      therapistName,
-    } = await request.json();
-
     console.log('[notify-email] 📧 Email notification request received:', {
       patientUserId,
       therapistName
@@ -21,12 +20,12 @@ export async function POST(request: NextRequest) {
 
     if (!patientUserId) {
       console.error('[notify-email] ❌ Missing patientUserId');
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      throw new Error('Missing required field: patientUserId');
     }
 
     if (!process.env.RESEND_API_KEY) {
-      console.error('RESEND_API_KEY not configured');
-      return NextResponse.json({ error: 'Email service not configured' }, { status: 500 });
+      console.error('[notify-email] ❌ RESEND_API_KEY not configured');
+      throw new Error('Email service not configured');
     }
 
     // Check notification preferences
@@ -44,11 +43,11 @@ export async function POST(request: NextRequest) {
         patientUserId,
         fetchError: fetchError?.message
       });
-      return NextResponse.json({
+      return {
         success: true,
         skipped: true,
         reason: 'No intake record found'
-      });
+      };
     }
 
     console.log('[notify-email] 📋 Intake data found:', {
@@ -59,11 +58,11 @@ export async function POST(request: NextRequest) {
     // Skip if email notifications are disabled
     if (!intakeData.email_notifications) {
       console.log('[notify-email] ⚠️ Email notifications disabled for user:', patientUserId);
-      return NextResponse.json({
+      return {
         success: true,
         skipped: true,
         reason: 'Email notifications disabled'
-      });
+      };
     }
 
     // Get patient email from patient_details (single source of truth)
@@ -85,7 +84,7 @@ export async function POST(request: NextRequest) {
 
     if (!patientEmail) {
       console.error('[notify-email] ❌ No email found for user:', patientUserId);
-      return NextResponse.json({ error: 'Patient email not found' }, { status: 404 });
+      throw new Error('Patient email not found');
     }
 
     // Create the email HTML content
@@ -135,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[notify-email] ❌ Resend error:', error);
-      return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
+      throw new Error(`Failed to send email: ${error.message}`);
     }
 
     console.log('[notify-email] ✅ Email sent successfully:', {
@@ -144,13 +143,33 @@ export async function POST(request: NextRequest) {
       emailId: data?.id
     });
 
-    return NextResponse.json({
+    return {
       success: true,
       emailId: data?.id
-    });
+    };
 
   } catch (error) {
-    console.error('Error in notify-therapist-message-email:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    console.error('[notify-email] ❌ Error in sendEmailNotification:', error);
+    throw error;
+  }
+}
+
+// Keep route handler for external API access
+export async function POST(request: NextRequest) {
+  try {
+    const {
+      patientUserId,
+      therapistName,
+    } = await request.json();
+
+    const result = await sendEmailNotification(patientUserId, therapistName);
+    return NextResponse.json(result);
+
+  } catch (error) {
+    console.error('[notify-email] ❌ POST handler error:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Internal server error' },
+      { status: 500 }
+    );
   }
 }
