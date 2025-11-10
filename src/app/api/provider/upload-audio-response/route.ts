@@ -3,8 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import { sendEmailNotification } from '@/app/api/patient/notify-therapist-message-email/route';
-import { sendSMSNotification } from '@/app/api/patient/notify-therapist-message-sms/route';
+import { sendEmailNotification, sendSMSNotification } from '@/lib/notifications';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
