@@ -134,6 +134,9 @@ export async function POST(request: NextRequest) {
       console.log(`[voice_cloning] 🔄 Found ${sessionsNeedingCombination.length} sessions that need chunk combining`);
       console.log(`[voice_cloning] 🔧 Triggering automatic chunk combination...`);
 
+      // Track successfully combined session IDs
+      const successfullyCombinedIds: string[] = [];
+
       // Combine chunks for sessions that need it
       for (const session of sessionsNeedingCombination) {
         try {
@@ -158,26 +161,69 @@ export async function POST(request: NextRequest) {
           session.voice_recording_url = combineResult.combined_audio_url;
           session.voice_recording_uploaded = true;
 
+          // Track this session as successfully combined
+          successfullyCombinedIds.push(session.id);
+
         } catch (error) {
           console.log(`[voice_cloning] ❌ Error combining chunks for session #${session.session_number}:`, error);
           continue;
         }
       }
+
+      // Log chunk combining results
+      console.log(`[voice_cloning] 📊 Chunk combining complete: ${successfullyCombinedIds.length}/${sessionsNeedingCombination.length} successful`);
+      if (successfullyCombinedIds.length > 0) {
+        console.log(`[voice_cloning] ✅ Successfully combined session IDs: ${successfullyCombinedIds.join(', ')}`);
+      }
     }
 
-    // Now get all sessions with combined audio (including newly combined ones)
-    const sessions = sessionsWithAudio.filter(s => s.voice_recording_url);
+    // CRITICAL FIX: Re-query database to get fresh data with updated voice_recording_url values
+    // The in-memory updates above don't persist to the original query result
+    console.log(`[voice_cloning] 🔄 Re-querying database to get updated session data...`);
+    const { data: refreshedSessions, error: refreshError } = await supabase
+      .from('s2_case_simulation_sessions')
+      .select('id, duration_seconds, voice_recording_url, created_at, session_number')
+      .eq('therapist_profile_id', therapistProfileId)
+      .not('duration_seconds', 'is', null)
+      .eq('status', 'completed')
+      .not('voice_recording_url', 'is', null)
+      .order('created_at', { ascending: false });
+
+    if (refreshError) {
+      console.log(`[voice_cloning] ❌ Failed to refresh session data: ${refreshError.message}`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'SESSION_REFRESH_FAILED',
+          message: `Failed to refresh session data: ${refreshError.message}`
+        },
+        { status: 500 }
+      );
+    }
+
+    // Now get all sessions with combined audio (from fresh database query)
+    const sessions = refreshedSessions || [];
 
     console.log(`[voice_cloning] 📊 Using ${sessions.length} sessions with combined audio`);
 
+    // Log session details for debugging
+    if (sessions.length > 0) {
+      console.log(`[voice_cloning] 📋 Session breakdown:`);
+      sessions.forEach((s, idx) => {
+        const durationMin = Math.floor(s.duration_seconds / 60);
+        const durationSec = s.duration_seconds % 60;
+        console.log(`[voice_cloning]   ${idx + 1}. Session #${s.session_number}: ${durationMin}m ${durationSec}s - ${new Date(s.created_at).toLocaleDateString()}`);
+      });
+    }
+
     if (sessions.length === 0) {
-      const stillNeedingCombination = sessionsNeedingCombination.filter(s => !s.voice_recording_url);
-      console.log(`[voice_cloning] ❌ No sessions with combined audio available`);
+      console.log(`[voice_cloning] ❌ No sessions with combined audio available after database refresh`);
+      console.log(`[voice_cloning] 🔍 Debug: sessionsNeedingCombination had ${sessionsNeedingCombination.length} sessions`);
       return NextResponse.json(
         {
           success: false,
           error: 'NO_COMBINED_AUDIO',
-          message: `Found ${stillNeedingCombination.length} sessions with chunks, but audio combination failed. Please check logs and try again.`
+          message: `No sessions with combined audio found after refresh. Audio combination may have failed.`
         },
         { status: 400 }
       );
@@ -186,6 +232,14 @@ export async function POST(request: NextRequest) {
     // Check if re-cloning is needed
     const previousSessionCount = existingProfile.voice_cloning_session_count || 0;
     const currentSessionCount = sessions.length;
+
+    console.log(`[voice_cloning] 🔍 Re-cloning decision check:`);
+    console.log(`[voice_cloning]   - Has existing voice: ${!!existingProfile.cloned_voice_id ? 'YES' : 'NO'}`);
+    console.log(`[voice_cloning]   - Existing voice ID: ${existingProfile.cloned_voice_id || 'none'}`);
+    console.log(`[voice_cloning]   - Previous session count: ${previousSessionCount}`);
+    console.log(`[voice_cloning]   - Current session count: ${currentSessionCount}`);
+    console.log(`[voice_cloning]   - New sessions available: ${currentSessionCount - previousSessionCount}`);
+    console.log(`[voice_cloning]   - Should re-clone: ${existingProfile.cloned_voice_id && currentSessionCount > previousSessionCount ? 'YES ✅' : 'NO ❌'}`);
 
     if (existingProfile.cloned_voice_id && currentSessionCount <= previousSessionCount) {
       console.log(`[voice_cloning] ⏭️ Voice cloning skipped: voice already exists and no new audio material`);

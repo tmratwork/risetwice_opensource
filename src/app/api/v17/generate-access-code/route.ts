@@ -66,28 +66,6 @@ export async function POST(req: Request) {
       console.log(`${logPrefix} Found existing patient_details - returning user, id: ${patientDetailsId}`);
     }
 
-    // Fetch phone/email from patient_details (single source of truth)
-    let phoneNumber = null;
-    let emailAddress = null;
-
-    if (patientDetailsId) {
-      // For returning users, fetch from patient_details
-      const { data: patientDetailsData } = await supabaseAdmin
-        .from('patient_details')
-        .select('phone, email')
-        .eq('id', patientDetailsId)
-        .single();
-
-      if (patientDetailsData) {
-        phoneNumber = patientDetailsData.phone;
-        emailAddress = patientDetailsData.email;
-        console.log(`${logPrefix} 📞 Copied phone/email from patient_details:`, {
-          phone: phoneNumber,
-          email: emailAddress
-        });
-      }
-    }
-
     // ALWAYS create NEW intake_session record - never update existing ones
     // Each conversation gets its own record with unique access code
     const { error: insertError } = await supabaseAdmin
@@ -97,9 +75,7 @@ export async function POST(req: Request) {
         user_id: userId,
         access_code: accessCode,
         conversation_id: conversationId,
-        status: 'pending',
-        phone: phoneNumber,
-        email: emailAddress
+        status: 'pending'
       });
 
     if (insertError) {
