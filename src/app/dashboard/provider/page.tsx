@@ -17,8 +17,67 @@ const ProviderDashboard: React.FC = () => {
   const [, setUserRole] = useState<UserRole | null>(null);
   const [aiPreviewStatus, setAiPreviewStatus] = useState<string | null>(null);
   const [aiPreviewGeneratedAt, setAiPreviewGeneratedAt] = useState<string | null>(null);
+  const [aiPreviewCurrentStep, setAiPreviewCurrentStep] = useState<string | null>(null);
+  const [aiPreviewStepNumber, setAiPreviewStepNumber] = useState<number>(0);
+  const [aiPreviewTotalSteps, setAiPreviewTotalSteps] = useState<number>(6);
+  const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  const [pollingStartTime, setPollingStartTime] = useState<number | null>(null);
+  const [pollingTimedOut, setPollingTimedOut] = useState<boolean>(false);
   const [accessCode, setAccessCode] = useState<string>('');
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
+
+  // Poll for AI Preview job status with 20-minute timeout
+  const pollAiPreviewStatus = async () => {
+    if (!user?.uid) return;
+
+    // Check if 20 minutes have elapsed
+    if (pollingStartTime) {
+      const elapsedMinutes = (Date.now() - pollingStartTime) / 1000 / 60;
+      if (elapsedMinutes >= 20) {
+        console.log('[ai_preview_polling] 🛑 20-minute timeout reached, stopping polling');
+        if (pollingInterval) {
+          clearInterval(pollingInterval);
+          setPollingInterval(null);
+        }
+        setPollingTimedOut(true);
+        return;
+      }
+    }
+
+    try {
+      const response = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
+      const data = await response.json();
+
+      if (data.success && data.profile) {
+        const status = data.profile.ai_preview_status || 'not_started';
+        setAiPreviewStatus(status);
+        setAiPreviewGeneratedAt(data.profile.ai_preview_generated_at);
+
+        // Get job details if processing or pending
+        if (status === 'processing' || status === 'pending') {
+          // Fetch job details to get current step
+          const jobResponse = await fetch(`/api/s2/ai-preview-job-status?userId=${user.uid}`);
+          const jobData = await jobResponse.json();
+
+          if (jobData.success && jobData.job) {
+            setAiPreviewCurrentStep(jobData.job.current_step);
+            setAiPreviewStepNumber(jobData.job.current_step_number || 0);
+            setAiPreviewTotalSteps(jobData.job.total_steps || 6);
+          }
+        } else if (status === 'completed' || status === 'failed') {
+          // Stop polling when job is completed or failed
+          console.log(`[ai_preview_polling] 🛑 Job ${status}, stopping polling`);
+          if (pollingInterval) {
+            clearInterval(pollingInterval);
+            setPollingInterval(null);
+          }
+          setPollingStartTime(null);
+        }
+      }
+    } catch (error) {
+      console.error('[ai_preview_polling] Error fetching status:', error);
+    }
+  };
 
   useEffect(() => {
     async function checkAccess() {
@@ -43,8 +102,22 @@ const ProviderDashboard: React.FC = () => {
         const response = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
         const data = await response.json();
         if (data.success && data.profile) {
-          setAiPreviewStatus(data.profile.ai_preview_status || 'not_started');
+          const status = data.profile.ai_preview_status || 'not_started';
+          setAiPreviewStatus(status);
           setAiPreviewGeneratedAt(data.profile.ai_preview_generated_at);
+
+          // Start polling if job is pending or processing
+          if (status === 'processing' || status === 'pending') {
+            console.log('[ai_preview_polling] 🔄 Job is in progress, starting polling');
+            setPollingStartTime(Date.now());
+
+            // Poll immediately to get current step
+            await pollAiPreviewStatus();
+
+            // Set up polling interval (every 5 seconds)
+            const interval = setInterval(pollAiPreviewStatus, 5000);
+            setPollingInterval(interval);
+          }
         }
 
         // Fetch unread patient messages count
@@ -63,6 +136,16 @@ const ProviderDashboard: React.FC = () => {
 
     checkAccess();
   }, [user, authLoading, router]);
+
+  // Cleanup polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingInterval) {
+        console.log('[ai_preview_polling] 🧹 Cleaning up polling interval on unmount');
+        clearInterval(pollingInterval);
+      }
+    };
+  }, [pollingInterval]);
 
   if (authLoading || loading) {
     return (
@@ -266,17 +349,37 @@ const ProviderDashboard: React.FC = () => {
                 </h3>
               </div>
 
-              {/* Show warning if AI Preview is still generating */}
-              {aiPreviewStatus === 'generating' && (
+              {/* Show progress if AI Preview is pending or processing */}
+              {(aiPreviewStatus === 'pending' || aiPreviewStatus === 'processing') && !pollingTimedOut && (
+                <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 text-blue-600 mr-2 mt-0.5 flex-shrink-0 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-blue-900 mb-1">
+                        Building AI Preview: Step {aiPreviewStepNumber}/{aiPreviewTotalSteps}
+                        {aiPreviewCurrentStep && ` (${aiPreviewCurrentStep})`}
+                      </p>
+                      <p className="text-xs text-blue-800">
+                        This process takes approximately 30 minutes. Status updates automatically every 5 seconds.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Show timeout message if 20 minutes elapsed */}
+              {pollingTimedOut && aiPreviewStatus !== 'completed' && (
                 <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
                   <div className="flex items-start">
                     <svg className="w-5 h-5 text-amber-600 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
                     </svg>
                     <div className="flex-1">
-                      <p className="text-sm font-medium text-amber-900 mb-1">AI Preview is still generating</p>
+                      <p className="text-sm font-medium text-amber-900 mb-1">AI Preview is taking longer than expected</p>
                       <p className="text-xs text-amber-800">
-                        This process takes approximately 30 minutes. Please refresh this page later to test your AI Preview.
+                        The build process is still running but taking longer than usual. Please refresh the page in a few minutes to check status.
                       </p>
                     </div>
                   </div>
@@ -325,7 +428,7 @@ const ProviderDashboard: React.FC = () => {
                   <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                     Create an AI-powered preview that helps patients understand your therapeutic approach.
                   </p>
-                  {aiPreviewStatus === 'generating' ? (
+                  {(aiPreviewStatus === 'pending' || aiPreviewStatus === 'processing') ? (
                     <button
                       disabled
                       className="inline-flex items-center px-4 py-2 bg-gray-400 text-gray-200 text-sm font-medium rounded-lg cursor-not-allowed opacity-60"

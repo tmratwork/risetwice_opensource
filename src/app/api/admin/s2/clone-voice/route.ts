@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+// BEST PRACTICE: Direct API route import for server-to-server calls
+// Benefits: No HTTP overhead, no port conflicts, works in all environments
+import { POST as voiceCombineAPI } from '@/app/api/s2/voice-combine/route';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -142,19 +145,31 @@ export async function POST(request: NextRequest) {
         try {
           console.log(`[voice_cloning] 🔗 Combining chunks for session #${session.session_number} (${session.id})`);
 
-          const combineResponse = await fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/s2/voice-combine`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ sessionId: session.id })
-          });
+          // BEST PRACTICE: Direct server-side function call (no HTTP overhead, no port issues)
+          // Create a mock Request object for the API route handler
+          const mockRequest = new NextRequest(
+            new URL('http://localhost/api/s2/voice-combine'),
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ sessionId: session.id })
+            }
+          );
 
-          if (!combineResponse.ok) {
-            const errorData = await combineResponse.json();
-            console.log(`[voice_cloning] ❌ Failed to combine chunks for session #${session.session_number}: ${errorData.error}`);
+          console.log(`[voice_cloning] 📍 Calling voice-combine API directly (server-to-server)`);
+
+          // Call the API route handler directly
+          const combineResponse = await voiceCombineAPI(mockRequest);
+          const combineResult = await combineResponse.json();
+
+          console.log(`[voice_cloning] 📡 Voice-combine API response: ${combineResponse.status}`);
+
+          if (!combineResponse.ok || combineResponse.status >= 400) {
+            const errorMessage = combineResult.error || combineResult.details || `HTTP ${combineResponse.status}`;
+            console.log(`[voice_cloning] ❌ Failed to combine chunks for session #${session.session_number}: ${errorMessage}`);
             continue;
           }
 
-          const combineResult = await combineResponse.json();
           console.log(`[voice_cloning] ✅ Chunks combined for session #${session.session_number}: ${combineResult.combined_audio_url}`);
 
           // Update session with combined audio URL
@@ -165,7 +180,11 @@ export async function POST(request: NextRequest) {
           successfullyCombinedIds.push(session.id);
 
         } catch (error) {
-          console.log(`[voice_cloning] ❌ Error combining chunks for session #${session.session_number}:`, error);
+          const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+          console.log(`[voice_cloning] ❌ Error combining chunks for session #${session.session_number}: ${errorMsg}`);
+          if (error instanceof Error && error.stack) {
+            console.log(`[voice_cloning] 📚 Error stack: ${error.stack.split('\n').slice(0, 3).join('\n')}`);
+          }
           continue;
         }
       }
