@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
     // For ai_preview, check provider-specific customizations first, then fall back to global default
     let aiPrompt = null;
     let promptError = null;
+    let customOpeningStatement: string | null = null;
 
     if (specialistType === 'ai_preview' && userId) {
       // Try to get provider-specific AI preview prompt first
@@ -137,6 +138,40 @@ export async function POST(request: NextRequest) {
           userId,
           error: providerError?.message
         });
+      }
+
+      // Fetch custom opening statement from s2_ai_style_configs
+      logV17('🔍 Fetching custom opening statement from s2_ai_style_configs', { userId });
+
+      const { data: therapistProfile } = await supabase
+        .from('s2_therapist_profiles')
+        .select('id')
+        .eq('user_id', userId)
+        .single();
+
+      if (therapistProfile) {
+        // Get most recent active style config (order by updated_at DESC)
+        const { data: styleConfigs } = await supabase
+          .from('s2_ai_style_configs')
+          .select('opening_statement')
+          .eq('therapist_profile_id', therapistProfile.id)
+          .eq('is_active', true)
+          .order('updated_at', { ascending: false })
+          .limit(1);
+
+        const styleConfig = styleConfigs?.[0];
+
+        if (styleConfig?.opening_statement) {
+          customOpeningStatement = styleConfig.opening_statement;
+          logV17('✅ Found custom opening statement', {
+            userId,
+            therapistProfileId: therapistProfile.id,
+            openingStatementLength: styleConfig.opening_statement.length,
+            openingStatementPreview: styleConfig.opening_statement.substring(0, 100) + '...'
+          });
+        } else {
+          logV17('📘 No custom opening statement found, will use default', { userId });
+        }
       }
     }
 
@@ -262,12 +297,21 @@ export async function POST(request: NextRequest) {
       console.log(`[V17] 🚨 FORCE LOG: About to PATCH agent with voice_id: ${voiceConfig.voice_id} and ${toolIds.length} tool IDs`);
       console.log(`[V17] 🔧 TOOL IDS:`, toolIds);
 
+      // Use custom opening statement if available, otherwise default
+      const firstMessage = customOpeningStatement || "Hello! What type of assistance are you looking for today?";
+
+      logV17('📝 Using first message', {
+        isCustom: !!customOpeningStatement,
+        messageLength: firstMessage.length,
+        messagePreview: firstMessage.substring(0, 100) + '...'
+      });
+
       const patchPayload = {
         conversation_config: {
           agent: {
+            first_message: firstMessage,  // ✅ FIXED: first_message at agent level, not in prompt
             prompt: {
               prompt: finalPromptContent,
-              first_message: "Hello! What type of assistance are you looking for today?",
               tool_ids: toolIds,  // NEW: Use tool IDs instead of tools array
               tools: []  // Empty array instead of null for ElevenLabs API validation
             }

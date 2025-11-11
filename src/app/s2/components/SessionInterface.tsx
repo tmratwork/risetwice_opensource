@@ -35,6 +35,7 @@ interface SessionData {
       tone: number;
       energyLevel: number;
     };
+    openingStatement?: string;
   };
   generatedScenario?: string;
 }
@@ -306,12 +307,22 @@ Based on this scenario, embody a patient who fits this description. Stay in char
       console.log('[S2] [DEBUG] Creating ConnectionConfig with prompt length:', aiPersonalityPrompt.length);
       console.log('[S2] [DEBUG] Prompt starts with:', aiPersonalityPrompt.substring(0, 100));
 
+      // Use custom opening statement from provider's AI style config, or fallback to default
+      const greetingInstructions = sessionData.aiStyle?.openingStatement ||
+        'Speak in English. Remember: You are the PATIENT, not the therapist. Speak first, greet the user, who is a therapist, express uncertainty, nervousness, or your presenting concern. Do not act like a therapist asking questions.';
+
+      console.log('[S2] [DEBUG] Using greeting instructions:', {
+        hasCustomOpeningStatement: !!sessionData.aiStyle?.openingStatement,
+        greetingLength: greetingInstructions.length,
+        greetingPreview: greetingInstructions.substring(0, 100) + '...'
+      });
+
       const connectionConfig: ConnectionConfig = {
         instructions: aiPersonalityPrompt,
         voice: 'alloy', // Same voice as S1 for consistency
         tools: [], // No tools needed for AI patients
         tool_choice: 'none',
-        greetingInstructions: 'Speak in English. Remember: You are the PATIENT, not the therapist. Speak first, greet the user, who is a therapist, express uncertainty, nervousness, or your presenting concern. Do not act like a therapist asking questions.'
+        greetingInstructions
       };
 
       console.log('[S2] [DEBUG] ConnectionConfig created with instructions length:', connectionConfig.instructions?.length || 0);

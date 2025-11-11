@@ -20,10 +20,10 @@ interface SessionAudio {
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { therapistProfileId } = body;
+  const body = await request.json();
+  const { therapistProfileId } = body;
 
+  try {
     console.log(`[voice_cloning] 🚀 Starting voice cloning process for therapist: ${therapistProfileId}`);
 
     if (!therapistProfileId) {
@@ -40,8 +40,67 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Check if voice already exists and determine if re-cloning is needed
-    console.log(`[voice_cloning] 🔍 Checking for existing voice clone...`);
+    // CRITICAL: Atomic database-level lock to prevent race condition
+    // Uses unique partial index: idx_unique_voice_cloning_processing
+    // This ensures only ONE voice cloning operation can run per therapist at a time
+    console.log(`[voice_cloning] 🔒 Attempting to acquire voice cloning lock (atomic operation)...`);
+
+    const { data: lockResult, error: lockError } = await supabase
+      .from('s2_therapist_profiles')
+      .update({
+        voice_cloning_status: 'processing',
+        voice_cloning_started_at: new Date().toISOString()
+      })
+      .eq('id', therapistProfileId)
+      .or('voice_cloning_status.is.null,voice_cloning_status.eq.completed,voice_cloning_status.eq.failed')
+      .select('cloned_voice_id, full_name')
+      .single();
+
+    // Check for unique constraint violation (23505 = duplicate key error)
+    if (lockError) {
+      console.log(`[voice_cloning] 🔍 Lock error details:`, {
+        code: lockError.code,
+        message: lockError.message,
+        details: lockError.details
+      });
+
+      // If constraint violation, another operation is already in progress
+      if (lockError.code === '23505' || lockError.message?.includes('unique constraint')) {
+        console.log(`[voice_cloning] 🛑 Voice cloning already in progress for therapist: ${therapistProfileId}`);
+        console.log(`[voice_cloning] ⏭️ Skipping duplicate request (blocked by database constraint)`);
+
+        // Fetch current voice ID to return
+        const { data: currentProfile } = await supabase
+          .from('s2_therapist_profiles')
+          .select('cloned_voice_id')
+          .eq('id', therapistProfileId)
+          .single();
+
+        return NextResponse.json({
+          success: true,
+          skipped: true,
+          message: 'Voice cloning already in progress',
+          voice_id: currentProfile?.cloned_voice_id || null
+        });
+      }
+
+      // Other database errors
+      console.log(`[voice_cloning] ❌ Failed to acquire lock: ${lockError.message}`);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'LOCK_FAILED',
+          message: `Failed to start voice cloning: ${lockError.message}`
+        },
+        { status: 500 }
+      );
+    }
+
+    // Lock acquired successfully - we already have the profile data from lockResult
+    console.log(`[voice_cloning] ✅ Lock acquired successfully for therapist: ${lockResult?.full_name || therapistProfileId}`);
+
+    // Get full profile details including session count
+    console.log(`[voice_cloning] 🔍 Fetching profile details...`);
     const { data: existingProfile, error: profileError } = await supabase
       .from('s2_therapist_profiles')
       .select('cloned_voice_id, full_name, voice_cloning_session_count')
@@ -50,6 +109,14 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.log(`[voice_cloning] ❌ Therapist profile not found: ${profileError.message}`);
+      // Reset status before returning error
+      await supabase
+        .from('s2_therapist_profiles')
+        .update({
+          voice_cloning_status: 'failed',
+          voice_cloning_started_at: null
+        })
+        .eq('id', therapistProfileId);
       return NextResponse.json(
         {
           success: false,
@@ -83,6 +150,14 @@ export async function POST(request: NextRequest) {
 
     if (sessionsError) {
       console.log(`[voice_cloning] ❌ Failed to query sessions: ${sessionsError.message}`);
+      // Reset status before returning error
+      await supabase
+        .from('s2_therapist_profiles')
+        .update({
+          voice_cloning_status: 'failed',
+          voice_cloning_started_at: null
+        })
+        .eq('id', therapistProfileId);
       return NextResponse.json(
         {
           success: false,
@@ -118,6 +193,14 @@ export async function POST(request: NextRequest) {
 
     if (sessionsWithAudio.length === 0) {
       console.log(`[voice_cloning] ❌ No audio sessions found for voice cloning`);
+      // Reset status before returning error
+      await supabase
+        .from('s2_therapist_profiles')
+        .update({
+          voice_cloning_status: 'failed',
+          voice_cloning_started_at: null
+        })
+        .eq('id', therapistProfileId);
       return NextResponse.json(
         {
           success: false,
@@ -210,6 +293,14 @@ export async function POST(request: NextRequest) {
 
     if (refreshError) {
       console.log(`[voice_cloning] ❌ Failed to refresh session data: ${refreshError.message}`);
+      // Reset status before returning error
+      await supabase
+        .from('s2_therapist_profiles')
+        .update({
+          voice_cloning_status: 'failed',
+          voice_cloning_started_at: null
+        })
+        .eq('id', therapistProfileId);
       return NextResponse.json(
         {
           success: false,
@@ -238,6 +329,14 @@ export async function POST(request: NextRequest) {
     if (sessions.length === 0) {
       console.log(`[voice_cloning] ❌ No sessions with combined audio available after database refresh`);
       console.log(`[voice_cloning] 🔍 Debug: sessionsNeedingCombination had ${sessionsNeedingCombination.length} sessions`);
+      // Reset status before returning error
+      await supabase
+        .from('s2_therapist_profiles')
+        .update({
+          voice_cloning_status: 'failed',
+          voice_cloning_started_at: null
+        })
+        .eq('id', therapistProfileId);
       return NextResponse.json(
         {
           success: false,
@@ -308,6 +407,14 @@ export async function POST(request: NextRequest) {
       const availableMinutes = Math.floor(totalAvailableMs / 60000);
       const requiredMinutes = Math.floor(MIN_AUDIO_DURATION_MS / 60000);
       console.log(`[voice_cloning] ❌ Insufficient audio: ${availableMinutes}m available, ${requiredMinutes}m required`);
+      // Reset status before returning error
+      await supabase
+        .from('s2_therapist_profiles')
+        .update({
+          voice_cloning_status: 'failed',
+          voice_cloning_started_at: null
+        })
+        .eq('id', therapistProfileId);
       return NextResponse.json(
         {
           success: false,
@@ -370,20 +477,21 @@ export async function POST(request: NextRequest) {
     );
     console.log(`[voice_cloning] ✅ Voice successfully cloned with ID: ${voiceId}`);
 
-    // Store voice ID and tracking info in database
+    // Store voice ID and tracking info in database + reset status
     console.log(`[voice_cloning] 💾 Saving voice ID and tracking data to database...`);
     const { error: updateError } = await supabase
       .from('s2_therapist_profiles')
       .update({
         cloned_voice_id: voiceId,
         voice_last_cloned_at: new Date().toISOString(),
-        voice_cloning_session_count: selectedSessions.length
+        voice_cloning_session_count: selectedSessions.length,
+        voice_cloning_status: 'completed' // Reset status to allow future operations
       })
       .eq('id', therapistProfileId);
 
     if (updateError) {
       console.log(`[voice_cloning] ❌ Database update failed: ${updateError.message}`);
-      // If database update fails, clean up the created voice
+      // If database update fails, clean up the created voice and reset status
       try {
         console.log(`[voice_cloning] 🧹 Cleaning up created voice from ElevenLabs...`);
         await deleteVoiceFromElevenLabs(voiceId);
@@ -391,6 +499,15 @@ export async function POST(request: NextRequest) {
       } catch (cleanupError) {
         console.error(`[voice_cloning] ❌ Failed to cleanup voice after database error:`, cleanupError);
       }
+
+      // Reset status to allow retry
+      await supabase
+        .from('s2_therapist_profiles')
+        .update({
+          voice_cloning_status: 'failed',
+          voice_cloning_started_at: null
+        })
+        .eq('id', therapistProfileId);
 
       return NextResponse.json(
         {
@@ -416,6 +533,24 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error(`[voice_cloning] ❌ Voice cloning process failed:`, error);
+
+    // Reset status to allow retry
+    if (therapistProfileId) {
+      try {
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+        console.log(`[voice_cloning] 🔓 Resetting voice_cloning_status to 'failed' to allow retry`);
+        await supabase
+          .from('s2_therapist_profiles')
+          .update({
+            voice_cloning_status: 'failed',
+            voice_cloning_started_at: null
+          })
+          .eq('id', therapistProfileId);
+      } catch (resetError) {
+        console.error(`[voice_cloning] ❌ Failed to reset status:`, resetError);
+      }
+    }
+
     return NextResponse.json(
       {
         success: false,
@@ -508,8 +643,8 @@ async function cloneVoiceWithElevenLabs(audioBuffer: Buffer, therapistName: stri
 
   const formData = new FormData();
 
-  // Create blob from buffer
-  const audioBlob = new Blob([audioBuffer], { type: 'audio/mp3' });
+  // Create blob from buffer (convert Buffer to Uint8Array for compatibility)
+  const audioBlob = new Blob([new Uint8Array(audioBuffer)], { type: 'audio/mp3' });
   const sizeKB = Math.round(audioBuffer.length / 1024);
   console.log(`[voice_cloning] 📦 Audio file size: ${sizeKB}KB`);
 

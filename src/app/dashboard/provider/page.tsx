@@ -67,11 +67,18 @@ const ProviderDashboard: React.FC = () => {
         } else if (status === 'completed' || status === 'failed') {
           // Stop polling when job is completed or failed
           console.log(`[ai_preview_polling] 🛑 Job ${status}, stopping polling`);
+
+          // CRITICAL: Clear interval and reset state BEFORE early return
           if (pollingInterval) {
             clearInterval(pollingInterval);
             setPollingInterval(null);
+            console.log(`[ai_preview_polling] ✅ Interval cleared`);
           }
           setPollingStartTime(null);
+          console.log(`[ai_preview_polling] ✅ State reset, exiting polling function`);
+
+          // CRITICAL: Early return to prevent further processing
+          return;
         }
       }
     } catch (error) {
