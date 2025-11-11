@@ -9,6 +9,11 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
+interface AiStyleConfig {
+  opening_statement?: string;
+  updated_at?: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { userId } = await request.json();
@@ -91,7 +96,7 @@ export async function POST(request: NextRequest) {
       .order('updated_at', { ascending: false })
       .limit(1);
 
-    const aiStyleConfig = styleConfigs?.[0] || {};
+    const aiStyleConfig: AiStyleConfig = styleConfigs?.[0] || {};
 
     console.log('[My Preview] Style config check:', {
       therapistId: therapist.id,
