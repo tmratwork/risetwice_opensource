@@ -45,6 +45,26 @@ export async function POST(request: NextRequest) {
     // This ensures only ONE voice cloning operation can run per therapist at a time
     console.log(`[voice_cloning] 🔒 Attempting to acquire voice cloning lock (atomic operation)...`);
 
+    // First, check current status
+    const { data: currentStatus } = await supabase
+      .from('s2_therapist_profiles')
+      .select('voice_cloning_status, cloned_voice_id, full_name')
+      .eq('id', therapistProfileId)
+      .single();
+
+    // Only proceed if status is null, completed, or failed
+    if (currentStatus?.voice_cloning_status === 'processing') {
+      console.log(`[voice_cloning] 🛑 Voice cloning already in progress for therapist: ${therapistProfileId}`);
+      console.log(`[voice_cloning] ⏭️ Skipping duplicate request (already processing)`);
+      return NextResponse.json({
+        success: true,
+        skipped: true,
+        message: 'Voice cloning already in progress',
+        voice_id: currentStatus.cloned_voice_id || null
+      });
+    }
+
+    // Try to acquire lock by updating to 'processing'
     const { data: lockResult, error: lockError } = await supabase
       .from('s2_therapist_profiles')
       .update({
@@ -52,7 +72,6 @@ export async function POST(request: NextRequest) {
         voice_cloning_started_at: new Date().toISOString()
       })
       .eq('id', therapistProfileId)
-      .or('voice_cloning_status.is.null,voice_cloning_status.eq.completed,voice_cloning_status.eq.failed')
       .select('cloned_voice_id, full_name')
       .single();
 

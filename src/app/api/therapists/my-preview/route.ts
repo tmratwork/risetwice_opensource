@@ -53,9 +53,6 @@ export async function POST(request: NextRequest) {
           prompt_title,
           status,
           is_public
-        ),
-        s2_ai_style_configs!s2_ai_style_configs_therapist_profile_id_fkey(
-          opening_statement
         )
       `)
       .eq('user_id', userId)
@@ -85,10 +82,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Fetch the most recent active style config separately with proper ordering
+    const { data: styleConfigs } = await supabase
+      .from('s2_ai_style_configs')
+      .select('opening_statement, updated_at')
+      .eq('therapist_profile_id', therapist.id)
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false })
+      .limit(1);
+
+    const aiStyleConfig = styleConfigs?.[0] || {};
+
+    console.log('[My Preview] Style config check:', {
+      therapistId: therapist.id,
+      totalConfigs: styleConfigs?.length || 0,
+      hasOpeningStatement: !!aiStyleConfig.opening_statement,
+      openingStatementFull: aiStyleConfig.opening_statement,
+      updatedAt: aiStyleConfig.updated_at
+    });
+
     // Transform the data to match our frontend interface
     const completeProfile = therapist.s2_complete_profiles?.[0] || {};
     const aiPrompt = therapist.s2_ai_therapist_prompts?.[0] || {};
-    const aiStyleConfig = therapist.s2_ai_style_configs?.[0] || {};
 
     // Use other_title if title is "Other" and other_title exists
     const displayTitle = therapist.title === 'Other' && therapist.other_title

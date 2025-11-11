@@ -549,6 +549,18 @@ export function useElevenLabsConversation() {
       // 3. Start conversation with agent using WebRTC if available (v0.6.1+ feature)
       // Include custom first message override if provided
       // ✅ IMPORTANT: startSession() returns the ElevenLabs conversation ID!
+
+      // Log the EXACT first message being sent to ElevenLabs
+      if (customFirstMessage) {
+        console.log('[V17] 📨 SENDING CUSTOM FIRST MESSAGE TO ELEVENLABS:', {
+          fullMessage: customFirstMessage,
+          messageLength: customFirstMessage.length,
+          agentId: agent.agent_id
+        });
+      } else {
+        console.log('[V17] 📨 NO CUSTOM FIRST MESSAGE - ElevenLabs will use agent default');
+      }
+
       const elevenLabsConversationId = await conversation.startSession({
         agentId: agent.agent_id,
         connectionType: 'webrtc', // Use WebRTC for better audio quality

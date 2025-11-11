@@ -76,14 +76,10 @@ export async function GET(request: NextRequest) {
           age_ranges_treated,
           lgbtq_affirming,
           session_fees
-        ),
-        s2_ai_style_configs!s2_ai_style_configs_therapist_profile_id_fkey(
-          opening_statement
         )
       `)
       .eq('is_active', true)
-      .eq('s2_complete_profiles.is_active', true)
-      .eq('s2_ai_style_configs.is_active', true);
+      .eq('s2_complete_profiles.is_active', true);
 
     // Apply filters
     if (query) {
@@ -132,10 +128,33 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Fetch the most recent active style configs for all therapists
+    const therapistIds = therapists.map((t: DatabaseTherapist) => t.id);
+    const { data: allStyleConfigs } = await supabase
+      .from('s2_ai_style_configs')
+      .select('therapist_profile_id, opening_statement, updated_at')
+      .in('therapist_profile_id', therapistIds)
+      .eq('is_active', true)
+      .order('updated_at', { ascending: false });
+
+    // Create a map of therapist_id -> most recent opening_statement
+    const styleConfigMap = new Map<string, string>();
+    allStyleConfigs?.forEach((config: { therapist_profile_id: string; opening_statement: string }) => {
+      // Only store the first (most recent) config for each therapist
+      if (!styleConfigMap.has(config.therapist_profile_id)) {
+        styleConfigMap.set(config.therapist_profile_id, config.opening_statement);
+      }
+    });
+
+    console.log('[Therapist Search] Fetched style configs:', {
+      totalTherapists: therapists.length,
+      configsFound: styleConfigMap.size
+    });
+
     // Transform the data to match our frontend interface
     const transformedTherapists = therapists.map((therapist: DatabaseTherapist) => {
       const completeProfile = therapist.s2_complete_profiles?.[0] || {};
-      const aiStyleConfig = therapist.s2_ai_style_configs?.[0] || {};
+      const openingStatement = styleConfigMap.get(therapist.id);
 
       // Use other_title if title is "Other" and other_title exists
       const displayTitle = therapist.title === 'Other' && therapist.other_title
@@ -160,7 +179,7 @@ export async function GET(request: NextRequest) {
         ageRangesTreated: completeProfile.age_ranges_treated || [],
         lgbtqAffirming: completeProfile.lgbtq_affirming,
         sessionFees: completeProfile.session_fees,
-        openingStatement: aiStyleConfig.opening_statement
+        openingStatement: openingStatement
       };
     });
 

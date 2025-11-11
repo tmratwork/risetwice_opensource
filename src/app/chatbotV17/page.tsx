@@ -250,11 +250,12 @@ export default function ChatBotV17Page() {
         }
 
         // Log opening statement if available
-        if (therapist.openingStatement) {
-          console.log(`[V17] 👋 Using custom opening statement for ${therapist.fullName}:`, therapist.openingStatement.substring(0, 100) + '...');
-        } else {
-          console.log(`[V17] 👋 No custom opening statement for ${therapist.fullName}, using default`);
-        }
+        console.log(`[V17] 🔍 OPENING STATEMENT CHECK:`, {
+          hasOpeningStatement: !!therapist.openingStatement,
+          openingStatementType: typeof therapist.openingStatement,
+          openingStatementFull: therapist.openingStatement,
+          openingStatementLength: therapist.openingStatement?.length || 0
+        });
 
         // ALWAYS create a NEW conversation for each AI Preview (each gets unique access code)
         console.log('[V17] Creating NEW conversation for AI Preview');
@@ -263,6 +264,14 @@ export default function ChatBotV17Page() {
 
         // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice + custom opening statement
         // Pass the internal conversation ID so it can be saved with the ElevenLabs conversation ID
+        console.log('[V17] 🚀 CALLING startSession WITH:', {
+          specialistType: 'ai_preview',
+          voiceId,
+          promptLength: generatedTherapistPrompt.length,
+          customFirstMessage: therapist.openingStatement,
+          customFirstMessageLength: therapist.openingStatement?.length || 0,
+          internalConversationId
+        });
         await startSession('ai_preview', voiceId, generatedTherapistPrompt, therapist.openingStatement, internalConversationId);
 
         console.log(`[V17] ✅ AI preview started with comprehensive prompt for: ${therapist.fullName}`);
@@ -320,6 +329,11 @@ export default function ChatBotV17Page() {
 
         const data = await response.json();
         if (data.success && data.therapist) {
+          console.log('[V17] 🔍 API RESPONSE - therapist.openingStatement:', {
+            hasOpeningStatement: !!data.therapist.openingStatement,
+            openingStatementFull: data.therapist.openingStatement,
+            openingStatementLength: data.therapist.openingStatement?.length || 0
+          });
           setTherapists([data.therapist]);
           console.log('[V17] Provider mode: Loaded user AI Preview:', data.therapist.fullName);
         } else {

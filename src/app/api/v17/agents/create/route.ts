@@ -150,13 +150,13 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (therapistProfile) {
-        // Get most recent active style config (order by updated_at DESC)
+        // Get most recent active style config (order by created_at DESC to get newest inserted row)
         const { data: styleConfigs } = await supabase
           .from('s2_ai_style_configs')
           .select('opening_statement')
           .eq('therapist_profile_id', therapistProfile.id)
           .eq('is_active', true)
-          .order('updated_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(1);
 
         const styleConfig = styleConfigs?.[0];
@@ -297,19 +297,18 @@ export async function POST(request: NextRequest) {
       console.log(`[V17] 🚨 FORCE LOG: About to PATCH agent with voice_id: ${voiceConfig.voice_id} and ${toolIds.length} tool IDs`);
       console.log(`[V17] 🔧 TOOL IDS:`, toolIds);
 
-      // Use custom opening statement if available, otherwise default
-      const firstMessage = customOpeningStatement || "Hello! What type of assistance are you looking for today?";
-
-      logV17('📝 Using first message', {
-        isCustom: !!customOpeningStatement,
-        messageLength: firstMessage.length,
-        messagePreview: firstMessage.substring(0, 100) + '...'
+      // DON'T set first_message on agent - it will be overridden at session level
+      // This prevents caching issues with the shared agent
+      logV17('📝 Custom opening statement will be applied at SESSION level (not agent level)', {
+        hasCustom: !!customOpeningStatement,
+        messageLength: customOpeningStatement?.length || 0,
+        messagePreview: customOpeningStatement?.substring(0, 100) || 'no custom message'
       });
 
       const patchPayload = {
         conversation_config: {
           agent: {
-            first_message: firstMessage,  // ✅ FIXED: first_message at agent level, not in prompt
+            // ✅ NO first_message here - it's set via session override to avoid caching
             prompt: {
               prompt: finalPromptContent,
               tool_ids: toolIds,  // NEW: Use tool IDs instead of tools array
@@ -412,6 +411,8 @@ export async function POST(request: NextRequest) {
 
         if (response.ok) {
           const agentData = await response.json();
+          const actualFirstMessage = agentData.conversation_config?.agent?.first_message || 'NOT SET';
+
           console.log(`[V17] 🔍 ELEVENLABS AGENT VERIFICATION:`, {
             agentId: existingAgentId,
             hasInstructions: !!agentData.conversation_config?.agent?.prompt?.prompt,
@@ -420,6 +421,13 @@ export async function POST(request: NextRequest) {
             voiceId: agentData.conversation_config?.tts?.voice_id || 'not set',
             llmModel: agentData.conversation_config?.llm?.model || 'not set',
             lastUpdated: agentData.updated_at || 'unknown'
+          });
+
+          console.log(`[V17] 🎯 FIRST MESSAGE VERIFICATION:`, {
+            customOpeningStatementAvailable: !!customOpeningStatement,
+            customOpeningStatement: customOpeningStatement || 'NOT SET',
+            actualFirstMessage: actualFirstMessage,
+            note: 'first_message is now set at SESSION level, not agent level (to avoid caching)'
           });
 
           // Check if our Supabase prompt matches ElevenLabs agent
