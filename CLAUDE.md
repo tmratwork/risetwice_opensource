@@ -1,6 +1,6 @@
 # RiseTwice Development Guidelines
 
-## Core Principles
+## Core Principles 
 
 - **Keep It Simple**: Make the minimal number of changes needed to achieve the requested task. Don't overcomplicate things.
 - **Preserve Existing Code**: DO NOT remove code or features without explicit consent from the user. Only modify what's needed to fulfill the current request.
