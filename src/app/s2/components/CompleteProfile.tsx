@@ -5,7 +5,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import StepNavigator from './StepNavigator';
 import CustomMultiSelect from './CustomMultiSelect';
@@ -61,7 +60,6 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
   canSkipToStep,
   stepCompletionStatus
 }) => {
-  const router = useRouter();
   const { user } = useAuth();
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);

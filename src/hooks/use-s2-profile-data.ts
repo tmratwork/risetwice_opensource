@@ -27,7 +27,8 @@ interface UseS2ProfileDataReturn {
 const initialStepCompletionStatus: StepCompletionStatus = {
   profile: false,
   licenseVerification: false,
-  completeProfile: false
+  completeProfile: false,
+  notificationPreferences: false
 };
 
 export function useS2ProfileData(): UseS2ProfileDataReturn {

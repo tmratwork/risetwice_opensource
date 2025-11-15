@@ -115,7 +115,11 @@ export async function POST(request: NextRequest) {
     const stepCompletionStatus = {
       profile: validateProfileStep(therapistProfile),
       licenseVerification: validateLicenseStep(licenseVerification),
-      completeProfile: validateCompleteProfileStep(completeProfile)
+      completeProfile: validateCompleteProfileStep(completeProfile),
+      notificationPreferences: !!(therapistProfile && (
+        therapistProfile.email_notifications !== null ||
+        therapistProfile.sms_notifications !== null
+      ))
     };
 
     return NextResponse.json({
