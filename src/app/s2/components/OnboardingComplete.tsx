@@ -21,7 +21,7 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
   const [isSupportModalOpen, setIsSupportModalOpen] = useState(false);
   const [onboardingCompleted, setOnboardingCompleted] = useState(false);
 
-  // Complete onboarding and trigger AI Preview generation when component mounts
+  // Complete onboarding when component mounts (but do NOT trigger AI Preview - that's now separate)
   useEffect(() => {
     const completeOnboarding = async () => {
       if (!user || onboardingCompleted) return;
@@ -43,76 +43,8 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
           console.error('[S2] Failed to complete onboarding');
         }
 
-        // Trigger AI Preview generation in background
-        const profileResponse = await fetch('/api/s2/profile-data', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ userId: user.uid })
-        });
-
-        const profileData = await profileResponse.json();
-
-        if (profileData.success && profileData.data?.therapistProfile) {
-          const therapistProfileId = profileData.data.therapistProfile.id;
-
-          console.log('[S2] 🤖 Creating background AI preview job for therapist:', therapistProfileId);
-
-          // Generate AI prompt (creates job, returns immediately)
-          fetch('/api/admin/s2/generate-therapist-prompt', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              therapistId: therapistProfileId
-            })
-          }).then(async (response) => {
-            const result = await response.json();
-            if (result.success) {
-              console.log('[S2] ✅ AI preview job created:', result.jobId);
-              console.log('[S2] ⏳ Job will be processed in background (~30 minutes)');
-            } else {
-              console.error('[S2] ❌ Failed to create AI preview job:', result.error);
-            }
-          }).catch((error) => {
-            console.error('[S2] ❌ Background AI preview job creation failed (non-blocking):', error);
-          });
-
-          // Clone voice (silent, parallel to AI prompt generation)
-          console.log('[S2] 🎤 Triggering background voice cloning for therapist:', therapistProfileId);
-          fetch('/api/admin/s2/clone-voice', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              therapistProfileId: therapistProfileId
-            })
-          }).then(async (response) => {
-            const result = await response.json();
-
-            if (result.success && result.skipped) {
-              console.log('[S2] ⏭️ Voice cloning skipped: no new audio material');
-            } else if (result.success) {
-              console.log('[S2] ✅ Voice cloning completed successfully:', result.voice_id);
-            } else {
-              // Handle specific error cases
-              if (result.error === 'NO_AUDIO_SESSIONS' || result.error === 'NO_COMBINED_AUDIO') {
-                console.log('[S2] ℹ️ Voice cloning not ready: No completed practice sessions with audio yet');
-                console.log('[S2] 💡 Voice will be cloned automatically after completing your first practice session');
-              } else if (result.error === 'INSUFFICIENT_AUDIO_DURATION') {
-                console.log('[S2] ℹ️ Voice cloning not ready: Need at least 10 seconds of audio');
-                console.log('[S2] 💡 Complete a longer practice session (10+ seconds) to enable voice cloning');
-              } else {
-                console.log('[S2] ⚠️ Voice cloning failed (non-blocking):', result.message || result.error);
-              }
-            }
-          }).catch((error) => {
-            console.error('[S2] ❌ Background voice cloning failed (non-blocking):', error);
-          });
-        }
+        // AI Preview generation removed - now done through separate "AI Preview" panel in dashboard
+        // Provider must explicitly choose to build their AI Preview from the dashboard
 
       } catch (error) {
         console.error('[S2] Error completing onboarding:', error);
@@ -158,12 +90,11 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
           </div>
 
           <h1 className="text-4xl font-bold mb-6" style={{ color: 'var(--text-primary)' }}>
-            Congratulations! Your AI Preview is Being Created
+            Congratulations! Your Profile is Complete
           </h1>
           <p className="text-lg max-w-3xl mx-auto mb-8" style={{ color: 'var(--text-secondary)' }}>
-            Patients can now experience
-            a realistic preview of what therapy sessions with you would be like, helping ensure
-            better matches from day one.
+            Your professional profile is set up and ready. Visit your dashboard to build your AI Preview
+            and start connecting with patients.
           </p>
         </div>
 
@@ -190,34 +121,34 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
               Go to Dashboard
             </button>
             <p className="text-sm text-gray-600 max-w-md mx-auto">
-              Access your main dashboard to test and edit your AI preview, edit profile, and view analytics.
+              Access your main dashboard to build your AI Preview, edit your profile, and view analytics.
             </p>
           </div>
         </div>
 
-        {/* Key Features Summary */}
-        <div className="bg-green-50 rounded-lg border border-green-200 p-6 mb-8">
+        {/* Next Steps Summary */}
+        <div className="bg-blue-50 rounded-lg border border-blue-200 p-6 mb-8">
           <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>
-            Your AI Preview Includes:
+            What You Can Do Next:
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="flex items-start">
-              <svg className="w-5 h-5 text-green-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg className="w-5 h-5 text-blue-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-              <span className="text-sm text-gray-700">AI configured to match your therapeutic style and approach</span>
+              <span className="text-sm text-gray-700">Build your AI Preview from the dashboard</span>
             </div>
             <div className="flex items-start">
-              <svg className="w-5 h-5 text-green-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg className="w-5 h-5 text-blue-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
-              <span className="text-sm text-gray-700">Voice clone trained on your recorded session</span>
+              <span className="text-sm text-gray-700">Edit your professional profile anytime</span>
             </div>
             <div className="flex items-start">
-              <svg className="w-5 h-5 text-green-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <svg className="w-5 h-5 text-blue-600 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
               </svg>
-              <span className="text-sm text-gray-700">Complete professional profile for patient matching</span>
+              <span className="text-sm text-gray-700">View patient matches and analytics</span>
             </div>
           </div>
         </div>
@@ -225,7 +156,7 @@ const OnboardingComplete: React.FC<OnboardingCompleteProps> = ({
         {/* Help & Support */}
         <div className="text-center">
           <p className="text-sm text-gray-600 mb-4">
-            Need help or have questions about your AI Preview?
+            Need help or have questions?
           </p>
           <div>
             <button

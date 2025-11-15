@@ -26,66 +26,6 @@ const ProviderDashboard: React.FC = () => {
   const [accessCode, setAccessCode] = useState<string>('');
   const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
 
-  // Poll for AI Preview job status with 20-minute timeout
-  const pollAiPreviewStatus = async () => {
-    if (!user?.uid) return;
-
-    // Check if 20 minutes have elapsed
-    if (pollingStartTime) {
-      const elapsedMinutes = (Date.now() - pollingStartTime) / 1000 / 60;
-      if (elapsedMinutes >= 20) {
-        console.log('[ai_preview_polling] 🛑 20-minute timeout reached, stopping polling');
-        if (pollingInterval) {
-          clearInterval(pollingInterval);
-          setPollingInterval(null);
-        }
-        setPollingTimedOut(true);
-        return;
-      }
-    }
-
-    try {
-      const response = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
-      const data = await response.json();
-
-      if (data.success && data.profile) {
-        const status = data.profile.ai_preview_status || 'not_started';
-        setAiPreviewStatus(status);
-        setAiPreviewGeneratedAt(data.profile.ai_preview_generated_at);
-
-        // Get job details if processing or pending
-        if (status === 'processing' || status === 'pending') {
-          // Fetch job details to get current step
-          const jobResponse = await fetch(`/api/s2/ai-preview-job-status?userId=${user.uid}`);
-          const jobData = await jobResponse.json();
-
-          if (jobData.success && jobData.job) {
-            setAiPreviewCurrentStep(jobData.job.current_step);
-            setAiPreviewStepNumber(jobData.job.current_step_number || 0);
-            setAiPreviewTotalSteps(jobData.job.total_steps || 6);
-          }
-        } else if (status === 'completed' || status === 'failed') {
-          // Stop polling when job is completed or failed
-          console.log(`[ai_preview_polling] 🛑 Job ${status}, stopping polling`);
-
-          // CRITICAL: Clear interval and reset state BEFORE early return
-          if (pollingInterval) {
-            clearInterval(pollingInterval);
-            setPollingInterval(null);
-            console.log(`[ai_preview_polling] ✅ Interval cleared`);
-          }
-          setPollingStartTime(null);
-          console.log(`[ai_preview_polling] ✅ State reset, exiting polling function`);
-
-          // CRITICAL: Early return to prevent further processing
-          return;
-        }
-      }
-    } catch (error) {
-      console.error('[ai_preview_polling] Error fetching status:', error);
-    }
-  };
-
   useEffect(() => {
     async function checkAccess() {
       if (authLoading) return;
@@ -118,12 +58,77 @@ const ProviderDashboard: React.FC = () => {
             console.log('[ai_preview_polling] 🔄 Job is in progress, starting polling');
             setPollingStartTime(Date.now());
 
-            // Poll immediately to get current step
-            await pollAiPreviewStatus();
+            // Use local variable for interval to avoid React closure issues
+            let localInterval: NodeJS.Timeout | null = null;
 
-            // Set up polling interval (every 5 seconds)
-            const interval = setInterval(pollAiPreviewStatus, 5000);
-            setPollingInterval(interval);
+            const pollWithLocalRef = async () => {
+              if (!user?.uid) return;
+
+              // Check if 20 minutes have elapsed
+              if (pollingStartTime) {
+                const elapsedMinutes = (Date.now() - pollingStartTime) / 1000 / 60;
+                if (elapsedMinutes >= 20) {
+                  console.log('[ai_preview_polling] 🛑 20-minute timeout reached, stopping polling');
+                  if (localInterval) {
+                    clearInterval(localInterval);
+                    localInterval = null;
+                  }
+                  setPollingInterval(null);
+                  setPollingTimedOut(true);
+                  return;
+                }
+              }
+
+              try {
+                const response = await fetch(`/api/s2/therapist-profile?userId=${user.uid}`);
+                const data = await response.json();
+
+                if (data.success && data.profile) {
+                  const status = data.profile.ai_preview_status || 'not_started';
+                  setAiPreviewStatus(status);
+                  setAiPreviewGeneratedAt(data.profile.ai_preview_generated_at);
+
+                  // Get job details if processing or pending
+                  if (status === 'processing' || status === 'pending') {
+                    // Fetch job details to get current step
+                    const jobResponse = await fetch(`/api/s2/ai-preview-job-status?userId=${user.uid}`);
+                    const jobData = await jobResponse.json();
+
+                    if (jobData.success && jobData.job) {
+                      setAiPreviewCurrentStep(jobData.job.current_step);
+                      setAiPreviewStepNumber(jobData.job.current_step_number || 0);
+                      setAiPreviewTotalSteps(jobData.job.total_steps || 6);
+                    }
+                  } else if (status === 'completed' || status === 'failed') {
+                    // Stop polling when job is completed or failed
+                    console.log(`[ai_preview_polling] 🛑 Job ${status}, stopping polling`);
+
+                    // Clear local interval (this prevents future polling)
+                    if (localInterval) {
+                      clearInterval(localInterval);
+                      localInterval = null;
+                      console.log(`[ai_preview_polling] ✅ Local interval cleared`);
+                    }
+
+                    // Clear state interval for consistency
+                    setPollingInterval(null);
+                    setPollingStartTime(null);
+                    console.log(`[ai_preview_polling] ✅ State reset, exiting polling function`);
+
+                    return;
+                  }
+                }
+              } catch (error) {
+                console.error('[ai_preview_polling] Error fetching status:', error);
+              }
+            };
+
+            // Poll immediately
+            await pollWithLocalRef();
+
+            // Set up polling interval (every 5 seconds) using local variable
+            localInterval = setInterval(pollWithLocalRef, 5000);
+            setPollingInterval(localInterval);
           }
         }
 
