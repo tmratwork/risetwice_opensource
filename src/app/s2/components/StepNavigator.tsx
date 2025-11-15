@@ -22,10 +22,11 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
   // Define the step order and their display information
   const stepOrder: { step: FlowStep; number: number; label: string; width: string }[] = [
     { step: 'welcome', number: 0, label: 'Welcome', width: '0%' },
-    { step: 'profile', number: 1, label: 'Profile', width: '25%' },
-    { step: 'license-verification', number: 2, label: 'License', width: '50%' },
-    { step: 'complete-profile', number: 3, label: 'Complete Profile', width: '75%' },
-    { step: 'onboarding-complete', number: 4, label: 'Complete', width: '100%' }
+    { step: 'profile', number: 1, label: 'Profile', width: '20%' },
+    { step: 'license-verification', number: 2, label: 'License', width: '40%' },
+    { step: 'complete-profile', number: 3, label: 'Complete Profile', width: '60%' },
+    { step: 'notification-preferences', number: 4, label: 'Notifications', width: '80%' },
+    { step: 'onboarding-complete', number: 5, label: 'Complete', width: '100%' }
   ];
 
   // Find current step info
@@ -93,7 +94,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
                   {displayStatus === 'completed' ? '✓' : stepNumber}
                 </button>
                 {/* Enhanced connector line (except for last step) */}
-                {stepNumber < 3 && (
+                {stepNumber < 4 && (
                   <div className={`w-8 h-0.5 transition-all duration-200 ${getConnectorStyling()}`} />
                 )}
               </div>
@@ -104,7 +105,7 @@ const StepNavigator: React.FC<StepNavigatorProps> = ({
         {/* Current step text */}
         <div className="text-center mb-4">
           <span className="text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>
-            Step {currentStepNumber} of 3
+            Step {currentStepNumber} of 4
           </span>
         </div>
 

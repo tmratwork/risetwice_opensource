@@ -5,9 +5,10 @@ export interface StepCompletionStatus {
   profile: boolean;
   licenseVerification: boolean;
   completeProfile: boolean;
+  notificationPreferences: boolean;
 }
 
-export type FlowStep = 'welcome' | 'profile' | 'license-verification' | 'complete-profile' | 'onboarding-complete';
+export type FlowStep = 'welcome' | 'profile' | 'license-verification' | 'complete-profile' | 'notification-preferences' | 'onboarding-complete';
 
 // Validation functions for each step
 export function validateProfileStep(profile: unknown): boolean {
@@ -84,6 +85,7 @@ export function getNextRecommendedStep(stepCompletionStatus: StepCompletionStatu
   if (!stepCompletionStatus.profile) return 'profile';
   if (!stepCompletionStatus.licenseVerification) return 'license-verification';
   if (!stepCompletionStatus.completeProfile) return 'complete-profile';
+  if (!stepCompletionStatus.notificationPreferences) return 'notification-preferences';
   return 'onboarding-complete';
 }
 
@@ -91,7 +93,8 @@ export function getNextRecommendedStep(stepCompletionStatus: StepCompletionStatu
 export function isOnboardingComplete(stepCompletionStatus: StepCompletionStatus): boolean {
   return stepCompletionStatus.profile &&
          stepCompletionStatus.licenseVerification &&
-         stepCompletionStatus.completeProfile;
+         stepCompletionStatus.completeProfile &&
+         stepCompletionStatus.notificationPreferences;
 }
 
 // Get step display status for UI
@@ -108,6 +111,7 @@ export function getStepDisplayStatus(
     'profile': 'profile',
     'license-verification': 'licenseVerification',
     'complete-profile': 'completeProfile',
+    'notification-preferences': 'notificationPreferences',
     'onboarding-complete': null
   };
 

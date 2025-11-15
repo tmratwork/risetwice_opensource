@@ -12,6 +12,7 @@ import WelcomeScreen from './components/WelcomeScreen';
 import TherapistProfileForm from './components/TherapistProfileForm';
 import LicenseVerification from './components/LicenseVerification';
 import CompleteProfile from './components/CompleteProfile';
+import NotificationPreferences from './components/NotificationPreferences';
 import OnboardingComplete from './components/OnboardingComplete';
 import { MobileFooterNavV18 } from '@/app/chatbotV18/components/MobileFooterNavV18';
 
@@ -301,6 +302,9 @@ const S2CaseSimulation: React.FC = () => {
         setCurrentStep('complete-profile');
         break;
       case 'complete-profile':
+        setCurrentStep('notification-preferences');
+        break;
+      case 'notification-preferences':
         setCurrentStep('onboarding-complete');
         break;
     }
@@ -317,15 +321,18 @@ const S2CaseSimulation: React.FC = () => {
       case 'complete-profile':
         setCurrentStep('license-verification');
         break;
-      case 'onboarding-complete':
+      case 'notification-preferences':
         setCurrentStep('complete-profile');
+        break;
+      case 'onboarding-complete':
+        setCurrentStep('notification-preferences');
         break;
     }
   };
 
   const handleStepNavigation = (targetStep: FlowStep) => {
     const stepOrder: FlowStep[] = [
-      'welcome', 'profile', 'license-verification', 'complete-profile', 'onboarding-complete'
+      'welcome', 'profile', 'license-verification', 'complete-profile', 'notification-preferences', 'onboarding-complete'
     ];
 
     const currentIndex = stepOrder.indexOf(currentStep);
@@ -407,6 +414,17 @@ const S2CaseSimulation: React.FC = () => {
           <CompleteProfile
             profileData={sessionData.completeProfile}
             onUpdate={updateCompleteProfile}
+            onNext={handleNext}
+            onBack={handleBack}
+            onStepNavigation={handleStepNavigation}
+            canSkipToStep={canSkipToStep}
+            stepCompletionStatus={stepCompletionStatus}
+          />
+        );
+
+      case 'notification-preferences':
+        return (
+          <NotificationPreferences
             onNext={handleNext}
             onBack={handleBack}
             onStepNavigation={handleStepNavigation}

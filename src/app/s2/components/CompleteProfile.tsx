@@ -55,6 +55,7 @@ interface CompleteProfileProps {
 const CompleteProfile: React.FC<CompleteProfileProps> = ({
   profileData,
   onUpdate,
+  onNext,
   onBack,
   onStepNavigation,
   canSkipToStep,
@@ -308,8 +309,8 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
       }
 
       // AI Preview generation removed - now part of separate upsell flow
-      // Redirect to provider dashboard
-      router.push('/dashboard/provider');
+      // Move to next step (notification preferences)
+      onNext();
 
     } catch (error) {
       console.error('[S2] Error saving complete profile:', error);
@@ -1309,7 +1310,7 @@ const CompleteProfile: React.FC<CompleteProfileProps> = ({
                   Saving Profile...
                 </>
               ) : (
-                'Finish'
+                'Next'
               )}
             </button>
           </div>
