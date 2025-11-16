@@ -95,16 +95,27 @@ export async function POST(request: NextRequest) {
         ? `${patientDetails.first_name || ''} ${patientDetails.last_name || ''}`.trim() || 'A patient'
         : 'A patient';
 
+      // Get access code from intake session
+      const { data: intakeData } = await supabase
+        .from('intake_sessions')
+        .select('access_code')
+        .eq('id', intakeId)
+        .single();
+
+      const accessCode = intakeData?.access_code;
+
       console.log('[send-audio-reply] 📬 Sending notifications to provider', {
         providerUserId,
-        patientName
+        patientName,
+        accessCode
       });
 
       // Send email notification (non-blocking)
       sendProviderEmailNotification(
         providerUserId,
         patientName,
-        'patient_replied'
+        'patient_replied',
+        accessCode
       ).catch(error => {
         console.log('[send-audio-reply] ⚠️ Email notification failed (non-critical)', {
           providerUserId,
@@ -116,7 +127,8 @@ export async function POST(request: NextRequest) {
       sendProviderSMSNotification(
         providerUserId,
         patientName,
-        'patient_replied'
+        'patient_replied',
+        accessCode
       ).catch(error => {
         console.log('[send-audio-reply] ⚠️ SMS notification failed (non-critical)', {
           providerUserId,

@@ -391,6 +391,13 @@ export async function sendProviderEmailNotification(
             <p style="color: #374151; line-height: 1.6;">
               ${patientName || 'A patient'} has sent you a voice message in response to your introduction. They're interested in connecting with you.
             </p>
+            ${accessCode ? `
+            <div style="background-color: #fff; padding: 15px; border-radius: 6px; margin-top: 20px; border: 2px solid #2563eb;">
+              <p style="color: #374151; margin: 0 0 10px 0; font-weight: bold;">Access Code:</p>
+              <p style="color: #2563eb; font-size: 28px; font-weight: bold; margin: 0; letter-spacing: 3px;">${accessCode}</p>
+              <p style="color: #6b7280; margin: 10px 0 0 0; font-size: 14px;">Use this code to view their full intake information</p>
+            </div>
+            ` : ''}
           </div>
 
           <div style="text-align: center; margin-bottom: 25px;">
