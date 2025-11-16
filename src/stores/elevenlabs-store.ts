@@ -122,7 +122,7 @@ export interface ElevenLabsStoreState {
   setConnectionType: (type: 'webrtc' | 'websocket') => void;
 
   // V17 Session management
-  createConversation: () => Promise<string>;
+  createConversation: (providerUserId?: string) => Promise<string>;
   startSession: (agentId: string, specialistType?: string, contextSummary?: string) => Promise<void>;
   endSession: (reason?: string) => Promise<void>;
   switchSpecialist: (specialistType: string, contextSummary: string) => Promise<void>;
