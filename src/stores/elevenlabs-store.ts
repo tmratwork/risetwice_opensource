@@ -387,8 +387,8 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
   },
 
   // V17 Session management
-  createConversation: async () => {
-    logV17('🆕 Creating new V17 conversation');
+  createConversation: async (providerUserId?: string) => {
+    logV17('🆕 Creating new V17 conversation', { providerUserId });
 
     try {
       // Get userId from localStorage (supports both authenticated and anonymous users)
@@ -429,12 +429,12 @@ export const useElevenLabsStore = create<ElevenLabsStoreState>((set, get) => ({
       logV17('✅ V17 conversation created in database', { conversationId });
 
       // Generate access code for this conversation (creates new patient_intake record)
-      logV17('🔑 Generating access code for conversation', { conversationId, userId });
+      logV17('🔑 Generating access code for conversation', { conversationId, userId, providerUserId });
       try {
         const accessCodeResponse = await fetch('/api/v17/generate-access-code', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationId, userId })
+          body: JSON.stringify({ conversationId, userId, providerUserId })
         });
 
         if (!accessCodeResponse.ok) {

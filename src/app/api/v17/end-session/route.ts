@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { logTriageHandoffServer, generateHandoffCorrelationId } from '@/utils/server-logger';
+import { sendProviderEmailNotification, sendProviderSMSNotification } from '@/lib/notifications';
 
 // V17 conditional logging
 const logV17 = (message: string, ...args: unknown[]) => {
@@ -142,6 +143,85 @@ export async function POST(request: NextRequest) {
       reason,
       hasContextSummary: !!contextSummary
     });
+
+    // Send provider notifications (AI Preview used)
+    try {
+      logV17('📧 Attempting to send provider notifications for AI Preview usage');
+
+      // Get the conversation to find patient ID
+      const { data: conversation, error: convError } = await supabase
+        .from('conversations')
+        .select('human_id')
+        .eq('id', conversationId)
+        .single();
+
+      if (convError || !conversation) {
+        logV17('⚠️ Could not fetch conversation for notifications (non-critical)', convError);
+      } else {
+        const patientUserId = conversation.human_id;
+
+        // Get patient name
+        const { data: patientDetails } = await supabase
+          .from('patient_details')
+          .select('first_name, last_name')
+          .eq('user_id', patientUserId)
+          .single();
+
+        const patientName = patientDetails
+          ? `${patientDetails.first_name || ''} ${patientDetails.last_name || ''}`.trim() || 'A patient'
+          : 'A patient';
+
+        // Get provider who owns this AI Preview from intake_sessions
+        const { data: intakeSession } = await supabase
+          .from('intake_sessions')
+          .select('provider_user_id, access_code')
+          .eq('conversation_id', conversationId)
+          .single();
+
+        if (intakeSession?.provider_user_id) {
+          const providerUserId = intakeSession.provider_user_id;
+
+          logV17('📬 Sending notifications to provider', {
+            providerUserId,
+            patientName,
+            accessCode: intakeSession.access_code
+          });
+
+          // Send email notification (non-blocking)
+          sendProviderEmailNotification(
+            providerUserId,
+            patientName,
+            'ai_preview_used',
+            intakeSession.access_code
+          ).catch(error => {
+            logV17('⚠️ Email notification failed (non-critical)', {
+              providerUserId,
+              error: error.message
+            });
+          });
+
+          // Send SMS notification (non-blocking)
+          sendProviderSMSNotification(
+            providerUserId,
+            patientName,
+            'ai_preview_used',
+            intakeSession.access_code
+          ).catch(error => {
+            logV17('⚠️ SMS notification failed (non-critical)', {
+              providerUserId,
+              error: error.message
+            });
+          });
+
+          logV17('✅ Provider notification requests sent');
+        } else {
+          logV17('ℹ️ No provider associated with this AI Preview (might be triage session)');
+        }
+      }
+    } catch (notificationError) {
+      // Don't fail the request if notifications fail
+      logV17('⚠️ Error in notification logic (non-critical)', notificationError);
+    }
 
     return NextResponse.json({
       success: true,

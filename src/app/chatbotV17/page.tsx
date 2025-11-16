@@ -258,8 +258,8 @@ export default function ChatBotV17Page() {
         });
 
         // ALWAYS create a NEW conversation for each AI Preview (each gets unique access code)
-        console.log('[V17] Creating NEW conversation for AI Preview');
-        const internalConversationId = await store.createConversation();
+        console.log('[V17] Creating NEW conversation for AI Preview with provider:', therapist.userId);
+        const internalConversationId = await store.createConversation(therapist.userId);
         console.log('[V17] ✅ Internal conversation ID created:', internalConversationId);
 
         // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice + custom opening statement

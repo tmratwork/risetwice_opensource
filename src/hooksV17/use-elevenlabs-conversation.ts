@@ -657,11 +657,64 @@ export function useElevenLabsConversation() {
         specialist: store.triageSession?.currentSpecialist
       });
 
+      // Get conversationId before clearing state
+      const conversationId = store.conversationId;
+
       await conversation.endSession();
       setCurrentAgentId(null);
       store.setTriageSession(null);
-      
+
       logV17('✅ ElevenLabs session ended');
+
+      // Call the V17 end-session API endpoint to trigger provider notifications
+      if (conversationId) {
+        // Check and set flag atomically to prevent race condition
+        const notificationKey = `notification_sent_${conversationId}`;
+        const alreadySent = sessionStorage.getItem(notificationKey);
+
+        if (!alreadySent) {
+          // Set flag IMMEDIATELY before async operation to prevent duplicates
+          sessionStorage.setItem(notificationKey, 'true');
+
+          logV17('📧 Calling end-session API to trigger provider notifications', {
+            conversationId
+          });
+
+          try {
+            const response = await fetch('/api/v17/end-session', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                conversationId,
+                specialistType: 'ai_preview',
+                contextSummary: 'User manually ended session',
+                reason: 'user_request'
+              })
+            });
+
+            if (!response.ok) {
+              const errorData = await response.json();
+              logV17('⚠️ end-session API call failed (non-critical)', errorData);
+              // Remove flag if failed so it can retry
+              sessionStorage.removeItem(notificationKey);
+            } else {
+              const data = await response.json();
+              logV17('✅ end-session API call successful', data);
+            }
+          } catch (apiError) {
+            // Don't fail the session end if API call fails
+            logV17('⚠️ end-session API error (non-critical)', apiError);
+            // Remove flag if failed so it can retry
+            sessionStorage.removeItem(notificationKey);
+          }
+        } else {
+          logV17('ℹ️ Notification already sent for this conversation - skipping duplicate');
+        }
+      } else {
+        logV17('⚠️ No conversationId available - skipping provider notifications');
+      }
 
     } catch (error) {
       logV17('❌ Failed to end session', {

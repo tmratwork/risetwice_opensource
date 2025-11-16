@@ -3,6 +3,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { sendProviderEmailNotification, sendProviderSMSNotification } from '@/lib/notifications';
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -77,6 +78,56 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Failed to save audio metadata' },
         { status: 500 }
       );
+    }
+
+    // Send provider notifications (patient replied)
+    try {
+      console.log('[send-audio-reply] 📧 Attempting to send provider notifications');
+
+      // Get patient name
+      const { data: patientDetails } = await supabase
+        .from('patient_details')
+        .select('first_name, last_name')
+        .eq('user_id', patientUserId)
+        .single();
+
+      const patientName = patientDetails
+        ? `${patientDetails.first_name || ''} ${patientDetails.last_name || ''}`.trim() || 'A patient'
+        : 'A patient';
+
+      console.log('[send-audio-reply] 📬 Sending notifications to provider', {
+        providerUserId,
+        patientName
+      });
+
+      // Send email notification (non-blocking)
+      sendProviderEmailNotification(
+        providerUserId,
+        patientName,
+        'patient_replied'
+      ).catch(error => {
+        console.log('[send-audio-reply] ⚠️ Email notification failed (non-critical)', {
+          providerUserId,
+          error: error.message
+        });
+      });
+
+      // Send SMS notification (non-blocking)
+      sendProviderSMSNotification(
+        providerUserId,
+        patientName,
+        'patient_replied'
+      ).catch(error => {
+        console.log('[send-audio-reply] ⚠️ SMS notification failed (non-critical)', {
+          providerUserId,
+          error: error.message
+        });
+      });
+
+      console.log('[send-audio-reply] ✅ Provider notification requests sent');
+    } catch (notificationError) {
+      // Don't fail the request if notifications fail
+      console.log('[send-audio-reply] ⚠️ Error in notification logic (non-critical)', notificationError);
     }
 
     return NextResponse.json({

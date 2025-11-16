@@ -1141,11 +1141,43 @@ export function useMentalHealthFunctionsV17() {
 
   // Implementation for end_session
   const endSession = useCallback(async (): Promise<MentalHealthFunctionResult> => {
-    // const requestId = Date.now().toString().slice(-6);
-
-    // console.log(`[V16] end_session called with requestId: ${requestId}`);
-
     try {
+      // Get conversationId from the Zustand store
+      const { useElevenLabsStore } = await import('@/stores/elevenlabs-store');
+      const conversationId = useElevenLabsStore.getState().conversationId;
+
+      if (!conversationId) {
+        console.warn('[V17] end_session called without conversationId - notifications will be skipped');
+      }
+
+      // Call the V17 end-session API endpoint to trigger notifications
+      if (conversationId) {
+        try {
+          const response = await fetch('/api/v17/end-session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              conversationId,
+              specialistType: 'ai_preview',
+              contextSummary: 'User ended session via end_session function',
+              reason: 'user_request'
+            })
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('[V17] end_session API call failed:', errorData);
+          } else {
+            console.log('[V17] end_session API call successful - provider notifications sent');
+          }
+        } catch (apiError) {
+          // Don't fail the function if API call fails
+          console.error('[V17] end_session API error (non-critical):', apiError);
+        }
+      }
+
       // Log session end
       userHistoryRef.current.recentInteractions.push({
         timestamp: Date.now(),
@@ -1153,7 +1185,6 @@ export function useMentalHealthFunctionsV17() {
         outcome: 'completed'
       });
 
-    // console.log(`[V16] end_session success for requestId: ${requestId}`);
       return {
         success: true,
         data: {
@@ -1164,7 +1195,7 @@ export function useMentalHealthFunctionsV17() {
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-    // console.error(`[V16] end_session error for requestId: ${requestId}: ${errorMessage}`);
+      console.error('[V17] end_session error:', errorMessage);
 
       return {
         success: false,

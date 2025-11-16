@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 interface GenerateAccessCodeRequest {
   conversationId: string;
   userId: string;
+  providerUserId?: string;
 }
 
 export async function POST(req: Request) {
@@ -20,14 +21,14 @@ export async function POST(req: Request) {
 
   try {
     const body: GenerateAccessCodeRequest = await req.json();
-    const { conversationId, userId } = body;
+    const { conversationId, userId, providerUserId } = body;
 
     if (!conversationId || !userId) {
       console.error(`${logPrefix} Missing required fields`, { conversationId, userId });
       return NextResponse.json({ error: 'Missing conversationId or userId' }, { status: 400 });
     }
 
-    console.log(`${logPrefix} Creating NEW intake_session for conversation: ${conversationId}, user: ${userId}`);
+    console.log(`${logPrefix} Creating NEW intake_session for conversation: ${conversationId}, user: ${userId}, provider: ${providerUserId || 'none'}`);
 
     // Generate unique 5-digit access code
     const { data: accessCodeData, error: accessCodeError } = await supabaseAdmin
@@ -75,6 +76,7 @@ export async function POST(req: Request) {
         user_id: userId,
         access_code: accessCode,
         conversation_id: conversationId,
+        provider_user_id: providerUserId || null, // Store provider ID if this is an AI Preview session
         status: 'pending'
       });
 
@@ -90,6 +92,7 @@ export async function POST(req: Request) {
       conversationId,
       accessCode,
       userId,
+      providerUserId: providerUserId || 'NULL (not an AI Preview)',
       patientDetailsId: patientDetailsId || 'NULL (first-time user)',
       isReturningUser: !!patientDetailsId
     });
