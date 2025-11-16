@@ -121,12 +121,40 @@ export default function NotificationsPage() {
         <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">
-                Notification Preferences
-              </h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
+                  Patient Notification Preferences
+                </h2>
+              </div>
               <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 Get notified when therapists send you messages
               </p>
+
+              {/* Link to Provider Notification Settings */}
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+                  Also a provider? Manage your provider notification preferences separately.
+                </p>
+                <a
+                  href="/settings/provider-notifications"
+                  className="inline-flex items-center text-sm font-medium text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                >
+                  Go to Provider Notification Settings
+                  <svg
+                    className="ml-1 w-4 h-4"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M9 5l7 7-7 7"
+                    />
+                  </svg>
+                </a>
+              </div>
 
               {/* Email Notifications */}
               <label className="flex items-start space-x-3 mb-4 cursor-pointer group">
