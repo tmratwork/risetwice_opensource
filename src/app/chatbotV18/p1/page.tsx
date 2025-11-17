@@ -96,13 +96,8 @@ export default function PatientIntakeLanding() {
   }, [user?.uid]);
 
   return (
-    <div className="w-full h-full overflow-y-auto flex justify-center p-6">
+    <div className="w-full h-full overflow-y-auto flex justify-center p-6 pt-16">
       <div className="w-full max-w-6xl my-auto">
-        {/* Welcome Title */}
-        <h1 className="text-5xl font-bold text-center mb-12 text-gray-800 dark:text-gray-100">
-          Welcome
-        </h1>
-
         {/* Two-column grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {/* New Patient Card */}
