@@ -395,7 +395,7 @@ function AuthButtons() {
                         >
                             <span className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700">
                                 <Bell className="w-5 h-5 mr-2" />
-                                Notifications
+                                Notification Preferences
                             </span>
                         </Link>
                         <button
