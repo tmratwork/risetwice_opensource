@@ -579,15 +579,14 @@ function BookSelector() {
     const [selectedBook, setSelectedBook] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(true);
     const [showDropdown, setShowDropdown] = useState<boolean>(false);
-    const { user } = useAuth();
+    // const { user } = useAuth(); // Uncomment if enabling user restriction
     // const isSpecificUser = user?.uid === "NbewAuSvZNgrb64yNDkUebjMHa23"; // Uncomment to restrict to specific user
 
-    // Early return - book selector is disabled
-    if (!BOOK_SELECTOR_ENABLED) {
-        return null;
-    }
-
     useEffect(() => {
+        if (!BOOK_SELECTOR_ENABLED) {
+            return;
+        }
+
         // Only fetch books if this is the specific user
         // TO ENABLE USER RESTRICTION: Uncomment the isSpecificUser constant above and this check below
         // if (!isSpecificUser) {
@@ -631,7 +630,12 @@ function BookSelector() {
         };
 
         fetchBooks();
-    }, []); // Removed isSpecificUser dependency since it's commented out
+    }, [BOOK_SELECTOR_ENABLED]); // Added dependency
+
+    // Early return - book selector is disabled (after all hooks)
+    if (!BOOK_SELECTOR_ENABLED) {
+        return null;
+    }
 
     // Function to handle book selection with direct approach (similar to TestBookSelector)
     const handleBookChange = (bookId: string) => {
