@@ -395,7 +395,7 @@ function AuthButtons() {
                         >
                             <span className="flex items-center w-full px-4 py-2 text-sm text-sage-500 dark:text-gray-200 hover:bg-sage-300 dark:hover:bg-gray-700">
                                 <Bell className="w-5 h-5 mr-2" />
-                                Notifications
+                                Notification Preferences
                             </span>
                         </Link>
                         <button
@@ -570,19 +570,28 @@ interface Book {
 
 
 // Simple BookSelector component to be used in the header
+// VISIBILITY: Currently disabled for all users
+// TO RE-ENABLE: Change BOOK_SELECTOR_ENABLED to true
+// TO SHOW FOR SPECIFIC USER ONLY: Also uncomment the isSpecificUser check below
 function BookSelector() {
+    const BOOK_SELECTOR_ENABLED = false; // Set to true to enable book selector
     const [books, setBooks] = useState<Book[]>([]);
     const [selectedBook, setSelectedBook] = useState<string>('');
     const [loading, setLoading] = useState<boolean>(true);
     const [showDropdown, setShowDropdown] = useState<boolean>(false);
-    const { user } = useAuth();
-    const isSpecificUser = user?.uid === "NbewAuSvZNgrb64yNDkUebjMHa23";
+    // const { user } = useAuth(); // Uncomment if enabling user restriction
+    // const isSpecificUser = user?.uid === "NbewAuSvZNgrb64yNDkUebjMHa23"; // Uncomment to restrict to specific user
 
     useEffect(() => {
-        // Only fetch books if this is the specific user
-        if (!isSpecificUser) {
+        if (!BOOK_SELECTOR_ENABLED) {
             return;
         }
+
+        // Only fetch books if this is the specific user
+        // TO ENABLE USER RESTRICTION: Uncomment the isSpecificUser constant above and this check below
+        // if (!isSpecificUser) {
+        //     return;
+        // }
 
         // Get the selected book from localStorage
         const storedBookId = localStorage.getItem('selectedBookId');
@@ -621,7 +630,12 @@ function BookSelector() {
         };
 
         fetchBooks();
-    }, [isSpecificUser]);
+    }, [BOOK_SELECTOR_ENABLED]); // Added dependency
+
+    // Early return - book selector is disabled (after all hooks)
+    if (!BOOK_SELECTOR_ENABLED) {
+        return null;
+    }
 
     // Function to handle book selection with direct approach (similar to TestBookSelector)
     const handleBookChange = (bookId: string) => {
@@ -641,9 +655,10 @@ function BookSelector() {
     };
 
     // Only render the component for the specific user
-    if (!isSpecificUser) {
-        return null;
-    }
+    // TO ENABLE USER RESTRICTION: Uncomment below and the isSpecificUser constant above
+    // if (!isSpecificUser) {
+    //     return null;
+    // }
 
     if (loading) {
         return <span className="text-sm text-gray-400">Loading...</span>;

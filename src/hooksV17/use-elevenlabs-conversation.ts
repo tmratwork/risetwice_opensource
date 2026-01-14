@@ -477,22 +477,19 @@ export function useElevenLabsConversation() {
   //   }
   // }, [conversation, store.isConnected]);
 
-  // Start session with specific specialist agent (with optional demo parameters and custom first message)
-  const startSession = useCallback(async (specialistType: string = 'triage', demoVoiceId?: string, demoPromptAppend?: string, customFirstMessage?: string, internalConversationId?: string) => {
+  // Start session with specific specialist agent (with optional demo parameters and userId for fetching opening statement)
+  const startSession = useCallback(async (specialistType: string = 'triage', demoVoiceId?: string, demoPromptAppend?: string, providerUserId?: string, internalConversationId?: string) => {
     try {
       setIsPreparing(true);
-
-      // Store custom first message in ref for logging after connection
-      customFirstMessageRef.current = customFirstMessage || null;
 
       logV17('🚀 Starting ElevenLabs session', {
         specialistType,
         userId: user?.uid || 'anonymous',
+        providerUserId,
         isDemoRequest: !!(demoVoiceId || demoPromptAppend),
         demoVoiceId,
         demoPromptLength: demoPromptAppend?.length || 0,
-        hasCustomFirstMessage: !!customFirstMessage,
-        customFirstMessagePreview: customFirstMessage?.substring(0, 50)
+        note: 'Opening statement will be fetched by agent API'
       });
 
       // 1. Load saved voice preferences from localStorage
@@ -513,12 +510,13 @@ export function useElevenLabsConversation() {
       }
 
       // 2. Create or get agent for specialist with voice preferences
+      // For AI Preview, pass providerUserId so API can fetch fresh opening statement
       const agentResponse = await fetch('/api/v17/agents/create', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           specialistType,
-          userId: user?.uid || null,
+          userId: providerUserId || user?.uid || null, // Use providerUserId for AI Preview to fetch their opening statement
           voiceId: demoVoiceId || 'EmtkmiOFoQVpKRVpXH2B', // Use demo voice or V17 default
           demoPromptAppend, // Pass demo prompt append if provided
           voicePreferences // ✅ Pass saved voice preferences to API
@@ -532,9 +530,15 @@ export function useElevenLabsConversation() {
       const { agent } = await agentResponse.json();
       setCurrentAgentId(agent.agent_id);
 
+      // Store the fresh opening statement from API response
+      const freshOpeningStatement = agent.customOpeningStatement || null;
+      customFirstMessageRef.current = freshOpeningStatement;
+
       logV17('✅ Agent created/retrieved', {
         agentId: agent.agent_id,
-        specialistType: agent.specialist_type
+        specialistType: agent.specialist_type,
+        hasFreshOpeningStatement: !!freshOpeningStatement,
+        openingStatementPreview: freshOpeningStatement?.substring(0, 100)
       });
 
       // 2. Update store with session info
@@ -547,14 +551,14 @@ export function useElevenLabsConversation() {
       });
 
       // 3. Start conversation with agent using WebRTC if available (v0.6.1+ feature)
-      // Include custom first message override if provided
+      // Include custom first message override using freshly-fetched opening statement
       // ✅ IMPORTANT: startSession() returns the ElevenLabs conversation ID!
 
       // Log the EXACT first message being sent to ElevenLabs
-      if (customFirstMessage) {
-        console.log('[V17] 📨 SENDING CUSTOM FIRST MESSAGE TO ELEVENLABS:', {
-          fullMessage: customFirstMessage,
-          messageLength: customFirstMessage.length,
+      if (freshOpeningStatement) {
+        console.log('[V17] 📨 SENDING CUSTOM FIRST MESSAGE TO ELEVENLABS (fresh from database):', {
+          fullMessage: freshOpeningStatement,
+          messageLength: freshOpeningStatement.length,
           agentId: agent.agent_id
         });
       } else {
@@ -565,10 +569,10 @@ export function useElevenLabsConversation() {
         agentId: agent.agent_id,
         connectionType: 'webrtc', // Use WebRTC for better audio quality
         userId: user?.uid || undefined, // Optional user tracking
-        ...(customFirstMessage && {
+        ...(freshOpeningStatement && {
           overrides: {
             agent: {
-              firstMessage: customFirstMessage
+              firstMessage: freshOpeningStatement
             }
           }
         })
@@ -633,7 +637,7 @@ export function useElevenLabsConversation() {
       logV17('✅ ElevenLabs session started successfully', {
         agentId: agent.agent_id,
         specialistType,
-        usedCustomFirstMessage: !!customFirstMessage,
+        usedCustomFirstMessage: !!freshOpeningStatement,
         elevenLabsConversationId
       });
 

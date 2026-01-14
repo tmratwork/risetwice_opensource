@@ -249,30 +249,23 @@ export default function ChatBotV17Page() {
           console.log(`[V17] 🎤 Using default voice (no cloned voice available for ${therapist.fullName})`);
         }
 
-        // Log opening statement if available
-        console.log(`[V17] 🔍 OPENING STATEMENT CHECK:`, {
-          hasOpeningStatement: !!therapist.openingStatement,
-          openingStatementType: typeof therapist.openingStatement,
-          openingStatementFull: therapist.openingStatement,
-          openingStatementLength: therapist.openingStatement?.length || 0
-        });
-
         // ALWAYS create a NEW conversation for each AI Preview (each gets unique access code)
         console.log('[V17] Creating NEW conversation for AI Preview with provider:', therapist.userId);
         const internalConversationId = await store.createConversation(therapist.userId);
         console.log('[V17] ✅ Internal conversation ID created:', internalConversationId);
 
-        // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice + custom opening statement
+        // Start session with ai_preview specialist + comprehensive generated prompt + cloned voice
+        // The custom opening statement will be fetched fresh from the database by the agent API
         // Pass the internal conversation ID so it can be saved with the ElevenLabs conversation ID
         console.log('[V17] 🚀 CALLING startSession WITH:', {
           specialistType: 'ai_preview',
           voiceId,
           promptLength: generatedTherapistPrompt.length,
-          customFirstMessage: therapist.openingStatement,
-          customFirstMessageLength: therapist.openingStatement?.length || 0,
-          internalConversationId
+          userId: therapist.userId,
+          internalConversationId,
+          note: 'Opening statement will be fetched fresh by agent API'
         });
-        await startSession('ai_preview', voiceId, generatedTherapistPrompt, therapist.openingStatement, internalConversationId);
+        await startSession('ai_preview', voiceId, generatedTherapistPrompt, therapist.userId, internalConversationId);
 
         console.log(`[V17] ✅ AI preview started with comprehensive prompt for: ${therapist.fullName}`);
       } else {

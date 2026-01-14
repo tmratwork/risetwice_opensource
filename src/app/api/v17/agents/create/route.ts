@@ -455,7 +455,8 @@ export async function POST(request: NextRequest) {
         agent_id: agent.agent_id,
         specialist_type: specialistType,
         voice_id: voiceConfig.voice_id,
-        name: agent.name
+        name: agent.name,
+        customOpeningStatement: customOpeningStatement // ✅ Return fresh opening statement from database
       }
     });
 
